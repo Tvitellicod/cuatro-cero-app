@@ -182,9 +182,9 @@ export function MatchesManagement() {
   }
 
   const filteredMatches = pastMatches.filter((match) => {
-    const matchesResult = !filterResult || match.status === filterResult
-    const matchesLocation = !filterLocation || match.location === filterLocation
-    const matchesTournament = !filterTournament || match.tournament === filterTournament
+    const matchesResult = filterResult === "all" || match.status === filterResult
+    const matchesLocation = filterLocation === "all" || match.location === filterLocation
+    const matchesTournament = filterTournament === "all" || match.tournament === filterTournament
 
     return matchesResult && matchesLocation && matchesTournament
   })

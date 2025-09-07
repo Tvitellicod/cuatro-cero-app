@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Plus, Search, Filter, Edit, Trash2, Cross, Users, X } from "lucide-react"
+import { Upload, Plus, Search, Edit, Trash2, Users, X } from "lucide-react"
 import Image from 'next/image'
 
 export function ClubManagement() {
@@ -110,7 +110,7 @@ export function ClubManagement() {
   }
   
   const [players, setPlayers] = useState(generatePlayers())
-  const filteredPlayers = allPlayers.filter((player) => {
+  const filteredPlayers = players.filter((player) => {
     const matchesSearch =
       player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       player.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||

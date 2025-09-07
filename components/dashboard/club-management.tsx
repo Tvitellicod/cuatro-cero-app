@@ -225,8 +225,7 @@ export function ClubManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2">CLUB</h2>
-          <p className="text-gray-400">Información general del club</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Mi Club</h2>
         </div>
         {!showCreateForm && (
           <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowCreateForm(true)}>
@@ -413,7 +412,7 @@ export function ClubManagement() {
         <div className="lg:col-span-1 space-y-6">
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-white">Panel General</CardTitle>
+              <CardTitle className="text-white">Información del Club</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-4 mb-4">

@@ -15,8 +15,9 @@ export function ClubManagement() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [editingPlayer, setEditingPlayer] = useState<any>(null)
-  const [newPlayer, setNewPlayer] = useState({
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
+  const [newPlayer, setNewPlayer] = useState<Player>({
+    id: 0,
     firstName: "",
     lastName: "",
     nickname: "",
@@ -25,8 +26,9 @@ export function ClubManagement() {
     position: "",
     foot: "",
     category: "primera",
-    photo: null,
+    photo: "",
     status: "DISPONIBLE",
+    injury: null,
   })
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
@@ -123,12 +125,14 @@ export function ClubManagement() {
 
   const handleCreatePlayer = () => {
     if (newPlayer.firstName && newPlayer.lastName && newPlayer.position) {
-      const player = {
-        id: players.length + 1,
+      const player: Player = {
         ...newPlayer,
+        id: players.length + 1,
+        photo: newPlayer.photo || "/placeholder-user.jpg",
       }
       setPlayers([...players, player])
       setNewPlayer({
+        id: 0,
         firstName: "",
         lastName: "",
         nickname: "",
@@ -137,26 +141,19 @@ export function ClubManagement() {
         position: "",
         foot: "",
         category: "primera",
-        photo: null,
+        photo: "",
         status: "DISPONIBLE",
+        injury: null,
       })
       setShowCreateForm(false)
     }
   }
 
-  const handleEditPlayer = (player: any) => {
+  const handleEditPlayer = (player: Player) => {
     setEditingPlayer(player)
     setNewPlayer({
-      firstName: player.firstName,
-      lastName: player.lastName,
-      nickname: player.nickname,
-      birthDate: player.birthDate,
-      phoneNumber: player.phoneNumber,
-      position: player.position,
-      foot: player.foot,
-      category: player.category,
-      photo: player.photo,
-      status: player.status,
+      ...player,
+      photo: player.photo || "",
     })
     setShowCreateForm(true)
   }
@@ -167,6 +164,7 @@ export function ClubManagement() {
       setEditingPlayer(null)
       setShowCreateForm(false)
       setNewPlayer({
+        id: 0,
         firstName: "",
         lastName: "",
         nickname: "",
@@ -175,8 +173,9 @@ export function ClubManagement() {
         position: "",
         foot: "",
         category: "primera",
-        photo: null,
+        photo: "",
         status: "DISPONIBLE",
+        injury: null,
       })
     }
   }
@@ -191,6 +190,7 @@ export function ClubManagement() {
     setShowCreateForm(false)
     setEditingPlayer(null)
     setNewPlayer({
+      id: 0,
       firstName: "",
       lastName: "",
       nickname: "",
@@ -199,8 +199,9 @@ export function ClubManagement() {
       position: "",
       foot: "",
       category: "primera",
-      photo: null,
+      photo: "",
       status: "DISPONIBLE",
+      injury: null,
     })
   }
 
@@ -218,19 +219,6 @@ export function ClubManagement() {
       setShowCreateCategory(false)
     }
   }
-
-  const colorsOption = [
-    "#aff606",
-    "#33d9f6",
-    "#f4c11a",
-    "#ea3498",
-    "#25d03f",
-    "#8a46c5",
-    "#ff6b35",
-    "#4ecdc4",
-    "#45b7d1",
-    "#96ceb4",
-  ]
 
 
   return (
@@ -551,8 +539,7 @@ export function ClubManagement() {
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.firstName} />
                         <AvatarFallback className="bg-[#305176] text-white">
-                          {player.firstName[0]}
-                          {player.lastName[0]}
+                          {(player.firstName?.[0] || "") + (player.lastName?.[0] || "")}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -599,4 +586,24 @@ export function ClubManagement() {
       )}
     </div>
   )
+}
+
+// Opcional: Define un tipo para Player
+type Player = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  nickname: string;
+  birthDate: string;
+  phoneNumber: string;
+  position: string;
+  foot: string;
+  status: string;
+  category: string;
+  photo: string;
+  injury?: {
+    type: string;
+    date: string;
+    recovery: string;
+  } | null;
 }

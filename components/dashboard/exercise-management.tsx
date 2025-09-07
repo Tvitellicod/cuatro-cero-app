@@ -403,7 +403,7 @@ export function ExerciseManagement() {
                         <SelectValue placeholder="Dificultad" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                        <SelectItem value="" className="text-white text-xs">
+                        <SelectItem value="all" className="text-white text-xs">
                           Todas
                         </SelectItem>
                         <SelectItem value="Fácil" className="text-white text-xs">

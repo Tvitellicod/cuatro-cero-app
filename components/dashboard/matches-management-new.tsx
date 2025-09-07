@@ -14,9 +14,9 @@ export function MatchesManagement() {
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([])
 
   // Filtros
-  const [filterResult, setFilterResult] = useState("")
-  const [filterLocation, setFilterLocation] = useState("")
-  const [filterTournament, setFilterTournament] = useState("")
+  const [filterResult, setFilterResult] = useState("all")
+  const [filterLocation, setFilterLocation] = useState("all")
+  const [filterTournament, setFilterTournament] = useState("all")
 
   const today = new Date()
 
@@ -368,7 +368,7 @@ export function MatchesManagement() {
                     <SelectValue placeholder="Resultado" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="" className="text-white text-xs">
+                    <SelectItem value="all" className="text-white text-xs">
                       Todos
                     </SelectItem>
                     <SelectItem value="Victoria" className="text-white text-xs">
@@ -388,7 +388,7 @@ export function MatchesManagement() {
                     <SelectValue placeholder="Lugar" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="" className="text-white text-xs">
+                    <SelectItem value="all" className="text-white text-xs">
                       Todos
                     </SelectItem>
                     <SelectItem value="Local" className="text-white text-xs">
@@ -405,7 +405,7 @@ export function MatchesManagement() {
                     <SelectValue placeholder="Torneo" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="" className="text-white text-xs">
+                    <SelectItem value="all" className="text-white text-xs">
                       Todos
                     </SelectItem>
                     {tournaments.map((tournament) => (

@@ -40,11 +40,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         label: "CLUB",
         icon: Users,
         href: "/dashboard/club",
-        items: [
-          { label: "Mi Club", href: "/dashboard/club" },
-          { label: "Categorías", href: "/dashboard/club/categorias" },
-          { label: "Jugadores", href: "/dashboard/club/jugadores" },
-        ],
+        items: [], // Se eliminan los submenús
         show: true,
       },
     ]

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Plus, Search, Edit, Trash2, Users, X, Cross } from "lucide-react"
+import { Upload, Plus, Search, Edit, Trash2, Users, FileText, Eye } from "lucide-react"
 import Image from 'next/image'
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -48,6 +48,15 @@ export function ClubManagement() {
   const [showMedicalReport, setShowMedicalReport] = useState<Player | null>(null)
   const [playerToDelete, setPlayerToDelete] = useState<number | null>(null)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [showPlayerDetail, setShowPlayerDetail] = useState<Player | null>(null)
+
+  const [isEditingClub, setIsEditingClub] = useState(false)
+  const [clubInfo, setClubInfo] = useState({
+    name: "Amigos de Villa Luro",
+    abbreviation: "AVL",
+    logo: "/images/cuatro-cero-logo.png",
+  })
+
 
   const colorsOption = [
     "#aff606",
@@ -70,7 +79,7 @@ export function ClubManagement() {
     { id: "juveniles", name: "Juveniles", playerCount: 22, color: "#f4c11a" },
   ])
 
-  const positions = ["Arquero", "Defensor", "Mediocampista", "Delantero"]
+  const positions = ["Arquero", "Ultimo", "Ala", "Pivot"]
   const feet = ["Derecho", "Izquierdo", "Ambidiestro"]
 
   const generatePlayers = () => {
@@ -218,10 +227,26 @@ export function ClubManagement() {
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Aquí iría la lógica para subir la imagen a un servicio de almacenamiento
-    // Para el modo demo, simplemente mostraremos un mensaje en consola.
-    console.log("Simulando subida de archivo...", event.target.files?.[0]);
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setNewPlayer({ ...newPlayer, photo: reader.result as string })
+      }
+      reader.readAsDataURL(file)
+    }
   };
+
+  const handleClubLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setClubInfo({ ...clubInfo, logo: reader.result as string })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
 
   return (
@@ -238,23 +263,83 @@ export function ClubManagement() {
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-white">Información del Club</CardTitle>
+              <Button size="icon" variant="ghost" className="text-white hover:text-[#aff606]" onClick={() => setIsEditingClub(!isEditingClub)}>
+                <Edit className="h-4 w-4" />
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
-                  <Image
-                    src="/images/cuatro-cero-logo.png"
-                    alt="Escudo del club"
-                    width={80}
-                    height={80}
-                    className="object-cover"
-                  />
+              {isEditingClub ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white">Nombre del Club</Label>
+                    <Input
+                      value={clubInfo.name}
+                      onChange={(e) => setClubInfo({ ...clubInfo, name: e.target.value })}
+                      className="bg-[#1d2834] border-[#305176] text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-white">Abreviación</Label>
+                    <Input
+                      value={clubInfo.abbreviation}
+                      onChange={(e) => setClubInfo({ ...clubInfo, abbreviation: e.target.value })}
+                      className="bg-[#1d2834] border-[#305176] text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-white">Logo</Label>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
+                        {clubInfo.logo ? (
+                          <Image
+                            src={clubInfo.logo}
+                            alt="Logo del club"
+                            width={80}
+                            height={80}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <Upload className="h-6 w-6 text-gray-400" />
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="border-[#305176] text-white hover:bg-[#305176] bg-transparent"
+                        onClick={() => document.getElementById('logo-upload-input')?.click()}
+                      >
+                        Subir Logo
+                      </Button>
+                      <input
+                        id="logo-upload-input"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleClubLogoUpload}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end space-x-2 mt-4">
+                    <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white" onClick={() => setIsEditingClub(false)}>Cancelar</Button>
+                    <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setIsEditingClub(false)}>Guardar</Button>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-white font-medium text-lg">Amigos de Villa Luro</h3>
-                  <p className="text-gray-400 text-sm">AVL</p>
+              ) : (
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
+                    <Image
+                      src={clubInfo.logo}
+                      alt="Escudo del club"
+                      width={80}
+                      height={80}
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-medium text-lg">{clubInfo.name}</h3>
+                    <p className="text-gray-400 text-sm">{clubInfo.abbreviation}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -471,7 +556,17 @@ export function ClubManagement() {
                     <Label className="text-white">Foto del Jugador</Label>
                     <div className="flex items-center space-x-4">
                       <div className="w-24 h-24 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
-                        <Upload className="h-8 w-8 text-gray-400" />
+                        {newPlayer.photo ? (
+                          <Image
+                            src={newPlayer.photo}
+                            alt="Preview de la foto del jugador"
+                            width={96}
+                            height={96}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <Upload className="h-8 w-8 text-gray-400" />
+                        )}
                       </div>
                       <Button
                         variant="outline"
@@ -549,10 +644,7 @@ export function ClubManagement() {
                     <Button
                       size="default"
                       className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
-                      onClick={() => {
-                        setEditingPlayer(null);
-                        setShowCreateForm(true);
-                      }}
+                      onClick={() => setShowCreateForm(true)}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Nuevo Jugador
@@ -607,10 +699,10 @@ export function ClubManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                            className="text-white hover:bg-white/10"
                             onClick={() => handleViewMedicalReport(player)}
                           >
-                            <X className="h-4 w-4" />
+                            <FileText className="h-4 w-4 text-orange-500" />
                           </Button>
                         )}
                         <Button

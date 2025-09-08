@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Clock, Users, Target } from "lucide-react"
+import { Plus, Clock, Users, Target, Search } from "lucide-react"
 
 export function ExerciseManagement() {
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -148,12 +148,8 @@ export function ExerciseManagement() {
           <h2 className="text-2xl font-bold text-white mb-2">Ejercicios</h2>
           <p className="text-gray-400">Gestiona ejercicios reutilizables para tus entrenamientos</p>
         </div>
-        {!showCreateForm && (
-          <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowCreateForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Ejercicio
-          </Button>
-        )}
+        
+        {/* El botón de arriba se elimina para usar el de abajo */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -380,24 +376,36 @@ export function ExerciseManagement() {
             <Card className="bg-[#213041] border-[#305176]">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <CardTitle className="text-white">
-                    Ejercicios Creados {selectedCategory && `- ${selectedCategory}`}
+                  <CardTitle className="text-2xl font-bold text-white">
+                    Ejercicios Creados
                   </CardTitle>
 
-                  {/* Filtros */}
-                  <div className="flex flex-wrap gap-2">
-                    <Input
-                      placeholder="Jugadores"
-                      value={filterPlayers}
-                      onChange={(e) => setFilterPlayers(e.target.value)}
-                      className="w-20 h-8 bg-[#1d2834] border-[#305176] text-white text-xs"
-                    />
-                    <Input
-                      placeholder="Arqueros"
-                      value={filterGoalkeepers}
-                      onChange={(e) => setFilterGoalkeepers(e.target.value)}
-                      className="w-20 h-8 bg-[#1d2834] border-[#305176] text-white text-xs"
-                    />
+                  {/* Filtros y Botón */}
+                  <div className="flex items-center flex-wrap gap-2">
+                    <Select value={filterPlayers} onValueChange={setFilterPlayers}>
+                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectValue placeholder="Jugadores" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#213041] border-[#305176]">
+                        {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                          <SelectItem key={num} value={num.toString()} className="text-white text-xs">
+                            {num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
+                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectValue placeholder="Arqueros" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#213041] border-[#305176]">
+                        {Array.from({ length: 5 }, (_, i) => i).map((num) => (
+                          <SelectItem key={num} value={num.toString()} className="text-white text-xs">
+                            {num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
                       <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                         <SelectValue placeholder="Dificultad" />
@@ -417,12 +425,26 @@ export function ExerciseManagement() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      placeholder="Tiempo"
-                      value={filterTime}
-                      onChange={(e) => setFilterTime(e.target.value)}
-                      className="w-20 h-8 bg-[#1d2834] border-[#305176] text-white text-xs"
-                    />
+                    <Select value={filterTime} onValueChange={setFilterTime}>
+                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectValue placeholder="Tiempo" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#213041] border-[#305176]">
+                        {["10min", "15min", "20min", "25min", "30min"].map((time) => (
+                          <SelectItem key={time} value={time} className="text-white text-xs">
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="default" // Tamaño predeterminado para hacerlo más alto
+                      className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4" // Clases para ancho y fuente
+                      onClick={() => setShowCreateForm(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Nuevo Ejercicio
+                    </Button>
                   </div>
                 </div>
               </CardHeader>

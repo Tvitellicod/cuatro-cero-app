@@ -8,8 +8,20 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Plus, Search, Edit, Trash2, Users, X } from "lucide-react"
+import { Upload, Plus, Search, Edit, Trash2, Users, X, Cross } from "lucide-react"
 import Image from 'next/image'
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function ClubManagement() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -33,6 +45,8 @@ export function ClubManagement() {
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
+  const [showMedicalReport, setShowMedicalReport] = useState<Player | null>(null)
+  const [playerToDelete, setPlayerToDelete] = useState<number | null>(null)
 
 
   const colorsOption = [
@@ -83,7 +97,7 @@ export function ClubManagement() {
         const randomYear = 1990 + Math.floor(Math.random() * 15)
         const randomMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")
         const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0")
-        const isInjured = Math.random() < 0.1
+        const isInjured = Math.random() < 0.3
         const randomPhone = `+54 9 11 ${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 10000)}`
 
         players.push({
@@ -181,9 +195,8 @@ export function ClubManagement() {
   }
 
   const handleDeletePlayer = (id: number) => {
-    if (confirm("¿Estás seguro de que quieres eliminar este jugador?")) {
-      setPlayers(players.filter((p) => p.id !== id))
-    }
+    setPlayers(players.filter((p) => p.id !== id))
+    setPlayerToDelete(null)
   }
 
   const handleCancelForm = () => {
@@ -220,6 +233,10 @@ export function ClubManagement() {
     }
   }
 
+  const handleViewMedicalReport = (player: Player) => {
+    setShowMedicalReport(player)
+  }
+
 
   return (
     <div className="space-y-6">
@@ -227,12 +244,6 @@ export function ClubManagement() {
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">Mi Club</h2>
         </div>
-        {!showCreateForm && (
-          <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowCreateForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Jugador
-          </Button>
-        )}
       </div>
 
       {showCreateForm ? (
@@ -389,16 +400,16 @@ export function ClubManagement() {
               </div>
             </div>
 
-            <div className="flex justify-between space-x-4">
+            <div className="flex justify-center space-x-4 mt-6"> {/* Centrado y margen superior */}
               <Button
-                className="bg-[#aff606] text-black hover:bg-[#25d03f] w-1/2"
+                className="bg-[#aff606] text-black hover:bg-[#25d03f] w-1/4 h-16 text-lg" // w-1/4 para la mitad de ancho, h-16 para el doble de alto
                 onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
               >
                 {editingPlayer ? "Actualizar" : "Crear"}
               </Button>
               <Button
                 variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent w-1/2"
+                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent w-1/4 h-16 text-lg" // w-1/4 para la mitad de ancho, h-16 para el doble de alto
                 onClick={handleCancelForm}
               >
                 Cancelar
@@ -434,22 +445,39 @@ export function ClubManagement() {
           </Card>
 
           <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader className="flex items-center justify-between">
+            <CardHeader>
               <CardTitle className="text-white flex items-center">
                 <Users className="h-5 w-5 mr-2" />
                 Categorías
               </CardTitle>
-              <Button
-                size="sm"
-                className="bg-[#aff606] text-black hover:bg-[#25d03f]"
-                onClick={() => setShowCreateCategory(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Categoría
-              </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {showCreateCategory && (
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedCategory === category.id ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
+                  }`}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <div className="flex items-center space-x-3">
+                    {category.id !== "all" && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>}
+                    <span className="text-white font-medium">{category.name}</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-[#305176] text-gray-300">
+                    {category.playerCount}
+                  </Badge>
+                </div>
+              ))}
+              {!showCreateCategory ? (
+                <Button
+                  className="w-full bg-[#305176] text-white hover:bg-[#aff606] hover:text-black"
+                  onClick={() => setShowCreateCategory(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva Categoría
+                </Button>
+              ) : (
                 <div className="space-y-3 p-3 bg-[#1d2834] rounded-lg">
                   <Input
                     placeholder="Nombre de la categoría"
@@ -488,23 +516,6 @@ export function ClubManagement() {
                   </div>
                 </div>
               )}
-              {categories.map((category) => (
-                <div
-                  key={category.id}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedCategory === category.id ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
-                  }`}
-                  onClick={() => setSelectedCategory(category.id)}
-                >
-                  <div className="flex items-center space-x-3">
-                    {category.id !== "all" && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>}
-                    <span className="text-white font-medium">{category.name}</span>
-                  </div>
-                  <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                    {category.playerCount}
-                  </Badge>
-                </div>
-              ))}
             </CardContent>
           </Card>
         </div>
@@ -514,11 +525,14 @@ export function ClubManagement() {
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-white">
-                  Jugadores ({filteredPlayers.length}) {selectedCategory !== "all" && `- ${categories.find(c => c.id === selectedCategory)?.name}`}
+                <CardTitle className="text-xl md:text-2xl text-white">
+                  {selectedCategory !== "all"
+                    ? `${categories.find((c) => c.id === selectedCategory)?.name}`
+                    : "Todas las categorías"}{" "}
+                  - Jugadores ({filteredPlayers.length})
                 </CardTitle>
-                <div className="flex-1">
-                  <div className="relative">
+                <div className="flex-1 flex items-center space-x-2">
+                  <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
                       placeholder="Buscar jugadores..."
@@ -527,6 +541,13 @@ export function ClubManagement() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
+                  <Button
+                    className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black"
+                    onClick={() => setShowCreateForm(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline"> Nuevo Jugador</span>
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -563,6 +584,16 @@ export function ClubManagement() {
                       >
                         {player.status}
                       </Badge>
+                      {player.status === "LESIONADO" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                          onClick={() => handleViewMedicalReport(player)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="text-white hover:text-[#aff606]" onClick={() => handleEditPlayer(player)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -570,7 +601,7 @@ export function ClubManagement() {
                         variant="ghost"
                         size="icon"
                         className="text-white hover:text-red-400"
-                        onClick={() => handleDeletePlayer(player.id)}
+                        onClick={() => setPlayerToDelete(player.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -583,6 +614,76 @@ export function ClubManagement() {
         </div>
       </div>
       )}
+
+      {/* Medical Report Dialog */}
+      <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">INFORME MEDICO</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Detalles de la lesión de {showMedicalReport?.firstName} {showMedicalReport?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-date" className="text-right text-white">
+                Fecha
+              </Label>
+              <Input
+                id="injury-date"
+                value={showMedicalReport?.injury?.date || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-description" className="text-right text-white">
+                Descripción
+              </Label>
+              <Input
+                id="injury-description"
+                value={showMedicalReport?.injury?.type || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-recovery" className="text-right text-white">
+                Recuperación
+              </Label>
+              <Input
+                id="injury-recovery"
+                value={showMedicalReport?.injury?.recovery || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Alert Dialog for Delete Confirmation */}
+      <AlertDialog open={!!playerToDelete} onOpenChange={() => setPlayerToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar a este jugador de forma permanente? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDeletePlayer(playerToDelete!)}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

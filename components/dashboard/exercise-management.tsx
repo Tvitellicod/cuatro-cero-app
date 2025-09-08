@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,19 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Clock, Users, Target, Search } from "lucide-react"
+import { Plus, Clock, Users, Target, Search, Trash2, Edit } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
 
 export function ExerciseManagement() {
   const [selectedCategory, setSelectedCategory] = useState("")
@@ -16,12 +28,28 @@ export function ExerciseManagement() {
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
+  const [newExercise, setNewExercise] = useState({
+    name: "",
+    category: "",
+    duration: 0,
+    players: 0,
+    goalkeepers: 0,
+    difficulty: "",
+    materials: "",
+    description: "",
+    objective: "",
+  })
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
+  const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null)
+
 
   // Filtros
-  const [filterPlayers, setFilterPlayers] = useState("")
-  const [filterGoalkeepers, setFilterGoalkeepers] = useState("")
-  const [filterDifficulty, setFilterDifficulty] = useState("")
-  const [filterTime, setFilterTime] = useState("")
+  const [filterPlayers, setFilterPlayers] = useState("all")
+  const [filterGoalkeepers, setFilterGoalkeepers] = useState("all")
+  const [filterDifficulty, setFilterDifficulty] = useState("all")
+  const [filterTime, setFilterTime] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
 
   const colorOptions = [
     "#aff606",
@@ -44,7 +72,7 @@ export function ExerciseManagement() {
     { name: "Balón Parado", color: "#8a46c5", exercises: 5 },
   ])
 
-  const exercises = [
+  const [exercises, setExercises] = useState([
     {
       id: 1,
       name: "Ataque 4-3-3 por bandas",
@@ -105,7 +133,16 @@ export function ExerciseManagement() {
       objective: "Mejorar distribución del arquero",
       createdAt: "2024-01-11",
     },
-  ]
+  ])
+
+  // Lógica para actualizar el conteo de ejercicios por categoría
+  useEffect(() => {
+    const updatedCategories = exerciseCategories.map(cat => ({
+      ...cat,
+      exercises: exercises.filter(ex => ex.category === cat.name).length
+    }))
+    setExerciseCategories(updatedCategories)
+  }, [exercises])
 
   const handleCreateCategory = () => {
     if (newCategoryName.trim()) {
@@ -123,21 +160,96 @@ export function ExerciseManagement() {
     }
   }
 
+  const handleCreateExercise = () => {
+    if (newExercise.name && newExercise.category && newExercise.difficulty) {
+      const exerciseToAdd = {
+        ...newExercise,
+        id: exercises.length + 1,
+        createdAt: new Date().toISOString().split('T')[0],
+      }
+      setExercises([...exercises, exerciseToAdd])
+      setNewExercise({
+        name: "",
+        category: "",
+        duration: 0,
+        players: 0,
+        goalkeepers: 0,
+        difficulty: "",
+        materials: "",
+        description: "",
+        objective: "",
+      })
+      setShowCreateForm(false)
+    }
+  }
+
+  const handleEditExercise = (exercise: any) => {
+    setShowExerciseDetail(null);
+    setNewExercise(exercise);
+    setShowCreateForm(true);
+  }
+
+  const handleDeleteExercise = () => {
+    if (exerciseToDelete) {
+      setExercises(exercises.filter(ex => ex.id !== exerciseToDelete));
+      setExerciseToDelete(null);
+      setShowExerciseDetail(null);
+    }
+  }
+
+  const handleDeleteCategory = () => {
+    if (categoryToDelete) {
+      setExerciseCategories(exerciseCategories.filter(cat => cat.name !== categoryToDelete))
+      setExercises(exercises.filter(ex => ex.category !== categoryToDelete))
+      setSelectedCategory("")
+      setCategoryToDelete(null)
+    }
+  }
+
   const getCategoryColor = (categoryName: string) => {
     const category = exerciseCategories.find((cat) => cat.name === categoryName)
     return category ? category.color : "#aff606"
   }
 
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Fácil":
+        return "bg-[#25d03f] text-black"
+      case "Media":
+        return "bg-[#f4c11a] text-black"
+      case "Difícil":
+        return "bg-red-500 text-white"
+      default:
+        return "bg-gray-500 text-white"
+    }
+  }
+
+  // Generar opciones dinámicas para los filtros
+  const uniquePlayers = [...new Set(exercises.map(ex => ex.players))].sort((a, b) => a - b)
+  const uniqueGoalkeepers = [...new Set(exercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b)
+  const uniqueDurations = [...new Set(exercises.map(ex => ex.duration))].sort((a, b) => a - b)
+
+
+  // Función para resetear todos los filtros
+  const handleClearFilters = () => {
+    setFilterPlayers("all")
+    setFilterGoalkeepers("all")
+    setFilterDifficulty("all")
+    setFilterTime("all")
+    setSearchQuery("")
+  }
+
   // Filtrar ejercicios
   const filteredExercises = exercises
     .filter((exercise) => {
-      const matchesCategory = !selectedCategory || exercise.category === selectedCategory
-      const matchesPlayers = !filterPlayers || exercise.players.toString().includes(filterPlayers)
-      const matchesGoalkeepers = !filterGoalkeepers || exercise.goalkeepers.toString().includes(filterGoalkeepers)
-      const matchesDifficulty = !filterDifficulty || exercise.difficulty === filterDifficulty
-      const matchesTime = !filterTime || exercise.duration.toString().includes(filterTime)
+      const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === "" || exercise.category === selectedCategory
+      const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
+      const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
+      const matchesDifficulty = filterDifficulty === "all" || exercise.difficulty === filterDifficulty
+      const matchesTime = filterTime === "all" || exercise.duration.toString() === filterTime
 
-      return matchesCategory && matchesPlayers && matchesGoalkeepers && matchesDifficulty && matchesTime
+      return matchesSearch && matchesCategory && matchesPlayers && matchesGoalkeepers && matchesDifficulty && matchesTime
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
@@ -148,8 +260,6 @@ export function ExerciseManagement() {
           <h2 className="text-2xl font-bold text-white mb-2">Ejercicios</h2>
           <p className="text-gray-400">Gestiona ejercicios reutilizables para tus entrenamientos</p>
         </div>
-        
-        {/* El botón de arriba se elimina para usar el de abajo */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -163,7 +273,7 @@ export function ExerciseManagement() {
               {exerciseCategories.map((category, index) => (
                 <div
                   key={index}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                     selectedCategory === category.name ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
                   }`}
                   onClick={() => setSelectedCategory(selectedCategory === category.name ? "" : category.name)}
@@ -172,9 +282,25 @@ export function ExerciseManagement() {
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>
                     <span className="text-white font-medium">{category.name}</span>
                   </div>
-                  <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                    {category.exercises}
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    {selectedCategory === category.name ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="bg-red-500/20 text-red-400 hover:bg-red-500/40 opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setCategoryToDelete(category.name)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary" className="bg-[#305176] text-gray-300">
+                        {category.exercises}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
 
@@ -233,8 +359,8 @@ export function ExerciseManagement() {
         <div className="lg:col-span-2">
           {showCreateForm ? (
             <Card className="bg-[#213041] border-[#305176]">
-              <CardHeader>
-                <CardTitle className="text-white">Crear Nuevo Ejercicio</CardTitle>
+              <CardHeader className="text-center">
+                <CardTitle className="text-white text-2xl font-bold">Crear Nuevo Ejercicio</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,12 +371,17 @@ export function ExerciseManagement() {
                     <Input
                       id="exercise-name"
                       placeholder="Ej: Ataque posicional 4-3-3"
+                      value={newExercise.name}
+                      onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-white">Categoría</Label>
-                    <Select>
+                    <Select
+                      value={newExercise.category}
+                      onValueChange={(value) => setNewExercise({ ...newExercise, category: value })}
+                    >
                       <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                         <SelectValue placeholder="Seleccionar categoría" />
                       </SelectTrigger>
@@ -274,6 +405,8 @@ export function ExerciseManagement() {
                       id="duration"
                       type="number"
                       placeholder="20"
+                      value={newExercise.duration}
+                      onChange={(e) => setNewExercise({ ...newExercise, duration: parseInt(e.target.value) || 0 })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
@@ -285,6 +418,8 @@ export function ExerciseManagement() {
                       id="players"
                       type="number"
                       placeholder="11"
+                      value={newExercise.players}
+                      onChange={(e) => setNewExercise({ ...newExercise, players: parseInt(e.target.value) || 0 })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
@@ -296,6 +431,8 @@ export function ExerciseManagement() {
                       id="goalkeepers"
                       type="number"
                       placeholder="1"
+                      value={newExercise.goalkeepers}
+                      onChange={(e) => setNewExercise({ ...newExercise, goalkeepers: parseInt(e.target.value) || 0 })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
@@ -304,7 +441,10 @@ export function ExerciseManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-white">Dificultad</Label>
-                    <Select>
+                    <Select
+                      value={newExercise.difficulty}
+                      onValueChange={(value) => setNewExercise({ ...newExercise, difficulty: value })}
+                    >
                       <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                         <SelectValue placeholder="Seleccionar dificultad" />
                       </SelectTrigger>
@@ -328,43 +468,51 @@ export function ExerciseManagement() {
                     <Input
                       id="materials"
                       placeholder="Conos, balones, petos..."
+                      value={newExercise.materials}
+                      onChange={(e) => setNewExercise({ ...newExercise, materials: e.target.value })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-white">
-                    Descripción
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe el ejercicio paso a paso..."
-                    className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-white">
+                      Descripción
+                    </Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Describe el ejercicio paso a paso..."
+                      value={newExercise.description}
+                      onChange={(e) => setNewExercise({ ...newExercise, description: e.target.value })}
+                      className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="objective" className="text-white">
+                      Objetivo
+                    </Label>
+                    <Textarea
+                      id="objective"
+                      placeholder="¿Qué se busca mejorar con este ejercicio?"
+                      value={newExercise.objective}
+                      onChange={(e) => setNewExercise({ ...newExercise, objective: e.target.value })}
+                      className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="objective" className="text-white">
-                    Objetivo
-                  </Label>
-                  <Input
-                    id="objective"
-                    placeholder="¿Qué se busca mejorar con este ejercicio?"
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-2">
+                <div className="flex justify-between space-x-4">
                   <Button
-                    className="bg-[#aff606] text-black hover:bg-[#25d03f]"
-                    onClick={() => setShowCreateForm(false)}
+                    className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
+                    onClick={handleCreateExercise}
                   >
                     Guardar Ejercicio
                   </Button>
                   <Button
                     variant="outline"
-                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                    className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
                     onClick={() => setShowCreateForm(false)}
                   >
                     Cancelar
@@ -375,37 +523,70 @@ export function ExerciseManagement() {
           ) : (
             <Card className="bg-[#213041] border-[#305176]">
               <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <CardTitle className="text-2xl font-bold text-white">
-                    Ejercicios Creados
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <CardTitle className="text-2xl font-bold text-white whitespace-nowrap">
+                    {selectedCategory && selectedCategory !== "" ? selectedCategory : "Ejercicios Creados"}
                   </CardTitle>
-
-                  {/* Filtros y Botón */}
-                  <div className="flex items-center flex-wrap gap-2">
+                  <Button
+                    size="default"
+                    className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
+                    onClick={() => setShowCreateForm(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Nuevo Ejercicio
+                  </Button>
+                </div>
+                <div className="flex items-center flex-wrap gap-2 mt-4">
+                  <div className="space-y-1">
+                    <Label className="text-white text-xs">Búsqueda</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Buscar ejercicio..."
+                        className="pl-10 bg-[#1d2834] border-[#305176] text-white"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white text-xs">Jugadores</Label>
                     <Select value={filterPlayers} onValueChange={setFilterPlayers}>
                       <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                         <SelectValue placeholder="Jugadores" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                        {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                         <SelectItem value="all" className="text-white text-xs">
+                          Todas
+                        </SelectItem>
+                        {uniquePlayers.map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
                             {num}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white text-xs">Arqueros</Label>
                     <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
                       <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                         <SelectValue placeholder="Arqueros" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                        {Array.from({ length: 5 }, (_, i) => i).map((num) => (
+                         <SelectItem value="all" className="text-white text-xs">
+                          Todas
+                        </SelectItem>
+                        {uniqueGoalkeepers.map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
                             {num}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white text-xs">Dificultad</Label>
                     <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
                       <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                         <SelectValue placeholder="Dificultad" />
@@ -425,25 +606,33 @@ export function ExerciseManagement() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white text-xs">Tiempo</Label>
                     <Select value={filterTime} onValueChange={setFilterTime}>
                       <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                         <SelectValue placeholder="Tiempo" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                        {["10min", "15min", "20min", "25min", "30min"].map((time) => (
-                          <SelectItem key={time} value={time} className="text-white text-xs">
-                            {time}
+                        <SelectItem value="all" className="text-white text-xs">
+                          Todos
+                        </SelectItem>
+                        {uniqueDurations.map((time) => (
+                          <SelectItem key={time} value={time.toString()} className="text-white text-xs">
+                            {time}min
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="mt-auto">
                     <Button
-                      size="default" // Tamaño predeterminado para hacerlo más alto
-                      className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4" // Clases para ancho y fuente
-                      onClick={() => setShowCreateForm(true)}
+                      size="icon"
+                      variant="ghost"
+                      className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                      onClick={handleClearFilters}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Nuevo Ejercicio
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -469,7 +658,9 @@ export function ExerciseManagement() {
                         </div>
                         <div className="flex items-center text-gray-400">
                           <Target className="h-4 w-4 mr-1" />
-                          {exercise.difficulty}
+                          <Badge className={getDifficultyColor(exercise.difficulty)}>
+                            {exercise.difficulty}
+                          </Badge>
                         </div>
                       </div>
                       <p className="text-gray-400 text-sm mb-3">{exercise.objective}</p>
@@ -479,6 +670,7 @@ export function ExerciseManagement() {
                           size="sm"
                           variant="outline"
                           className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                          onClick={() => setShowExerciseDetail(exercise)}
                         >
                           Ver Detalles
                         </Button>
@@ -491,6 +683,145 @@ export function ExerciseManagement() {
           )}
         </div>
       </div>
+      <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar la categoría "{categoryToDelete}"? Todos los ejercicios dentro de esta categoría también serán eliminados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCategory}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              {showExerciseDetail?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Categoría: {showExerciseDetail?.category}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Duración</Label>
+                <Input
+                  value={`${showExerciseDetail?.duration} min`}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Dificultad</Label>
+                <Input
+                  value={showExerciseDetail?.difficulty}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Jugadores</Label>
+                <Input
+                  value={showExerciseDetail?.players}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Arqueros</Label>
+                <Input
+                  value={showExerciseDetail?.goalkeepers}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Materiales</Label>
+              <Input
+                value={showExerciseDetail?.materials}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Descripción</Label>
+              <Textarea
+                value={showExerciseDetail?.description}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Objetivo</Label>
+              <Textarea
+                value={showExerciseDetail?.objective}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
+              />
+            </div>
+          </div>
+          <div className="flex justify-between space-x-4">
+            <Button
+              variant="default"
+              className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={() => handleEditExercise(showExerciseDetail)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Ejercicio
+            </Button>
+            <Button
+              variant="outline"
+              className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={() => {
+                setShowExerciseDetail(null);
+                setExerciseToDelete(showExerciseDetail?.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar Ejercicio
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Deleting Exercise */}
+      <AlertDialog open={!!exerciseToDelete} onOpenChange={() => setExerciseToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar este ejercicio de forma permanente? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteExercise}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -28,11 +28,10 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined)
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [currentProfile, setCurrentProfile] = useState<string | null>(null)
-  const [userPlan, setUserPlan] = useState<string>("institucional") // Default for demo
+  const [userPlan, setUserPlan] = useState<string>("institucional")
 
-  // Cargar perfil guardado al inicializar
   useEffect(() => {
-    const savedProfile = localStorage.getItem("selectedProfile")
+    const savedProfile = typeof window !== "undefined" ? localStorage.getItem("selectedProfile") : null
     if (savedProfile) {
       setCurrentProfile(savedProfile)
     }

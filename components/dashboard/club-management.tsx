@@ -47,6 +47,7 @@ export function ClubManagement() {
   const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
   const [showMedicalReport, setShowMedicalReport] = useState<Player | null>(null)
   const [playerToDelete, setPlayerToDelete] = useState<number | null>(null)
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
 
 
   const colorsOption = [
@@ -237,6 +238,21 @@ export function ClubManagement() {
     setShowMedicalReport(player)
   }
 
+  const handleDeleteCategory = () => {
+    if (categoryToDelete) {
+      setCategories(categories.filter(cat => cat.id !== categoryToDelete));
+      setPlayers(players.filter(p => p.category !== categoryToDelete));
+      setCategoryToDelete(null);
+      setSelectedCategory("all");
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Aquí iría la lógica para subir la imagen a un servicio de almacenamiento
+    // Para el modo demo, simplemente mostraremos un mensaje en consola.
+    console.log("Simulando subida de archivo...", event.target.files?.[0]);
+  };
+
 
   return (
     <div className="space-y-6">
@@ -247,9 +263,11 @@ export function ClubManagement() {
       </div>
 
       {showCreateForm ? (
-        <Card className="bg-[#213041] border-[#305176]">
+         <Card className="bg-[#213041] border-[#305176] mx-auto max-w-4xl">
           <CardHeader>
-            <CardTitle className="text-white">{editingPlayer ? "Editar Jugador" : "Nuevo Jugador"}</CardTitle>
+            <CardTitle className="text-white text-2xl text-center font-bold">
+              {editingPlayer ? "Editar Jugador" : "Nuevo Jugador"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -365,9 +383,20 @@ export function ClubManagement() {
                   <div className="w-24 h-24 bg-[#305176] rounded-lg flex items-center justify-center">
                     <Upload className="h-8 w-8 text-gray-400" />
                   </div>
-                  <Button variant="outline" className="border-[#305176] text-white hover:bg-[#305176] bg-transparent">
+                  <Button
+                    variant="outline"
+                    className="border-[#305176] text-white hover:bg-[#305176] bg-transparent"
+                    onClick={() => document.getElementById('file-upload-input')?.click()}
+                  >
                     Subir Foto
                   </Button>
+                  <input
+                    id="file-upload-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
                 </div>
               </div>
 
@@ -400,16 +429,16 @@ export function ClubManagement() {
               </div>
             </div>
 
-            <div className="flex justify-center space-x-4 mt-6"> {/* Centrado y margen superior */}
+            <div className="flex justify-center space-x-4">
               <Button
-                className="bg-[#aff606] text-black hover:bg-[#25d03f] w-1/4 h-16 text-lg" // w-1/4 para la mitad de ancho, h-16 para el doble de alto
+                className="w-1/4 h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f]"
                 onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
               >
                 {editingPlayer ? "Actualizar" : "Crear"}
               </Button>
               <Button
                 variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent w-1/4 h-16 text-lg" // w-1/4 para la mitad de ancho, h-16 para el doble de alto
+                className="w-1/4 h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
                 onClick={handleCancelForm}
               >
                 Cancelar
@@ -455,7 +484,7 @@ export function ClubManagement() {
               {categories.map((category) => (
                 <div
                   key={category.id}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                     selectedCategory === category.id ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
                   }`}
                   onClick={() => setSelectedCategory(category.id)}
@@ -464,9 +493,25 @@ export function ClubManagement() {
                     {category.id !== "all" && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>}
                     <span className="text-white font-medium">{category.name}</span>
                   </div>
-                  <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                    {category.playerCount}
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    {selectedCategory === category.id && category.id !== "all" ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="bg-red-500/20 text-red-400 hover:bg-red-500/40 opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setCategoryToDelete(category.id)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary" className="bg-[#305176] text-gray-300">
+                        {category.playerCount}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
               {!showCreateCategory ? (
@@ -524,14 +569,23 @@ export function ClubManagement() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-xl md:text-2xl text-white">
-                  {selectedCategory !== "all"
-                    ? `${categories.find((c) => c.id === selectedCategory)?.name}`
-                    : "Todas las categorías"}{" "}
-                  - Jugadores ({filteredPlayers.length})
-                </CardTitle>
-                <div className="flex-1 flex items-center space-x-2">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <CardTitle className="text-2xl font-bold text-white whitespace-nowrap">
+                    {selectedCategory !== "all"
+                      ? `${categories.find((c) => c.id === selectedCategory)?.name}`
+                      : "Todas las categorías"}{" "}
+                    - Jugadores ({filteredPlayers.length})
+                  </CardTitle>
+                  <Button
+                    size="default"
+                    className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
+                    onClick={() => setShowCreateForm(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Nuevo Jugador
+                  </Button>
+              </div>
+              <div className="flex-1 flex items-center space-x-2 mt-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
@@ -541,15 +595,7 @@ export function ClubManagement() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button
-                    className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black"
-                    onClick={() => setShowCreateForm(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline"> Nuevo Jugador</span>
-                  </Button>
                 </div>
-              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -567,7 +613,7 @@ export function ClubManagement() {
                           {player.firstName} {player.lastName}
                         </h3>
                         <p className="text-gray-400 text-sm">
-                          "{player.nickname}" • {player.position} • {player.foot} • {player.phoneNumber}
+                          "{player.nickname}" • {player.position} • {player.foot}
                         </p>
                         <p className="text-gray-500 text-xs">Estado: {player.status}</p>
                       </div>
@@ -618,8 +664,8 @@ export function ClubManagement() {
       {/* Medical Report Dialog */}
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">INFORME MEDICO</DialogTitle>
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">INFORME MEDICO</DialogTitle>
             <DialogDescription className="text-gray-400">
               Detalles de la lesión de {showMedicalReport?.firstName} {showMedicalReport?.lastName}.
             </DialogDescription>
@@ -677,6 +723,29 @@ export function ClubManagement() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleDeletePlayer(playerToDelete!)}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       {/* Alert Dialog for Category Deletion Confirmation */}
+       <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar la categoría "{categoryToDelete}"? Todos los jugadores dentro de esta categoría también serán eliminados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCategory}
               className="bg-red-500 text-white hover:bg-red-600"
             >
               Eliminar

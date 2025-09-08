@@ -1,14 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Clock, Users, Target, Search, Trash2, Edit } from "lucide-react"
+import { Upload, Plus, Search, Edit, Trash2, Users, X, Cross } from "lucide-react"
+import Image from 'next/image'
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,39 +22,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-
-export function ExerciseManagement() {
-  const [selectedCategory, setSelectedCategory] = useState("")
+export function ClubManagement() {
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
+  const [newPlayer, setNewPlayer] = useState<Player>({
+    id: 0,
+    firstName: "",
+    lastName: "",
+    nickname: "",
+    birthDate: "",
+    phoneNumber: "",
+    position: "",
+    foot: "",
+    category: "primera",
+    photo: "",
+    status: "DISPONIBLE",
+    injury: null,
+  })
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
-  const [newExercise, setNewExercise] = useState({
-    name: "",
-    category: "",
-    duration: 0,
-    players: 0,
-    goalkeepers: 0,
-    difficulty: "",
-    materials: "",
-    description: "",
-    objective: "",
-  })
+  const [showMedicalReport, setShowMedicalReport] = useState<Player | null>(null)
+  const [playerToDelete, setPlayerToDelete] = useState<number | null>(null)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
-  const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
-  const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null)
 
 
-  // Filtros
-  const [filterPlayers, setFilterPlayers] = useState("all")
-  const [filterGoalkeepers, setFilterGoalkeepers] = useState("all")
-  const [filterDifficulty, setFilterDifficulty] = useState("all")
-  const [filterTime, setFilterTime] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-
-  const colorOptions = [
+  const colorsOption = [
     "#aff606",
     "#33d9f6",
     "#f4c11a",
@@ -64,246 +63,457 @@ export function ExerciseManagement() {
     "#96ceb4",
   ]
 
-  const [exerciseCategories, setExerciseCategories] = useState([
-    { name: "Ataque", color: "#ea3498", exercises: 12 },
-    { name: "Defensa", color: "#33d9f6", exercises: 8 },
-    { name: "Arquero-Jugador", color: "#25d03f", exercises: 6 },
-    { name: "Transiciones", color: "#f4c11a", exercises: 10 },
-    { name: "Balón Parado", color: "#8a46c5", exercises: 5 },
+
+  const [categories, setCategories] = useState([
+    { id: "all", name: "Todas las categorías", playerCount: 65, color: "#213041" },
+    { id: "primera", name: "Primera División", playerCount: 25, color: "#aff606" },
+    { id: "tercera", name: "Tercera División", playerCount: 18, color: "#33d9f6" },
+    { id: "juveniles", name: "Juveniles", playerCount: 22, color: "#f4c11a" },
   ])
 
-  const [exercises, setExercises] = useState([
-    {
-      id: 1,
-      name: "Ataque 4-3-3 por bandas",
-      category: "Ataque",
-      duration: 20,
-      players: 11,
-      goalkeepers: 1,
-      difficulty: "Media",
-      materials: "Conos, balones",
-      objective: "Mejorar el juego por las bandas",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: 2,
-      name: "Presión alta coordinada",
-      category: "Defensa",
-      duration: 15,
-      players: 8,
-      goalkeepers: 0,
-      difficulty: "Difícil",
-      materials: "Conos, petos",
-      objective: "Coordinar la presión defensiva",
-      createdAt: "2024-01-14",
-    },
-    {
-      id: 3,
-      name: "Transición defensa-ataque",
-      category: "Transiciones",
-      duration: 18,
-      players: 10,
-      goalkeepers: 1,
-      difficulty: "Media",
-      materials: "Balones, conos",
-      objective: "Mejorar transiciones rápidas",
-      createdAt: "2024-01-13",
-    },
-    {
-      id: 4,
-      name: "Tiros libres directos",
-      category: "Balón Parado",
-      duration: 12,
-      players: 6,
-      goalkeepers: 1,
-      difficulty: "Fácil",
-      materials: "Balones, barrera",
-      objective: "Mejorar precisión en tiros libres",
-      createdAt: "2024-01-12",
-    },
-    {
-      id: 5,
-      name: "Salida con los pies",
-      category: "Arquero-Jugador",
-      duration: 25,
-      players: 4,
-      goalkeepers: 1,
-      difficulty: "Media",
-      materials: "Balones, conos",
-      objective: "Mejorar distribución del arquero",
-      createdAt: "2024-01-11",
-    },
-  ])
+  const positions = ["Arquero", "Defensor", "Mediocampista", "Delantero"]
+  const feet = ["Derecho", "Izquierdo", "Ambidiestro"]
 
-  // Lógica para actualizar el conteo de ejercicios por categoría
-  useEffect(() => {
-    const updatedCategories = exerciseCategories.map(cat => ({
-      ...cat,
-      exercises: exercises.filter(ex => ex.category === cat.name).length
-    }))
-    setExerciseCategories(updatedCategories)
-  }, [exercises])
+  const generatePlayers = () => {
+    const firstNames = ["Juan", "Carlos", "Miguel", "Roberto", "Diego", "Fernando", "Alejandro", "Sebastián", "Martín", "Pablo", "Gonzalo", "Nicolás", "Facundo", "Matías", "Lucas", "Tomás", "Agustín", "Franco", "Ignacio", "Maximiliano", "Santiago", "Joaquín", "Emiliano", "Valentín", "Thiago"]
+    const lastNames = ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín", "Jiménez", "Ruiz", "Hernández", "Díaz", "Moreno", "Muñoz", "Álvarez", "Romero", "Alonso", "Gutiérrez", "Navarro", "Torres", "Domínguez", "Vázquez", "Ramos"]
+    const nicknames = ["Checo", "Toto", "Pipa", "Chino", "Flaco", "Gordo", "Ruso", "Turco", "Negro", "Rubio", "Pelado", "Chiqui", "Tano", "Mono", "Loco", "Pato", "Gato", "Oso", "León", "Tigre", "Lobo", "Colo", "Nacho", "Maxi", "Santi"]
+
+    const players = []
+    let playerId = 1
+
+    const categoryMap = {
+      "primera": { name: "Primera División", count: 25 },
+      "tercera": { name: "Tercera División", count: 18 },
+      "juveniles": { name: "Juveniles", count: 22 },
+    }
+
+    for (const categoryId in categoryMap) {
+      for (let i = 0; i < categoryMap[categoryId].count; i++) {
+        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+        const randomNickname = nicknames[Math.floor(Math.random() * nicknames.length)]
+        const randomPosition = positions[Math.floor(Math.random() * positions.length)]
+        const randomFoot = feet[Math.floor(Math.random() * feet.length)]
+        const randomYear = 1990 + Math.floor(Math.random() * 15)
+        const randomMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")
+        const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0")
+        const isInjured = Math.random() < 0.3
+        const randomPhone = `+54 9 11 ${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 10000)}`
+
+        players.push({
+          id: playerId++,
+          firstName: randomFirstName,
+          lastName: randomLastName,
+          nickname: randomNickname,
+          birthDate: `${randomYear}-${randomMonth}-${randomDay}`,
+          phoneNumber: randomPhone,
+          position: randomPosition,
+          foot: randomFoot,
+          status: isInjured ? "LESIONADO" : "DISPONIBLE",
+          category: categoryId,
+          photo: `/placeholder-user.jpg`,
+          injury: isInjured
+            ? {
+                type: ["Lesión de rodilla", "Desgarro muscular", "Esguince de tobillo", "Contractura"][Math.floor(Math.random() * 4)],
+                date: "2024-01-05",
+                recovery: ["2-3 semanas", "3-4 semanas", "1-2 semanas", "4-6 semanas"][Math.floor(Math.random() * 4)],
+              }
+            : null,
+        })
+      }
+    }
+    return players
+  }
+  
+  const [players, setPlayers] = useState(generatePlayers())
+  const filteredPlayers = players.filter((player) => {
+    const matchesSearch =
+      player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.nickname.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesCategory = selectedCategory === "all" || player.category === selectedCategory
+
+    return matchesSearch && matchesCategory
+  })
+
+  const handleCreatePlayer = () => {
+    if (newPlayer.firstName && newPlayer.lastName && newPlayer.position) {
+      const player: Player = {
+        ...newPlayer,
+        id: players.length + 1,
+        photo: newPlayer.photo || "/placeholder-user.jpg",
+      }
+      setPlayers([...players, player])
+      setNewPlayer({
+        id: 0,
+        firstName: "",
+        lastName: "",
+        nickname: "",
+        birthDate: "",
+        phoneNumber: "",
+        position: "",
+        foot: "",
+        category: "primera",
+        photo: "",
+        status: "DISPONIBLE",
+        injury: null,
+      })
+      setShowCreateForm(false)
+    }
+  }
+
+  const handleEditPlayer = (player: Player) => {
+    setEditingPlayer(player)
+    setNewPlayer({
+      ...player,
+      photo: player.photo || "",
+    })
+    setShowCreateForm(true)
+  }
+
+  const handleUpdatePlayer = () => {
+    if (editingPlayer) {
+      setPlayers(players.map((p) => (p.id === editingPlayer.id ? { ...p, ...newPlayer } : p)))
+      setEditingPlayer(null)
+      setShowCreateForm(false)
+      setNewPlayer({
+        id: 0,
+        firstName: "",
+        lastName: "",
+        nickname: "",
+        birthDate: "",
+        phoneNumber: "",
+        position: "",
+        foot: "",
+        category: "primera",
+        photo: "",
+        status: "DISPONIBLE",
+        injury: null,
+      })
+    }
+  }
+
+  const handleDeletePlayer = (id: number) => {
+    setPlayers(players.filter((p) => p.id !== id))
+    setPlayerToDelete(null)
+  }
+
+  const handleCancelForm = () => {
+    setShowCreateForm(false)
+    setEditingPlayer(null)
+    setNewPlayer({
+      id: 0,
+      firstName: "",
+      lastName: "",
+      nickname: "",
+      birthDate: "",
+      phoneNumber: "",
+      position: "",
+      foot: "",
+      category: "primera",
+      photo: "",
+      status: "DISPONIBLE",
+      injury: null,
+    })
+  }
 
   const handleCreateCategory = () => {
     if (newCategoryName.trim()) {
-      setExerciseCategories([
-        ...exerciseCategories,
-        {
-          name: newCategoryName,
-          color: newCategoryColor,
-          exercises: 0,
-        },
-      ])
+      const newCat = {
+        id: newCategoryName.toLowerCase().replace(/\s/g, ''),
+        name: newCategoryName,
+        playerCount: 0,
+        color: newCategoryColor,
+      }
+      setCategories([...categories, newCat])
       setNewCategoryName("")
       setNewCategoryColor("#aff606")
       setShowCreateCategory(false)
     }
   }
 
-  const handleCreateExercise = () => {
-    if (newExercise.name && newExercise.category && newExercise.difficulty) {
-      const exerciseToAdd = {
-        ...newExercise,
-        id: exercises.length + 1,
-        createdAt: new Date().toISOString().split('T')[0],
-      }
-      setExercises([...exercises, exerciseToAdd])
-      setNewExercise({
-        name: "",
-        category: "",
-        duration: 0,
-        players: 0,
-        goalkeepers: 0,
-        difficulty: "",
-        materials: "",
-        description: "",
-        objective: "",
-      })
-      setShowCreateForm(false)
-    }
-  }
-
-  const handleEditExercise = (exercise: any) => {
-    setShowExerciseDetail(null);
-    setNewExercise(exercise);
-    setShowCreateForm(true);
-  }
-
-  const handleDeleteExercise = () => {
-    if (exerciseToDelete) {
-      setExercises(exercises.filter(ex => ex.id !== exerciseToDelete));
-      setExerciseToDelete(null);
-      setShowExerciseDetail(null);
-    }
+  const handleViewMedicalReport = (player: Player) => {
+    setShowMedicalReport(player)
   }
 
   const handleDeleteCategory = () => {
     if (categoryToDelete) {
-      setExerciseCategories(exerciseCategories.filter(cat => cat.name !== categoryToDelete))
-      setExercises(exercises.filter(ex => ex.category !== categoryToDelete))
-      setSelectedCategory("")
-      setCategoryToDelete(null)
+      setCategories(categories.filter(cat => cat.id !== categoryToDelete));
+      setPlayers(players.filter(p => p.category !== categoryToDelete));
+      setCategoryToDelete(null);
+      setSelectedCategory("all");
     }
-  }
+  };
 
-  const getCategoryColor = (categoryName: string) => {
-    const category = exerciseCategories.find((cat) => cat.name === categoryName)
-    return category ? category.color : "#aff606"
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Fácil":
-        return "bg-[#25d03f] text-black"
-      case "Media":
-        return "bg-[#f4c11a] text-black"
-      case "Difícil":
-        return "bg-red-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
-    }
-  }
-
-  // Generar opciones dinámicas para los filtros
-  const uniquePlayers = [...new Set(exercises.map(ex => ex.players))].sort((a, b) => a - b)
-  const uniqueGoalkeepers = [...new Set(exercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b)
-  const uniqueDurations = [...new Set(exercises.map(ex => ex.duration))].sort((a, b) => a - b)
-
-
-  // Función para resetear todos los filtros
-  const handleClearFilters = () => {
-    setFilterPlayers("all")
-    setFilterGoalkeepers("all")
-    setFilterDifficulty("all")
-    setFilterTime("all")
-    setSearchQuery("")
-  }
-
-  // Filtrar ejercicios
-  const filteredExercises = exercises
-    .filter((exercise) => {
-      const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === "" || exercise.category === selectedCategory
-      const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
-      const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
-      const matchesDifficulty = filterDifficulty === "all" || exercise.difficulty === filterDifficulty
-      const matchesTime = filterTime === "all" || exercise.duration.toString() === filterTime
-
-      return matchesSearch && matchesCategory && matchesPlayers && matchesGoalkeepers && matchesDifficulty && matchesTime
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Lógica para simular subida de archivo
+    console.log("Simulando subida de archivo...", event.target.files?.[0]);
+    // En una implementación real, aquí se subiría el archivo a un servicio de almacenamiento
+    // y se obtendría una URL para guardarla en el estado del jugador.
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Ejercicios</h2>
-          <p className="text-gray-400">Gestiona ejercicios reutilizables para tus entrenamientos</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Mi Club</h2>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Categories */}
-        <div className="lg:col-span-1">
+      {showCreateForm ? (
+         <Card className="bg-[#213041] border-[#305176] mx-auto max-w-4xl">
+          <CardHeader>
+            <CardTitle className="text-white text-2xl text-center font-bold">
+              {editingPlayer ? "Editar Jugador" : "Nuevo Jugador"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Nombre</Label>
+                <Input
+                  value={newPlayer.firstName}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, firstName: e.target.value })}
+                  placeholder="Nombre"
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Apellido</Label>
+                <Input
+                  value={newPlayer.lastName}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, lastName: e.target.value })}
+                  placeholder="Apellido"
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Apodo</Label>
+                <Input
+                  value={newPlayer.nickname}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, nickname: e.target.value })}
+                  placeholder="Apodo"
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Posición</Label>
+                <Select
+                  value={newPlayer.position}
+                  onValueChange={(value) => setNewPlayer({ ...newPlayer, position: value })}
+                >
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
+                    <SelectValue placeholder="Seleccionar posición" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#213041] border-[#305176]">
+                    {positions.map((pos) => (
+                      <SelectItem key={pos} value={pos} className="text-white">
+                        {pos}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Pierna Hábil</Label>
+                <Select value={newPlayer.foot} onValueChange={(value) => setNewPlayer({ ...newPlayer, foot: value })}>
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
+                    <SelectValue placeholder="Seleccionar pierna" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#213041] border-[#305176]">
+                    {feet.map((foot) => (
+                      <SelectItem key={foot} value={foot} className="text-white">
+                        {foot}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Categoría</Label>
+                <Select
+                  value={newPlayer.category}
+                  onValueChange={(value) => setNewPlayer({ ...newPlayer, category: value })}
+                >
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
+                    <SelectValue placeholder="Seleccionar categoría" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#213041] border-[#305176]">
+                    {categories.filter(c => c.id !== "all").map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id} className="text-white">
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Fecha de Nacimiento</Label>
+                <Input
+                  type="date"
+                  value={newPlayer.birthDate}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, birthDate: e.target.value })}
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Número de celular</Label>
+                <Input
+                  type="tel"
+                  value={newPlayer.phoneNumber}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
+                  placeholder="Ej: +54 9 11 1234-5678"
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:justify-between md:space-x-4 space-y-4 md:space-y-0">
+              <div className="space-y-2 flex-1">
+                <Label className="text-white">Foto del Jugador</Label>
+                <div className="flex items-center space-x-4">
+                  <div className="w-24 h-24 bg-[#305176] rounded-lg flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="border-[#305176] text-white hover:bg-[#305176] bg-transparent"
+                    onClick={() => document.getElementById('file-upload-input')?.click()}
+                  >
+                    Subir Foto
+                  </Button>
+                  <input
+                    id="file-upload-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 flex-1">
+                <Label className="text-white">Estado</Label>
+                <div className="flex space-x-4">
+                  <Button
+                    variant={newPlayer.status === "DISPONIBLE" ? "default" : "outline"}
+                    className={
+                      newPlayer.status === "DISPONIBLE"
+                        ? "bg-[#25d03f] text-black hover:bg-[#20b136]"
+                        : "border-[#25d03f] text-[#25d03f] hover:bg-[#25d03f] hover:text-black bg-transparent"
+                    }
+                    onClick={() => setNewPlayer({ ...newPlayer, status: "DISPONIBLE" })}
+                  >
+                    DISPONIBLE
+                  </Button>
+                  <Button
+                    variant={newPlayer.status === "NO DISPONIBLE" ? "default" : "outline"}
+                    className={
+                      newPlayer.status === "NO DISPONIBLE"
+                        ? "bg-red-500 text-white hover:bg-red-600"
+                        : "border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                    }
+                    onClick={() => setNewPlayer({ ...newPlayer, status: "NO DISPONIBLE" })}
+                  >
+                    NO DISPONIBLE
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center space-x-4">
+              <Button
+                className="w-1/4 h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f]"
+                onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
+              >
+                {editingPlayer ? "Actualizar" : "Crear"}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-1/4 h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                onClick={handleCancelForm}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Panel de información del Club y Categorías */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-white">Información del Club</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
+                  <Image
+                    src="/images/cuatro-cero-logo.png"
+                    alt="Escudo del club"
+                    width={80}
+                    height={80}
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-white font-medium text-lg">Amigos de Villa Luro</h3>
+                  <p className="text-gray-400 text-sm">AVL</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
-              <CardTitle className="text-white">Categorías</CardTitle>
+              <CardTitle className="text-white flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Categorías
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {exerciseCategories.map((category, index) => (
+              {categories.map((category) => (
                 <div
-                  key={index}
+                  key={category.id}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
-                    selectedCategory === category.name ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
+                    selectedCategory === category.id ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
                   }`}
-                  onClick={() => setSelectedCategory(selectedCategory === category.name ? "" : category.name)}
+                  onClick={() => setSelectedCategory(category.id)}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>
+                    {category.id !== "all" && <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>}
                     <span className="text-white font-medium">{category.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {selectedCategory === category.name ? (
+                    {selectedCategory === category.id && category.id !== "all" ? (
                       <Button
                         size="icon"
                         variant="ghost"
                         className="bg-red-500/20 text-red-400 hover:bg-red-500/40 opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setCategoryToDelete(category.name)
+                          setCategoryToDelete(category.id)
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     ) : (
                       <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                        {category.exercises}
+                        {category.playerCount}
                       </Badge>
                     )}
                   </div>
                 </div>
               ))}
-
               {!showCreateCategory ? (
                 <Button
                   className="w-full bg-[#305176] text-white hover:bg-[#aff606] hover:text-black"
@@ -321,7 +531,7 @@ export function ExerciseManagement() {
                     className="bg-[#305176] border-[#305176] text-white"
                   />
                   <div className="flex flex-wrap gap-2">
-                    {colorOptions.map((color) => (
+                    {colorsOption.map((color) => (
                       <button
                         key={color}
                         className={`w-6 h-6 rounded-full border-2 ${
@@ -355,177 +565,16 @@ export function ExerciseManagement() {
           </Card>
         </div>
 
-        {/* Exercise List or Create Form */}
-        <div className="lg:col-span-2">
-          {showCreateForm ? (
-            <Card className="bg-[#213041] border-[#305176]">
-              <CardHeader className="text-center">
-                <CardTitle className="text-white text-2xl font-bold">Crear Nuevo Ejercicio</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="exercise-name" className="text-white">
-                      Nombre del Ejercicio
-                    </Label>
-                    <Input
-                      id="exercise-name"
-                      placeholder="Ej: Ataque posicional 4-3-3"
-                      value={newExercise.name}
-                      onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-white">Categoría</Label>
-                    <Select
-                      value={newExercise.category}
-                      onValueChange={(value) => setNewExercise({ ...newExercise, category: value })}
-                    >
-                      <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                        <SelectValue placeholder="Seleccionar categoría" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#213041] border-[#305176]">
-                        {exerciseCategories.map((cat) => (
-                          <SelectItem key={cat.name} value={cat.name} className="text-white">
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="duration" className="text-white">
-                      Duración (min)
-                    </Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      placeholder="20"
-                      value={newExercise.duration}
-                      onChange={(e) => setNewExercise({ ...newExercise, duration: parseInt(e.target.value) || 0 })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="players" className="text-white">
-                      Jugadores
-                    </Label>
-                    <Input
-                      id="players"
-                      type="number"
-                      placeholder="11"
-                      value={newExercise.players}
-                      onChange={(e) => setNewExercise({ ...newExercise, players: parseInt(e.target.value) || 0 })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="goalkeepers" className="text-white">
-                      Arqueros
-                    </Label>
-                    <Input
-                      id="goalkeepers"
-                      type="number"
-                      placeholder="1"
-                      value={newExercise.goalkeepers}
-                      onChange={(e) => setNewExercise({ ...newExercise, goalkeepers: parseInt(e.target.value) || 0 })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-white">Dificultad</Label>
-                    <Select
-                      value={newExercise.difficulty}
-                      onValueChange={(value) => setNewExercise({ ...newExercise, difficulty: value })}
-                    >
-                      <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                        <SelectValue placeholder="Seleccionar dificultad" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#213041] border-[#305176]">
-                        <SelectItem value="Fácil" className="text-white">
-                          Fácil
-                        </SelectItem>
-                        <SelectItem value="Media" className="text-white">
-                          Media
-                        </SelectItem>
-                        <SelectItem value="Difícil" className="text-white">
-                          Difícil
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="materials" className="text-white">
-                      Materiales
-                    </Label>
-                    <Input
-                      id="materials"
-                      placeholder="Conos, balones, petos..."
-                      value={newExercise.materials}
-                      onChange={(e) => setNewExercise({ ...newExercise, materials: e.target.value })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="text-white">
-                      Descripción
-                    </Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Describe el ejercicio paso a paso..."
-                      value={newExercise.description}
-                      onChange={(e) => setNewExercise({ ...newExercise, description: e.target.value })}
-                      className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="objective" className="text-white">
-                      Objetivo
-                    </Label>
-                    <Textarea
-                      id="objective"
-                      placeholder="¿Qué se busca mejorar con este ejercicio?"
-                      value={newExercise.objective}
-                      onChange={(e) => setNewExercise({ ...newExercise, objective: e.target.value })}
-                      className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-between space-x-4">
-                  <Button
-                    className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-                    onClick={handleCreateExercise}
-                  >
-                    Guardar Ejercicio
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-                    onClick={() => setShowCreateForm(false)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-[#213041] border-[#305176]">
-              <CardHeader>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Lista de Jugadores */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                   <CardTitle className="text-2xl font-bold text-white whitespace-nowrap">
-                    {selectedCategory && selectedCategory !== "" ? selectedCategory : "Ejercicios Creados"}
+                    {selectedCategory !== "all"
+                      ? `${categories.find((c) => c.id === selectedCategory)?.name}`
+                      : "Todas las categorías"}{" "}
+                    - Jugadores ({filteredPlayers.length})
                   </CardTitle>
                   <Button
                     size="default"
@@ -533,162 +582,162 @@ export function ExerciseManagement() {
                     onClick={() => setShowCreateForm(true)}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Nuevo Ejercicio
+                    Nuevo Jugador
                   </Button>
+              </div>
+              <div className="flex-1 flex items-center space-x-2 mt-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Buscar jugadores..."
+                      className="pl-10 bg-[#1d2834] border-[#305176] text-white"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center flex-wrap gap-2 mt-4">
-                  <div className="space-y-1">
-                    <Label className="text-white text-xs">Búsqueda</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        placeholder="Buscar ejercicio..."
-                        className="pl-10 bg-[#1d2834] border-[#305176] text-white"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {filteredPlayers.map((player) => (
+                  <div key={player.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.firstName} />
+                        <AvatarFallback className="bg-[#305176] text-white">
+                          {(player.firstName?.[0] || "") + (player.lastName?.[0] || "")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-white font-medium">
+                          {player.firstName} {player.lastName}
+                        </h3>
+                        <p className="text-gray-400 text-sm">
+                          "{player.nickname}" • {player.position} • {player.foot}
+                        </p>
+                        <p className="text-gray-500 text-xs">Estado: {player.status}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white text-xs">Jugadores</Label>
-                    <Select value={filterPlayers} onValueChange={setFilterPlayers}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                        <SelectValue placeholder="Jugadores" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#213041] border-[#305176]">
-                         <SelectItem value="all" className="text-white text-xs">
-                          Todas
-                        </SelectItem>
-                        {uniquePlayers.map((num) => (
-                          <SelectItem key={num} value={num.toString()} className="text-white text-xs">
-                            {num}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white text-xs">Arqueros</Label>
-                    <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                        <SelectValue placeholder="Arqueros" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#213041] border-[#305176]">
-                         <SelectItem value="all" className="text-white text-xs">
-                          Todas
-                        </SelectItem>
-                        {uniqueGoalkeepers.map((num) => (
-                          <SelectItem key={num} value={num.toString()} className="text-white text-xs">
-                            {num}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white text-xs">Dificultad</Label>
-                    <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                        <SelectValue placeholder="Dificultad" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#213041] border-[#305176]">
-                        <SelectItem value="all" className="text-white text-xs">
-                          Todas
-                        </SelectItem>
-                        <SelectItem value="Fácil" className="text-white text-xs">
-                          Fácil
-                        </SelectItem>
-                        <SelectItem value="Media" className="text-white text-xs">
-                          Media
-                        </SelectItem>
-                        <SelectItem value="Difícil" className="text-white text-xs">
-                          Difícil
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-white text-xs">Tiempo</Label>
-                    <Select value={filterTime} onValueChange={setFilterTime}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                        <SelectValue placeholder="Tiempo" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#213041] border-[#305176]">
-                        <SelectItem value="all" className="text-white text-xs">
-                          Todos
-                        </SelectItem>
-                        {uniqueDurations.map((time) => (
-                          <SelectItem key={time} value={time.toString()} className="text-white text-xs">
-                            {time}min
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="mt-auto">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
-                      onClick={handleClearFilters}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredExercises.map((exercise) => (
-                    <div key={exercise.id} className="p-4 bg-[#1d2834] rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-white font-medium">{exercise.name}</h3>
-                        <Badge className="text-white" style={{ backgroundColor: getCategoryColor(exercise.category) }}>
-                          {exercise.category}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
-                        <div className="flex items-center text-gray-400">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {exercise.duration}min
-                        </div>
-                        <div className="flex items-center text-gray-400">
-                          <Users className="h-4 w-4 mr-1" />
-                          {exercise.players}+{exercise.goalkeepers}
-                        </div>
-                        <div className="flex items-center text-gray-400">
-                          <Target className="h-4 w-4 mr-1" />
-                          <Badge className={getDifficultyColor(exercise.difficulty)}>
-                            {exercise.difficulty}
-                          </Badge>
-                        </div>
-                      </div>
-                      <p className="text-gray-400 text-sm mb-3">{exercise.objective}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">{exercise.materials}</span>
+                    <div className="flex items-center space-x-3">
+                      <Badge
+                        className={
+                          player.status === "DISPONIBLE"
+                            ? "bg-[#25d03f] text-black"
+                            : player.status === "LESIONADO"
+                              ? "bg-orange-500 text-white"
+                              : "bg-red-500 text-white"
+                        }
+                      >
+                        {player.status}
+                      </Badge>
+                      {player.status === "LESIONADO" && (
                         <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                          onClick={() => setShowExerciseDetail(exercise)}
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                          onClick={() => handleViewMedicalReport(player)}
                         >
-                          Ver Detalles
+                          <X className="h-4 w-4" />
                         </Button>
-                      </div>
+                      )}
+                      <Button variant="ghost" size="icon" className="text-white hover:text-[#aff606]" onClick={() => handleEditPlayer(player)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:text-red-400"
+                        onClick={() => setPlayerToDelete(player.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-      <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
+      )}
+
+      {/* Medical Report Dialog */}
+      <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">INFORME MEDICO</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Detalles de la lesión de {showMedicalReport?.firstName} {showMedicalReport?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-date" className="text-right text-white">
+                Fecha
+              </Label>
+              <Input
+                id="injury-date"
+                value={showMedicalReport?.injury?.date || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-description" className="text-right text-white">
+                Descripción
+              </Label>
+              <Input
+                id="injury-description"
+                value={showMedicalReport?.injury?.type || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-recovery" className="text-right text-white">
+                Recuperación
+              </Label>
+              <Input
+                id="injury-recovery"
+                value={showMedicalReport?.injury?.recovery || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Alert Dialog for Delete Confirmation */}
+      <AlertDialog open={!!playerToDelete} onOpenChange={() => setPlayerToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              ¿Estás seguro de que quieres eliminar la categoría "{categoryToDelete}"? Todos los ejercicios dentro de esta categoría también serán eliminados.
+              ¿Estás seguro de que quieres eliminar a este jugador de forma permanente? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDeletePlayer(playerToDelete!)}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       {/* Alert Dialog for Category Deletion Confirmation */}
+       <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar la categoría "{categoryToDelete}"? Todos los jugadores dentro de esta categoría también serán eliminados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -704,124 +753,26 @@ export function ExerciseManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
-        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">
-              {showExerciseDetail?.name}
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Categoría: {showExerciseDetail?.category}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-white">Duración</Label>
-                <Input
-                  value={`${showExerciseDetail?.duration} min`}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white">Dificultad</Label>
-                <Input
-                  value={showExerciseDetail?.difficulty}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-white">Jugadores</Label>
-                <Input
-                  value={showExerciseDetail?.players}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white">Arqueros</Label>
-                <Input
-                  value={showExerciseDetail?.goalkeepers}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Materiales</Label>
-              <Input
-                value={showExerciseDetail?.materials}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Descripción</Label>
-              <Textarea
-                value={showExerciseDetail?.description}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Objetivo</Label>
-              <Textarea
-                value={showExerciseDetail?.objective}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
-              />
-            </div>
-          </div>
-          <div className="flex justify-between space-x-4">
-            <Button
-              variant="default"
-              className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-              onClick={() => handleEditExercise(showExerciseDetail)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar Ejercicio
-            </Button>
-            <Button
-              variant="outline"
-              className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-              onClick={() => {
-                setShowExerciseDetail(null);
-                setExerciseToDelete(showExerciseDetail?.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar Ejercicio
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Dialog for Deleting Exercise */}
-      <AlertDialog open={!!exerciseToDelete} onOpenChange={() => setExerciseToDelete(null)}>
-        <AlertDialogContent className="bg-[#213041] border-[#305176]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              ¿Estás seguro de que quieres eliminar este ejercicio de forma permanente? Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteExercise}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
+}
+
+// Opcional: Define un tipo para Player
+type Player = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  nickname: string;
+  birthDate: string;
+  phoneNumber: string;
+  position: string;
+  foot: string;
+  status: string;
+  category: string;
+  photo: string;
+  injury?: {
+    type: string;
+    date: string;
+    recovery: string;
+  } | null;
 }

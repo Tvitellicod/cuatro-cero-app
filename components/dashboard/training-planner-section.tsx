@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check } from "lucide-react"
+import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2 } from "lucide-react"
 
 export function TrainingPlannerSection() {
   const [showPlannerForm, setShowPlannerForm] = useState(false)
@@ -16,6 +16,13 @@ export function TrainingPlannerSection() {
   const [showAttendance, setShowAttendance] = useState(false)
   const [attendance, setAttendance] = useState<Record<number, boolean>>({})
 
+  // Filtros
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [filterPlayers, setFilterPlayers] = useState("all")
+  const [filterGoalkeepers, setFilterGoalkeepers] = useState("all")
+  const [filterDifficulty, setFilterDifficulty] = useState("all")
+  const [filterTime, setFilterTime] = useState("all")
   const today = new Date().toISOString().split("T")[0]
 
   // Obtener el perfil del usuario para filtrar jugadores
@@ -24,75 +31,58 @@ export function TrainingPlannerSection() {
 
   // Generar jugadores para la categoría actual
   const generatePlayersForCategory = () => {
-    const firstNames = [
-      "Juan",
-      "Carlos",
-      "Miguel",
-      "Roberto",
-      "Diego",
-      "Fernando",
-      "Alejandro",
-      "Sebastián",
-      "Martín",
-      "Pablo",
-      "Gonzalo",
-      "Nicolás",
-      "Facundo",
-      "Matías",
-      "Lucas",
-      "Tomás",
-      "Agustín",
-      "Franco",
-      "Ignacio",
-      "Maximiliano",
-      "Santiago",
-      "Joaquín",
-      "Emiliano",
-      "Valentín",
-      "Thiago",
-    ]
-    const lastNames = [
-      "García",
-      "Rodríguez",
-      "González",
-      "Fernández",
-      "López",
-      "Martínez",
-      "Sánchez",
-      "Pérez",
-      "Gómez",
-      "Martín",
-      "Jiménez",
-      "Ruiz",
-      "Hernández",
-      "Díaz",
-      "Moreno",
-      "Muñoz",
-      "Álvarez",
-      "Romero",
-      "Alonso",
-      "Gutiérrez",
-      "Navarro",
-      "Torres",
-      "Domínguez",
-      "Vázquez",
-      "Ramos",
-    ]
+    const firstNames = ["Juan", "Carlos", "Miguel", "Roberto", "Diego", "Fernando", "Alejandro", "Sebastián", "Martín", "Pablo", "Gonzalo", "Nicolás", "Facundo", "Matías", "Lucas", "Tomás", "Agustín", "Franco", "Ignacio", "Maximiliano", "Santiago", "Joaquín", "Emiliano", "Valentín", "Thiago"]
+    const lastNames = ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín", "Jiménez", "Ruiz", "Hernández", "Díaz", "Moreno", "Muñoz", "Álvarez", "Romero", "Alonso", "Gutiérrez", "Navarro", "Torres", "Domínguez", "Vázquez", "Ramos"]
+    const nicknames = ["Checo", "Toto", "Pipa", "Chino", "Flaco", "Gordo", "Ruso", "Turco", "Negro", "Rubio", "Pelado", "Chiqui", "Tano", "Mono", "Loco", "Pato", "Gato", "Oso", "León", "Tigre", "Lobo", "Colo", "Nacho", "Maxi", "Santi"]
 
     const players = []
-    for (let i = 0; i < 25; i++) {
-      const firstName = firstNames[i % firstNames.length]
-      const lastName = lastNames[i % lastNames.length]
-      players.push({
-        id: i + 1,
-        name: `${firstName} ${lastName}`,
-        status: Math.random() > 0.1 ? "DISPONIBLE" : "LESIONADO", // 90% disponibles
-      })
-    }
-    return players.filter((p) => p.status === "DISPONIBLE")
-  }
+    let playerId = 1
 
-  const availablePlayers = generatePlayersForCategory()
+    const categoryMap = {
+      "primera": { name: "Primera División", count: 25 },
+      "tercera": { name: "Tercera División", count: 18 },
+      "juveniles": { name: "Juveniles", count: 22 },
+      "cuarta": { name: "Cuarta División", count: 20 },
+      "quinta": { name: "Quinta División", count: 20 },
+      "sexta": { name: "Sexta División", count: 20 },
+      "septima": { name: "Séptima División", count: 20 },
+      "infantiles": { name: "Infantiles", count: 20 },
+    }
+
+    for (const categoryId in categoryMap) {
+      for (let i = 0; i < categoryMap[categoryId].count; i++) {
+        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+        const isInjured = Math.random() < 0.3
+        const randomPhone = `+54 9 11 ${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 10000)}`
+
+        players.push({
+          id: playerId++,
+          firstName: randomFirstName,
+          lastName: randomLastName,
+          nickname: nicknames[Math.floor(Math.random() * nicknames.length)],
+          birthDate: "1990-01-01",
+          phoneNumber: randomPhone,
+          position: ["Arquero", "Defensor", "Mediocampista", "Delantero"][Math.floor(Math.random() * 4)],
+          foot: ["Derecho", "Izquierdo", "Ambidiestro"][Math.floor(Math.random() * 3)],
+          status: isInjured ? "LESIONADO" : "DISPONIBLE",
+          category: categoryId,
+          photo: "/placeholder-user.jpg",
+          injury: isInjured
+            ? {
+                type: "Lesión muscular",
+                date: "2024-01-05",
+                recovery: "3-4 semanas",
+              }
+            : null,
+        })
+      }
+    }
+    return players
+  }
+  
+  const allPlayers = generatePlayersForCategory()
+  const availablePlayers = allPlayers.filter(p => p.status === "DISPONIBLE")
 
   const trainingSessions = [
     {
@@ -153,57 +143,172 @@ export function TrainingPlannerSection() {
       focus: "Presión Alta",
     },
   ]
-
-  const exerciseCategories = [
-    "Ataque",
-    "Defensa",
-    "Transiciones",
-    "Balón Parado",
-    "Físico",
-    "Técnico",
-    "Arquero-Jugador",
-  ]
-
-  const availableExercises = [
+  const exercisesFromManagement = [
     {
       id: 1,
       name: "Ataque 4-3-3 por bandas",
       category: "Ataque",
       duration: 20,
-      type: "Técnico",
+      players: 11,
+      goalkeepers: 1,
+      difficulty: "Media",
+      materials: "Conos, balones",
+      objective: "Mejorar el juego por las bandas",
       createdAt: "2024-01-15",
+      type: "Técnico",
     },
     {
       id: 2,
-      name: "Circuito de Resistencia",
-      category: "Físico",
-      duration: 25,
-      type: "Físico",
+      name: "Presión alta coordinada",
+      category: "Defensa",
+      duration: 15,
+      players: 8,
+      goalkeepers: 0,
+      difficulty: "Difícil",
+      materials: "Conos, petos",
+      objective: "Coordinar la presión defensiva",
       createdAt: "2024-01-14",
+      type: "Técnico",
     },
     {
       id: 3,
-      name: "Presión alta coordinada",
-      category: "Defensa",
+      name: "Transición defensa-ataque",
+      category: "Transiciones",
       duration: 18,
-      type: "Técnico",
+      players: 10,
+      goalkeepers: 1,
+      difficulty: "Media",
+      materials: "Balones, conos",
+      objective: "Mejorar transiciones rápidas",
       createdAt: "2024-01-13",
+      type: "Técnico",
     },
     {
       id: 4,
-      name: "Transición defensa-ataque",
-      category: "Transiciones",
-      duration: 15,
-      type: "Técnico",
+      name: "Tiros libres directos",
+      category: "Balón Parado",
+      duration: 12,
+      players: 6,
+      goalkeepers: 1,
+      difficulty: "Fácil",
+      materials: "Balones, barrera",
+      objective: "Mejorar precisión en tiros libres",
       createdAt: "2024-01-12",
+      type: "Técnico",
     },
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    {
+      id: 5,
+      name: "Salida con los pies",
+      category: "Arquero-Jugador",
+      duration: 25,
+      players: 4,
+      goalkeepers: 1,
+      difficulty: "Media",
+      materials: "Balones, conos",
+      objective: "Mejorar distribución del arquero",
+      createdAt: "2024-01-11",
+      type: "Técnico",
+    },
+  ];
 
-  const categories = [
-    { id: "primera", name: "Primera División" },
-    { id: "tercera", name: "Tercera División" },
-    { id: "juveniles", name: "Juveniles" },
-  ]
+  const exercisesFromPhysical = [
+    {
+      id: 101,
+      name: "Circuito de Resistencia Aeróbica",
+      category: "Resistencia",
+      duration: 25,
+      players: 15,
+      goalkeepers: 0,
+      difficulty: "Media",
+      materials: "Conos, cronómetro",
+      objective: "Mejorar la capacidad aeróbica",
+      createdBy: "Preparador Físico",
+      type: "Físico",
+      createdAt: "2024-01-15"
+    },
+    {
+      id: 102,
+      name: "Entrenamiento de Fuerza Funcional",
+      category: "Fuerza",
+      duration: 30,
+      players: 12,
+      goalkeepers: 0,
+      difficulty: "Difícil",
+      materials: "Pesas, bandas elásticas",
+      objective: "Desarrollar fuerza específica para fútbol",
+      createdBy: "Preparador Físico",
+      type: "Físico",
+      createdAt: "2024-01-14"
+    },
+  ];
+
+  const exercisesFromKinesiology = [
+    {
+      id: 201,
+      name: "Ejercicios de Rehabilitación de Rodilla",
+      category: "Rehabilitación",
+      duration: 20,
+      players: 1,
+      goalkeepers: 0,
+      difficulty: "Media",
+      materials: "Banda elástica, pelota suiza",
+      objective: "Recuperar movilidad y fuerza en rodilla",
+      createdBy: "Kinesiólogo",
+      type: "Kinesiológico",
+      createdAt: "2024-01-15"
+    },
+    {
+      id: 202,
+      name: "Prevención de Lesiones de Tobillo",
+      category: "Prevención",
+      duration: 15,
+      players: 8,
+      goalkeepers: 0,
+      difficulty: "Fácil",
+      materials: "Conos, plataforma inestable",
+      objective: "Fortalecer músculos estabilizadores del tobillo",
+      createdBy: "Kinesiólogo",
+      type: "Kinesiológico",
+      createdAt: "2024-01-14"
+    },
+  ];
+
+  const availableExercises = [...exercisesFromManagement, ...exercisesFromPhysical, ...exercisesFromKinesiology];
+
+  // Generar opciones dinámicas para los filtros
+  const uniquePlayers = [...new Set(availableExercises.map(ex => ex.players))].sort((a, b) => a - b);
+  const uniqueGoalkeepers = [...new Set(availableExercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b);
+  const uniqueDurations = [...new Set(availableExercises.map(ex => ex.duration))].sort((a, b) => a - b);
+  const uniqueCategories = [...new Set(availableExercises.map(ex => ex.category))];
+  const uniqueDifficulties = [...new Set(availableExercises.map(ex => ex.difficulty))];
+
+  const categoriesOptions = [{ id: "all", name: "Todas las categorías" }, ...uniqueCategories.map(cat => ({ id: cat, name: cat }))];
+  const difficultyOptions = [{ id: "all", name: "Todas" }, ...uniqueDifficulties.map(diff => ({ id: diff, name: diff }))];
+  
+  const playersInTraining = [
+    {
+      id: "primera", name: "Primera División"
+    },
+    {
+      id: "tercera", name: "Tercera División"
+    },
+    {
+      id: "juveniles", name: "Juveniles"
+    },
+  ];
+
+  const filteredExercises = availableExercises
+    .filter((exercise) => {
+      const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = filterCategory === "all" || exercise.category === filterCategory
+      const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
+      const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
+      const matchesDifficulty = filterDifficulty === "all" || exercise.difficulty === filterDifficulty
+      const matchesTime = filterTime === "all" || exercise.duration.toString() === filterTime
+
+      return matchesSearch && matchesCategory && matchesPlayers && matchesGoalkeepers && matchesDifficulty && matchesTime
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const addExercise = (exercise: any) => {
     if (!selectedExercises.find((e) => e.id === exercise.id)) {
@@ -230,7 +335,7 @@ export function TrainingPlannerSection() {
       type,
       duration,
       percentage: total > 0 ? Math.round((duration / total) * 100) : 0,
-      color: type === "Técnico" ? "#aff606" : type === "Físico" ? "#f4c11a" : "#33d9f6",
+      color: type === "Técnico" ? "#aff606" : type === "Físico" ? "#f4c11a" : type === "Kinesiológico" ? "#33d9f6" : "#33d9f6",
     }))
   }
 
@@ -246,6 +351,16 @@ export function TrainingPlannerSection() {
       Físico: "#25d03f",
       Técnico: "#aff606",
       "Arquero-Jugador": "#ff6b35",
+      Resistencia: "bg-red-500",
+      Fuerza: "bg-blue-500",
+      Velocidad: "bg-green-500",
+      Agilidad: "bg-yellow-500",
+      Flexibilidad: "bg-purple-500",
+      Rehabilitación: "bg-green-500",
+      Prevención: "bg-blue-500",
+      Fortalecimiento: "bg-purple-500",
+      Movilidad: "bg-orange-500",
+      Recuperación: "bg-teal-500",
     }
 
     return categories.map((cat) => ({
@@ -260,6 +375,33 @@ export function TrainingPlannerSection() {
       [playerId]: !prev[playerId],
     }))
   }
+
+  const handleClearFilters = () => {
+    setSearchQuery("")
+    setFilterCategory("all")
+    setFilterPlayers("all")
+    setFilterGoalkeepers("all")
+    setFilterDifficulty("all")
+    setFilterTime("all")
+  }
+  const handleCancelForm = () => {
+    setShowPlannerForm(false);
+    setSelectedExercises([]);
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Fácil":
+        return "bg-[#25d03f] text-black"
+      case "Media":
+        return "bg-[#f4c11a] text-black"
+      case "Difícil":
+        return "bg-red-500 text-white"
+      default:
+        return "bg-gray-500 text-white"
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -560,46 +702,151 @@ export function TrainingPlannerSection() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white">Categoría de Ejercicio</Label>
+                  <Label className="text-white">Categoría de la Plantilla</Label>
                   <Select>
                     <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                      <SelectValue placeholder="Seleccionar categoría de ejercicio" />
+                      <SelectValue placeholder="Seleccionar categoría" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#213041] border-[#305176]">
-                      {exerciseCategories.map((cat) => (
-                        <SelectItem key={cat} value={cat} className="text-white">
-                          {cat}
+                      {playersInTraining.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id} className="text-white">
+                          {cat.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                
 
-                {/* Ejercicios Disponibles */}
+                {/* Filtros para Ejercicios Disponibles */}
                 <div className="space-y-3">
                   <Label className="text-white">Ejercicios Disponibles</Label>
-                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                    {availableExercises.map((exercise) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="space-y-1 flex-1 min-w-[150px]">
+                      <Label className="text-white text-xs">Búsqueda</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Input
+                          placeholder="Buscar ejercicio..."
+                          className="pl-10 h-9 bg-[#1d2834] border-[#305176] text-white"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white text-xs">Categoría</Label>
+                      <Select value={filterCategory} onValueChange={setFilterCategory}>
+                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                          <SelectValue placeholder="Categoría" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#213041] border-[#305176]">
+                          {categoriesOptions.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id} className="text-white text-xs">
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white text-xs">Jugadores</Label>
+                      <Select value={filterPlayers} onValueChange={setFilterPlayers}>
+                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                          <SelectValue placeholder="Jugadores" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#213041] border-[#305176]">
+                          <SelectItem value="all" className="text-white text-xs">
+                            Todos
+                          </SelectItem>
+                          {uniquePlayers.map((num) => (
+                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">
+                              {num}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white text-xs">Arqueros</Label>
+                      <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
+                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                          <SelectValue placeholder="Arqueros" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#213041] border-[#305176]">
+                          <SelectItem value="all" className="text-white text-xs">
+                            Todos
+                          </SelectItem>
+                          {uniqueGoalkeepers.map((num) => (
+                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">
+                              {num}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white text-xs">Dificultad</Label>
+                      <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
+                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                          <SelectValue placeholder="Dificultad" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#213041] border-[#305176]">
+                          {difficultyOptions.map((opt) => (
+                            <SelectItem key={opt.id} value={opt.id} className="text-white text-xs">
+                              {opt.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-white text-xs">Tiempo</Label>
+                      <Select value={filterTime} onValueChange={setFilterTime}>
+                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                          <SelectValue placeholder="Tiempo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#213041] border-[#305176]">
+                          <SelectItem value="all" className="text-white text-xs">
+                            Todos
+                          </SelectItem>
+                          {uniqueDurations.map((time) => (
+                            <SelectItem key={time} value={time.toString()} className="text-white text-xs">
+                              {time}min
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="mt-auto">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                        onClick={handleClearFilters}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto mt-4">
+                    {filteredExercises.map((exercise) => (
                       <div key={exercise.id} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
                         <div>
                           <p className="text-white font-medium">{exercise.name}</p>
-                          <p className="text-gray-400 text-sm">
-                            {exercise.category} • {exercise.duration}min
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                             <p className="text-gray-400 text-sm">
+                               {exercise.category} • {exercise.duration}min
+                             </p>
+                             <Badge
+                               className={getDifficultyColor(exercise.difficulty)}
+                            >
+                              {exercise.difficulty}
+                            </Badge>
+                          </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge
-                            className={`${
-                              exercise.type === "Técnico"
-                                ? "bg-[#aff606] text-black"
-                                : exercise.type === "Físico"
-                                  ? "bg-[#f4c11a] text-black"
-                                  : "bg-[#33d9f6] text-black"
-                            }`}
-                          >
-                            {exercise.type}
-                          </Badge>
-                          <Button
+                           <Button
                             size="sm"
                             variant="outline"
                             className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
@@ -645,13 +892,15 @@ export function TrainingPlannerSection() {
                 )}
 
                 <div className="flex flex-col space-y-2">
-                  <Button className="bg-[#aff606] text-black hover:bg-[#25d03f] px-8 py-2">
+                  <Button
+                    className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
+                  >
                     Guardar Entrenamiento
                   </Button>
                   <Button
                     variant="outline"
-                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-                    onClick={() => setShowPlannerForm(false)}
+                    className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
+                    onClick={handleCancelForm}
                   >
                     Cancelar
                   </Button>

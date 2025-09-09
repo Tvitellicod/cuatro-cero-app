@@ -89,7 +89,7 @@ export function TrainingPlannerSection() {
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
   const profileType = profileData?.profileType
 
-  // Generar jugadores para la categoría actual
+  // Generar jugadores para la categoría
   const generatePlayersForCategory = () => {
     const firstNames = ["Juan", "Carlos", "Miguel", "Roberto", "Diego", "Fernando", "Alejandro", "Sebastián", "Martín", "Pablo", "Gonzalo", "Nicolás", "Facundo", "Matías", "Lucas", "Tomás", "Agustín", "Franco", "Ignacio", "Maximiliano", "Santiago", "Joaquín", "Emiliano", "Valentín", "Thiago"]
     const lastNames = ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín", "Jiménez", "Ruiz", "Hernández", "Díaz", "Moreno", "Muñoz", "Álvarez", "Romero", "Alonso", "Gutiérrez", "Navarro", "Torres", "Domínguez", "Vázquez", "Ramos"]
@@ -142,8 +142,7 @@ export function TrainingPlannerSection() {
   }
   
   const allPlayers = generatePlayersForCategory()
-  const availablePlayers = allPlayers.filter(p => p.status === "DISPONIBLE")
-
+  
   const previousSessions = [
     {
       id: 3,
@@ -482,6 +481,10 @@ export function TrainingPlannerSection() {
     }
   }
 
+  const playersForAttendance = newTraining.category
+  ? allPlayers.filter(p => p.category === newTraining.category && p.status === 'DISPONIBLE')
+  : allPlayers.filter(p => p.status === 'DISPONIBLE');
+
 
   return (
     <div className="space-y-6">
@@ -523,7 +526,11 @@ export function TrainingPlannerSection() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-400">Fecha:</span>
-                      <p className="text-white">{showTrainingDetail.date}</p>
+                      <p className="text-white">{showTrainingDetail.date.split("-").reverse().join(" - ")}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Hora:</span>
+                      <p className="text-white">{showTrainingDetail.time}</p>
                     </div>
                     <div>
                       <span className="text-gray-400">Duración:</span>
@@ -553,7 +560,7 @@ export function TrainingPlannerSection() {
                           </div>
                           <Badge
                             className="text-white"
-                            style={{ backgroundColor: getCategoriesInTraining([exercise])[0]?.color || "#aff606" }}
+                            style={{ backgroundColor: getCategoryColors(exercise.category) }}
                           >
                             {exercise.category}
                           </Badge>
@@ -577,7 +584,7 @@ export function TrainingPlannerSection() {
                 <div className="space-y-4">
                   <h4 className="text-white font-medium">Lista de Asistencia</h4>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {availablePlayers.map((player) => (
+                    {playersForAttendance.map((player: any) => (
                       <div
                         key={player.id}
                         className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
@@ -613,8 +620,8 @@ export function TrainingPlannerSection() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Presentes:</span>
                       <span className="text-[#25d03f] font-bold">
-                        {availablePlayers.length - Object.values(attendance).filter(Boolean).length}/
-                        {availablePlayers.length}
+                        {playersForAttendance.length - Object.values(attendance).filter(Boolean).length}/
+                        {playersForAttendance.length}
                       </span>
                     </div>
                   </div>
@@ -629,7 +636,7 @@ export function TrainingPlannerSection() {
       {!showPlannerForm ? (
         <>
           <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="text-white flex items-center">
                 <Calendar className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
@@ -675,7 +682,6 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
                       <Button
                         size="sm"
                         variant="outline"

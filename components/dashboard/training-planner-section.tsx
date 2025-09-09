@@ -9,12 +9,71 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2 } from "lucide-react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+
 export function TrainingPlannerSection() {
   const [showPlannerForm, setShowPlannerForm] = useState(false)
   const [selectedExercises, setSelectedExercises] = useState<any[]>([])
   const [showTrainingDetail, setShowTrainingDetail] = useState<any>(null)
   const [showAttendance, setShowAttendance] = useState(false)
   const [attendance, setAttendance] = useState<Record<number, boolean>>({})
+  const [showValidationAlert, setShowValidationAlert] = useState(false)
+
+
+  const [newTraining, setNewTraining] = useState({
+    name: "",
+    date: "",
+    time: "",
+    category: "",
+  });
+
+  const [trainingSessions, setTrainingSessions] = useState([
+    {
+      id: 1,
+      name: "Entrenamiento Táctico - Ataque",
+      date: "2025-09-08",
+      time: "10:00",
+      duration: 90,
+      exercises: [
+        { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
+        { name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
+        { name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico" },
+        { name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
+        { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico" },
+      ],
+      category: "Primera División",
+      focus: "Ataque Posicional",
+      attendance: "20/22",
+      path: "/dashboard/entrenamiento/planificar"
+    },
+    {
+      id: 2,
+      name: "Preparación Física - Resistencia",
+      date: "2025-09-10",
+      time: "15:00",
+      duration: 75,
+      exercises: [
+        { name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico" },
+        { name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico" },
+        { name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico" },
+      ],
+      category: "Primera División",
+      focus: "Resistencia Aeróbica",
+      attendance: "21/22",
+      path: "/dashboard/entrenamiento/planificar"
+    },
+  ]);
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState("")
@@ -28,6 +87,7 @@ export function TrainingPlannerSection() {
   // Obtener el perfil del usuario para filtrar jugadores
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
+  const profileType = profileData?.profileType
 
   // Generar jugadores para la categoría actual
   const generatePlayersForCategory = () => {
@@ -84,37 +144,6 @@ export function TrainingPlannerSection() {
   const allPlayers = generatePlayersForCategory()
   const availablePlayers = allPlayers.filter(p => p.status === "DISPONIBLE")
 
-  const trainingSessions = [
-    {
-      id: 1,
-      name: "Entrenamiento Táctico - Ataque",
-      date: "2024-01-16",
-      duration: 90,
-      exercises: [
-        { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20 },
-        { name: "Transición defensa-ataque", category: "Transiciones", duration: 18 },
-        { name: "Presión alta coordinada", category: "Defensa", duration: 15 },
-        { name: "Tiros libres directos", category: "Balón Parado", duration: 12 },
-        { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25 },
-      ],
-      category: "Primera División",
-      focus: "Ataque Posicional",
-    },
-    {
-      id: 2,
-      name: "Preparación Física - Resistencia",
-      date: "2024-01-18",
-      duration: 75,
-      exercises: [
-        { name: "Circuito de resistencia", category: "Físico", duration: 30 },
-        { name: "Sprints cortos", category: "Físico", duration: 20 },
-        { name: "Trabajo aeróbico", category: "Físico", duration: 25 },
-      ],
-      category: "Primera División",
-      focus: "Resistencia Aeróbica",
-    },
-  ]
-
   const previousSessions = [
     {
       id: 3,
@@ -122,12 +151,13 @@ export function TrainingPlannerSection() {
       date: "2024-01-10",
       duration: 60,
       exercises: [
-        { name: "Control y pase", category: "Técnico", duration: 20 },
-        { name: "Definición", category: "Ataque", duration: 25 },
-        { name: "Juego aéreo", category: "Defensa", duration: 15 },
+        { name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico" },
+        { name: "Definición", category: "Ataque", duration: 25, type: "Técnico" },
+        { name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico" },
       ],
       category: "Juveniles",
       focus: "Técnica Individual",
+      attendance: "19/22"
     },
     {
       id: 4,
@@ -135,12 +165,13 @@ export function TrainingPlannerSection() {
       date: "2024-01-08",
       duration: 80,
       exercises: [
-        { name: "Marcaje individual", category: "Defensa", duration: 25 },
-        { name: "Coberturas", category: "Defensa", duration: 20 },
-        { name: "Salida jugada", category: "Defensa", duration: 35 },
+        { name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico" },
+        { name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico" },
+        { name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico" },
       ],
       category: "Primera División",
       focus: "Presión Alta",
+      attendance: "20/22"
     },
   ]
   const exercisesFromManagement = [
@@ -273,9 +304,18 @@ export function TrainingPlannerSection() {
     },
   ];
 
-  const availableExercises = [...exercisesFromManagement, ...exercisesFromPhysical, ...exercisesFromKinesiology];
+  let availableExercises = []
+  if (profileType === "DIRECTOR TECNICO") {
+    availableExercises = exercisesFromManagement.filter(ex => ex.type === "Técnico")
+  } else if (profileType === "PREPARADOR FISICO") {
+    availableExercises = [...exercisesFromPhysical, ...exercisesFromKinesiology].filter(ex => ex.type === "Físico" || ex.type === "Kinesiológico")
+  } else if (profileType === "KINESIOLOGO") {
+    availableExercises = exercisesFromKinesiology.filter(ex => ex.type === "Kinesiológico")
+  } else {
+    availableExercises = [...exercisesFromManagement, ...exercisesFromPhysical, ...exercisesFromKinesiology]
+  }
 
-  // Generar opciones dinámicas para los filtros
+  // Filtros
   const uniquePlayers = [...new Set(availableExercises.map(ex => ex.players))].sort((a, b) => a - b);
   const uniqueGoalkeepers = [...new Set(availableExercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b);
   const uniqueDurations = [...new Set(availableExercises.map(ex => ex.duration))].sort((a, b) => a - b);
@@ -299,7 +339,7 @@ export function TrainingPlannerSection() {
 
   const filteredExercises = availableExercises
     .filter((exercise) => {
-      const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = searchQuery === "" || exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = filterCategory === "all" || exercise.category === filterCategory
       const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
       const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
@@ -320,22 +360,38 @@ export function TrainingPlannerSection() {
     setSelectedExercises(selectedExercises.filter((e) => e.id !== exerciseId))
   }
 
+  const getCategoryColors = (category: string) => {
+    switch (category) {
+        case 'Ataque': return '#ea3498';
+        case 'Defensa': return '#33d9f6';
+        case 'Transiciones': return '#f4c11a';
+        case 'Balón Parado': return '#8a46c5';
+        case 'Resistencia': return '#25d03f';
+        case 'Fuerza': return '#ff6b35';
+        case 'Rehabilitación': return '#4ecdc4';
+        case 'Prevención': return '#45b7d1';
+        case 'Técnico': return '#aff606';
+        default: return '#aff606';
+    }
+  };
+
   const calculatePieData = () => {
-    const typeCount = selectedExercises.reduce(
+    const categoryCount = selectedExercises.reduce(
       (acc, exercise) => {
-        acc[exercise.type] = (acc[exercise.type] || 0) + exercise.duration
-        return acc
+        const category = exercise.category;
+        acc[category] = (acc[category] || 0) + exercise.duration;
+        return acc;
       },
       {} as Record<string, number>,
     )
 
-    const total = Object.values(typeCount).reduce((sum, duration) => sum + duration, 0)
+    const total = Object.values(categoryCount).reduce((sum, duration) => sum + duration, 0)
 
-    return Object.entries(typeCount).map(([type, duration]) => ({
-      type,
+    return Object.entries(categoryCount).map(([category, duration]) => ({
+      category,
       duration,
       percentage: total > 0 ? Math.round((duration / total) * 100) : 0,
-      color: type === "Técnico" ? "#aff606" : type === "Físico" ? "#f4c11a" : type === "Kinesiológico" ? "#33d9f6" : "#33d9f6",
+      color: getCategoryColors(category),
     }))
   }
 
@@ -384,9 +440,33 @@ export function TrainingPlannerSection() {
     setFilterDifficulty("all")
     setFilterTime("all")
   }
+
   const handleCancelForm = () => {
     setShowPlannerForm(false);
+    setNewTraining({ name: "", date: "", time: "", category: "" });
     setSelectedExercises([]);
+  };
+
+  const handleSaveTraining = () => {
+    if (!newTraining.name || !newTraining.date || !newTraining.time || !newTraining.category || selectedExercises.length === 0) {
+      setShowValidationAlert(true);
+      return;
+    }
+
+    const newSession = {
+      id: trainingSessions.length + previousSessions.length + 1,
+      name: newTraining.name,
+      date: newTraining.date,
+      duration: selectedExercises.reduce((sum, ex) => sum + ex.duration, 0),
+      exercises: selectedExercises,
+      category: newTraining.category,
+      focus: "Custom",
+      attendance: "0/0",
+      path: "/dashboard/entrenamiento/planificar"
+    };
+
+    setTrainingSessions(prevSessions => [...prevSessions, newSession]);
+    handleCancelForm();
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -410,12 +490,7 @@ export function TrainingPlannerSection() {
           <h2 className="text-2xl font-bold text-white mb-2">Planificar Entrenamiento</h2>
           <p className="text-gray-400">Organiza y programa las sesiones de entrenamiento</p>
         </div>
-        {!showPlannerForm && (
-          <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowPlannerForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Planificar Próximo Entrenamiento
-          </Button>
-        )}
+        
       </div>
 
       {/* Training Detail Modal */}
@@ -550,15 +625,19 @@ export function TrainingPlannerSection() {
         </div>
       )}
 
-      {/* Entrenamientos Programados */}
-      {!showPlannerForm && (
+      {/* Contenido principal, que se oculta al planificar */}
+      {!showPlannerForm ? (
         <>
           <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-white flex items-center">
                 <Calendar className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
               </CardTitle>
+              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowPlannerForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Planificar Próximo Entrenamiento
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -567,7 +646,8 @@ export function TrainingPlannerSection() {
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
                         <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{session.date}</p>
+                        <p className="text-xs text-gray-400">{session.date.split("-").reverse().join(" - ")}</p>
+                        <p className="text-xs text-gray-400">{session.time}</p>
                       </div>
                       <div>
                         <h3 className="text-white font-medium">{session.name}</h3>
@@ -671,9 +751,7 @@ export function TrainingPlannerSection() {
             </CardContent>
           </Card>
         </>
-      )}
-
-      {showPlannerForm && (
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Formulario de Planificación */}
           <div className="lg:col-span-2">
@@ -691,19 +769,44 @@ export function TrainingPlannerSection() {
                       id="training-name"
                       placeholder="Ej: Entrenamiento Táctico"
                       className="bg-[#1d2834] border-[#305176] text-white"
+                      value={newTraining.name}
+                      onChange={(e) => setNewTraining({ ...newTraining, name: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="training-date" className="text-white">
-                      Fecha
-                    </Label>
-                    <Input id="training-date" type="date" className="bg-[#1d2834] border-[#305176] text-white" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="training-date" className="text-white">
+                        Fecha
+                      </Label>
+                      <Input
+                        id="training-date"
+                        type="date"
+                        className="bg-[#1d2834] border-[#305176] text-white"
+                        value={newTraining.date}
+                        onChange={(e) => setNewTraining({ ...newTraining, date: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="training-time" className="text-white">
+                        Hora
+                      </Label>
+                      <Input
+                        id="training-time"
+                        type="time"
+                        className="bg-[#1d2834] border-[#305176] text-white"
+                        value={newTraining.time}
+                        onChange={(e) => setNewTraining({ ...newTraining, time: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-white">Categoría de la Plantilla</Label>
-                  <Select>
+                  <Select
+                    value={newTraining.category}
+                    onValueChange={(value) => setNewTraining({ ...newTraining, category: value })}
+                  >
                     <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                       <SelectValue placeholder="Seleccionar categoría" />
                     </SelectTrigger>
@@ -894,6 +997,7 @@ export function TrainingPlannerSection() {
                 <div className="flex flex-col space-y-2">
                   <Button
                     className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
+                    onClick={handleSaveTraining}
                   >
                     Guardar Entrenamiento
                   </Button>
@@ -924,25 +1028,35 @@ export function TrainingPlannerSection() {
                     {/* Gráfico Pizza Simple */}
                     <div className="relative w-48 h-48 mx-auto">
                       <svg viewBox="0 0 200 200" className="w-full h-full">
-                        {pieData.map((segment, index) => {
-                          const startAngle = pieData.slice(0, index).reduce((sum, s) => sum + s.percentage * 3.6, 0)
-                          const endAngle = startAngle + segment.percentage * 3.6
-                          const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
-                          const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
-                          const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
-                          const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
-                          const largeArc = segment.percentage > 50 ? 1 : 0
-
-                          return (
-                            <path
-                              key={index}
-                              d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                              fill={segment.color}
-                              stroke="#1d2834"
-                              strokeWidth="2"
-                            />
-                          )
-                        })}
+                        {pieData.length === 1 ? (
+                          <circle
+                            cx="100"
+                            cy="100"
+                            r="80"
+                            fill={pieData[0].color}
+                            stroke="#1d2834"
+                            strokeWidth="2"
+                          />
+                        ) : (
+                          pieData.map((segment, index) => {
+                            const startAngle = pieData.slice(0, index).reduce((sum, s) => sum + s.percentage * 3.6, 0)
+                            const endAngle = startAngle + segment.percentage * 3.6
+                            const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
+                            const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
+                            const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
+                            const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
+                            const largeArc = segment.percentage > 50 ? 1 : 0
+                            return (
+                              <path
+                                key={index}
+                                d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                                fill={segment.color}
+                                stroke="#1d2834"
+                                strokeWidth="2"
+                              />
+                            )
+                          })
+                        )}
                       </svg>
                     </div>
 
@@ -952,7 +1066,7 @@ export function TrainingPlannerSection() {
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: segment.color }}></div>
-                            <span className="text-white text-sm">{segment.type}</span>
+                            <span className="text-white text-sm">{segment.category}</span>
                           </div>
                           <div className="text-right">
                             <p className="text-white font-bold">{segment.percentage}%</p>
@@ -982,6 +1096,27 @@ export function TrainingPlannerSection() {
           </div>
         </div>
       )}
+      
+      {/* Alert Dialog for Form Validation */}
+      <AlertDialog open={showValidationAlert} onOpenChange={setShowValidationAlert}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Campos Incompletos</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setShowValidationAlert(false)}
+              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+            >
+              Aceptar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   )
 }

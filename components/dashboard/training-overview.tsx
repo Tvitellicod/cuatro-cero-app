@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Dumbbell, Target, Users, TrendingUp, Calendar, PieChart, Clock } from "lucide-react"
+import { Dumbbell, Target, Users, TrendingUp, Calendar, PieChart, Clock, Trophy } from "lucide-react"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -119,7 +119,8 @@ export function TrainingOverview() {
       ],
       category: "Primera División",
       focus: "Ataque Posicional",
-      attendance: "20/22"
+      attendance: "20/22",
+      path: "/dashboard/entrenamiento/planificar"
     },
     {
       id: 2,
@@ -133,7 +134,8 @@ export function TrainingOverview() {
       ],
       category: "Primera División",
       focus: "Resistencia Aeróbica",
-      attendance: "21/22"
+      attendance: "21/22",
+      path: "/dashboard/entrenamiento/planificar"
     },
   ]
 
@@ -247,26 +249,94 @@ export function TrainingOverview() {
         ))}
       </div>
 
-      {/* Opciones disponibles - Centrado */}
-      <div className="flex flex-col md:flex-row gap-6 justify-center">
-        {availableOptions.filter(opt => opt.title === "Ejercicios" || opt.title === "Planificar Entrenamiento").map((option, index) => (
-          <Card key={index} className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors max-w-sm w-full">
+      {/* Bloque de 3 columnas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Próximos Entrenamientos */}
+        <Card className="bg-[#213041] border-[#305176]">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <Calendar className="h-5 w-5 mr-2" />
+              Próximos Entrenamientos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {trainingSessions.map((session, index) => (
+              <Link key={session.id} href={session.path}>
+                <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-center">
+                      <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
+                      <p className="text-xs text-gray-400">{session.date}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-medium">{session.name}</h3>
+                      <div className="flex items-center space-x-4 text-sm text-gray-400">
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {session.duration}min
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {getCategoriesInTraining(session.exercises).map((cat, index) => (
+                          <div
+                            key={index}
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: cat.color }}
+                            title={cat.name}
+                          ></div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{session.category}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Opciones disponibles - Ejercicios */}
+        {availableOptions.find(opt => opt.title === "Ejercicios" || opt.title === "Ejercicios Físicos" || opt.title === "Ejercicios Kinesiología") && (
+          <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors max-w-sm w-full">
             <CardHeader>
               <div className="flex items-center space-x-3">
-                <div className={`p-3 rounded-lg ${option.color}`}>
-                  <option.icon className="h-6 w-6 text-white" />
+                <div className={`p-3 rounded-lg bg-blue-500`}>
+                  <Target className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-white">{option.title}</CardTitle>
+                <CardTitle className="text-white">Ejercicios</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-400 mb-4">{option.description}</p>
-              <Link href={option.href}>
+              <p className="text-gray-400 mb-4">Gestiona ejercicios reutilizables para entrenamientos</p>
+              <Link href="/dashboard/entrenamiento/ejercicios">
                 <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
               </Link>
             </CardContent>
           </Card>
-        ))}
+        )}
+
+        {/* Opciones disponibles - Planificar Entrenamiento */}
+        {availableOptions.find(opt => opt.title === "Planificar Entrenamiento") && (
+          <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors max-w-sm w-full">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className={`p-3 rounded-lg bg-[#aff606]`}>
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <CardTitle className="text-white">Planificar Entrenamiento</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-400 mb-4">Crea y programa entrenamientos para tu equipo</p>
+              <Link href="/dashboard/entrenamiento/planificar">
+                <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Sección de Estadísticas de Entrenamiento - 4 gráficos en línea */}
@@ -321,6 +391,7 @@ export function TrainingOverview() {
           </div>
         </CardContent>
       </Card>
+
 
       {/* Entrenamientos recientes */}
       <Card className="bg-[#213041] border-[#305176]">
@@ -379,6 +450,7 @@ export function TrainingOverview() {
           </div>
         </CardContent>
       </Card>
+
 
       {/* Training Detail Dialog */}
       <Dialog open={!!showTrainingDetail} onOpenChange={() => setShowTrainingDetail(null)}>

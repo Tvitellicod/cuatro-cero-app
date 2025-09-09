@@ -50,13 +50,6 @@ export function ClubManagement() {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [showPlayerDetail, setShowPlayerDetail] = useState<Player | null>(null)
 
-  const [isEditingClub, setIsEditingClub] = useState(false)
-  const [clubInfo, setClubInfo] = useState({
-    name: "Amigos de Villa Luro",
-    abbreviation: "AVL",
-    logo: "/images/cuatro-cero-logo.png",
-  })
-
 
   const colorsOption = [
     "#aff606",
@@ -237,17 +230,6 @@ export function ClubManagement() {
     }
   };
 
-  const handleClubLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setClubInfo({ ...clubInfo, logo: reader.result as string })
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
 
   return (
     <div className="space-y-6">
@@ -263,83 +245,23 @@ export function ClubManagement() {
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-white">Información del Club</CardTitle>
-              <Button size="icon" variant="ghost" className="text-white hover:text-[#aff606]" onClick={() => setIsEditingClub(!isEditingClub)}>
-                <Edit className="h-4 w-4" />
-              </Button>
             </CardHeader>
             <CardContent>
-              {isEditingClub ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-white">Nombre del Club</Label>
-                    <Input
-                      value={clubInfo.name}
-                      onChange={(e) => setClubInfo({ ...clubInfo, name: e.target.value })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-white">Abreviación</Label>
-                    <Input
-                      value={clubInfo.abbreviation}
-                      onChange={(e) => setClubInfo({ ...clubInfo, abbreviation: e.target.value })}
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-white">Logo</Label>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
-                        {clubInfo.logo ? (
-                          <Image
-                            src={clubInfo.logo}
-                            alt="Logo del club"
-                            width={80}
-                            height={80}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <Upload className="h-6 w-6 text-gray-400" />
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="border-[#305176] text-white hover:bg-[#305176] bg-transparent"
-                        onClick={() => document.getElementById('logo-upload-input')?.click()}
-                      >
-                        Subir Logo
-                      </Button>
-                      <input
-                        id="logo-upload-input"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleClubLogoUpload}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2 mt-4">
-                    <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white" onClick={() => setIsEditingClub(false)}>Cancelar</Button>
-                    <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setIsEditingClub(false)}>Guardar</Button>
-                  </div>
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
+                  <Image
+                    src="/images/cuatro-cero-logo.png"
+                    alt="Escudo del club"
+                    width={80}
+                    height={80}
+                    className="object-cover"
+                  />
                 </div>
-              ) : (
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={clubInfo.logo}
-                      alt="Escudo del club"
-                      width={80}
-                      height={80}
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium text-lg">{clubInfo.name}</h3>
-                    <p className="text-gray-400 text-sm">{clubInfo.abbreviation}</p>
-                  </div>
+                <div>
+                  <h3 className="text-white font-medium text-lg">Amigos de Villa Luro</h3>
+                  <p className="text-gray-400 text-sm">AVL</p>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
@@ -644,7 +566,10 @@ export function ClubManagement() {
                     <Button
                       size="default"
                       className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
-                      onClick={() => setShowCreateForm(true)}
+                      onClick={() => {
+                        setEditingPlayer(null);
+                        setShowCreateForm(true);
+                      }}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Nuevo Jugador
@@ -709,9 +634,9 @@ export function ClubManagement() {
                           variant="ghost"
                           size="icon"
                           className="text-white hover:text-[#aff606]"
-                          onClick={() => handleEditPlayer(player)}
+                          onClick={() => setShowPlayerDetail(player)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -731,6 +656,103 @@ export function ClubManagement() {
         </div>
       </div>
       
+      {/* Player Detail Dialog */}
+      <Dialog open={!!showPlayerDetail} onOpenChange={() => setShowPlayerDetail(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">FICHA DEL JUGADOR</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Información de {showPlayerDetail?.firstName} {showPlayerDetail?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center space-x-4 mb-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={showPlayerDetail?.photo || "/placeholder.svg"} alt={showPlayerDetail?.firstName} />
+                <AvatarFallback className="bg-[#305176] text-white text-2xl">
+                  {(showPlayerDetail?.firstName?.[0] || "") + (showPlayerDetail?.lastName?.[0] || "")}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <h3 className="text-white font-bold text-xl">
+                  {showPlayerDetail?.firstName} {showPlayerDetail?.lastName}
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  "{showPlayerDetail?.nickname}"
+                </p>
+                <Badge
+                  className={
+                    showPlayerDetail?.status === "DISPONIBLE"
+                      ? "bg-[#25d03f] text-black"
+                      : showPlayerDetail?.status === "LESIONADO"
+                        ? "bg-orange-500 text-white"
+                        : "bg-red-500 text-white"
+                  }
+                >
+                  {showPlayerDetail?.status}
+                </Badge>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Posición</Label>
+                <Input
+                  value={showPlayerDetail?.position}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Categoría</Label>
+                <Input
+                  value={categories.find(c => c.id === showPlayerDetail?.category)?.name || ""}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Pierna Hábil</Label>
+                <Input
+                  value={showPlayerDetail?.foot}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Fecha Nacimiento</Label>
+                <Input
+                  value={showPlayerDetail?.birthDate}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label className="text-white">Celular</Label>
+                <Input
+                  value={showPlayerDetail?.phoneNumber}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between space-x-4">
+            <Button
+              variant="default"
+              className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={() => {
+                handleEditPlayer(showPlayerDetail!);
+                setShowPlayerDetail(null);
+              }}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Jugador
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       {/* Medical Report Dialog */}
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">

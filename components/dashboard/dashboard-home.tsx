@@ -132,27 +132,29 @@ export function DashboardHome() {
             Próximos Eventos
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {allUpcomingEvents.length > 0 ? (
-            allUpcomingEvents.map((event, index) => (
-              <Link key={index} href={event.path}>
-                <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
-                  <div className="flex items-center space-x-4">
-                    {getEventIcon(event.type)}
-                    <div>
-                      <p className="text-white font-medium">{event.title}</p>
-                      <p className="text-gray-400 text-sm">
-                        {event.date} - {event.time}
-                      </p>
+        <CardContent>
+          <div className="flex flex-col gap-4">
+            {allUpcomingEvents.length > 0 ? (
+              allUpcomingEvents.map((event, index) => (
+                <Link key={index} href={event.path}>
+                  <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
+                    <div className="flex items-center space-x-4">
+                      {getEventIcon(event.type)}
+                      <div>
+                        <p className="text-white font-medium">{event.title}</p>
+                        <p className="text-gray-400 text-sm">
+                          {event.date} - {event.time}
+                        </p>
+                      </div>
                     </div>
+                    {getEventBadge(event)}
                   </div>
-                  {getEventBadge(event)}
-                </div>
-              </Link>
-            ))
-          ) : (
-            <p className="text-gray-400 text-center">No hay eventos próximos.</p>
-          )}
+                </Link>
+              ))
+            ) : (
+              <p className="text-gray-400 text-center">No hay eventos próximos.</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 

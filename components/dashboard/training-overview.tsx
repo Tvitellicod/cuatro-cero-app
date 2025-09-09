@@ -249,8 +249,8 @@ export function TrainingOverview() {
         ))}
       </div>
 
-      {/* Bloque de 3 columnas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Bloque de 2 columnas para Próximos Entrenamientos y Opciones */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Próximos Entrenamientos */}
         <Card className="bg-[#213041] border-[#305176]">
           <CardHeader>
@@ -259,84 +259,87 @@ export function TrainingOverview() {
               Próximos Entrenamientos
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {trainingSessions.map((session, index) => (
-              <Link key={session.id} href={session.path}>
-                <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
-                  <div className="flex items-center space-x-4">
-                    <div className="text-center">
-                      <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                      <p className="text-xs text-gray-400">{session.date}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-white font-medium">{session.name}</h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-400">
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {session.duration}min
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              {trainingSessions.map((session, index) => (
+                <Link key={session.id} href={session.path}>
+                  <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-center">
+                        <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
+                        <p className="text-xs text-gray-400">{session.date}</p>
+                      </div>
+                      <div>
+                        <h3 className="text-white font-medium">{session.name}</h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-400">
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {session.duration}min
+                          </div>
                         </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {getCategoriesInTraining(session.exercises).map((cat, index) => (
+                            <div
+                              key={index}
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: cat.color }}
+                              title={cat.name}
+                            ></div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{session.category}</p>
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {getCategoriesInTraining(session.exercises).map((cat, index) => (
-                          <div
-                            key={index}
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: cat.color }}
-                            title={cat.name}
-                          ></div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">{session.category}</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Opciones disponibles - Ejercicios */}
-        {availableOptions.find(opt => opt.title === "Ejercicios" || opt.title === "Ejercicios Físicos" || opt.title === "Ejercicios Kinesiología") && (
-          <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors max-w-sm w-full">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className={`p-3 rounded-lg bg-blue-500`}>
-                  <Target className="h-6 w-6 text-white" />
+        {/* Contenedor para las dos tarjetas de opciones, apiladas */}
+        <div className="space-y-6">
+          {availableOptions.find(opt => opt.title === "Ejercicios" || opt.title === "Ejercicios Físicos" || opt.title === "Ejercicios Kinesiología") && (
+            <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors w-full">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className={`p-3 rounded-lg bg-blue-500`}>
+                    <Target className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="text-white">Ejercicios</CardTitle>
                 </div>
-                <CardTitle className="text-white">Ejercicios</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-400 mb-4">Gestiona ejercicios reutilizables para entrenamientos</p>
-              <Link href="/dashboard/entrenamiento/ejercicios">
-                <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">Gestiona ejercicios reutilizables para entrenamientos</p>
+                <Link href="/dashboard/entrenamiento/ejercicios">
+                  <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Opciones disponibles - Planificar Entrenamiento */}
-        {availableOptions.find(opt => opt.title === "Planificar Entrenamiento") && (
-          <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors max-w-sm w-full">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className={`p-3 rounded-lg bg-[#aff606]`}>
-                  <Calendar className="h-6 w-6 text-white" />
+          {availableOptions.find(opt => opt.title === "Planificar Entrenamiento") && (
+            <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors w-full">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className={`p-3 rounded-lg bg-[#aff606]`}>
+                    <Calendar className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="text-white">Planificar Entrenamiento</CardTitle>
                 </div>
-                <CardTitle className="text-white">Planificar Entrenamiento</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-400 mb-4">Crea y programa entrenamientos para tu equipo</p>
-              <Link href="/dashboard/entrenamiento/planificar">
-                <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">Crea y programa entrenamientos para tu equipo</p>
+                <Link href="/dashboard/entrenamiento/planificar">
+                  <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Sección de Estadísticas de Entrenamiento - 4 gráficos en línea */}
@@ -399,10 +402,10 @@ export function TrainingOverview() {
           <CardTitle className="text-white">Entrenamientos Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             {previousSessions.map((session, index) => (
               <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
-                <div className="flex items-center space-x-6 pl-4">
+                <div className="flex items-center space-x-4">
                   <div className="text-center">
                     <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-1" />
                     <p className="text-xs text-gray-400">{session.date}</p>
@@ -433,8 +436,11 @@ export function TrainingOverview() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
+                  <Badge variant="secondary" className="bg-[#305176] text-gray-300">
+                    {session.focus}
+                  </Badge>
                   <Button
-                    size="default"
+                    size="sm"
                     className="bg-[#305176] h-10 font-bold text-white hover:bg-[#aff606] hover:text-black"
                     onClick={() => setShowTrainingDetail(session)}
                   >

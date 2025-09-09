@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 
 import {
   AlertDialog,
@@ -17,6 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -29,6 +31,8 @@ export function TrainingPlannerSection() {
   const [showAttendance, setShowAttendance] = useState(false)
   const [attendance, setAttendance] = useState<Record<number, boolean>>({})
   const [showValidationAlert, setShowValidationAlert] = useState(false)
+  const [trainingToDelete, setTrainingToDelete] = useState<number | null>(null)
+  const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
 
 
   const [newTraining, setNewTraining] = useState({
@@ -46,11 +50,11 @@ export function TrainingPlannerSection() {
       time: "10:00",
       duration: 90,
       exercises: [
-        { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
-        { name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
-        { name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico" },
-        { name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
-        { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico" },
+        { id:1, name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas", description: "Ejercicio de ataque posicional para romper líneas por las bandas y buscar centros al área.", },
+        { id:2, name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas", description: "Ejercicio para practicar la transición rápida de defensa a ataque, creando superioridad numérica.", },
+        { id:3, name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva", description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.", },
+        { id:4, name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico", players:6, goalkeepers:1, difficulty:"Fácil", materials:"Balones, barrera", objective:"Mejorar precisión en tiros libres", description: "Práctica de tiros libres directos para mejorar la técnica y la efectividad en estas jugadas.", },
+        { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico", players:4, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar distribución del arquero", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
       ],
       category: "Primera División",
       focus: "Ataque Posicional",
@@ -64,9 +68,9 @@ export function TrainingPlannerSection() {
       time: "15:00",
       duration: 75,
       exercises: [
-        { name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico" },
-        { name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico" },
-        { name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico" },
+        { id:101, name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
+        { id:102, name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico", players:12, goalkeepers:0, difficulty:"Difícil", materials:"Pesas, bandas elásticas", objective:"Desarrollar fuerza específica para fútbol", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
+        { id:103, name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
       ],
       category: "Primera División",
       focus: "Resistencia Aeróbica",
@@ -150,9 +154,9 @@ export function TrainingPlannerSection() {
       date: "2024-01-10",
       duration: 60,
       exercises: [
-        { name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico" },
-        { name: "Definición", category: "Ataque", duration: 25, type: "Técnico" },
-        { name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico" },
+        { id:1, name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas" },
+        { id:2, name: "Definición", category: "Ataque", duration: 25, type: "Técnico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas" },
+        { id:3, name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
       ],
       category: "Juveniles",
       focus: "Técnica Individual",
@@ -164,9 +168,9 @@ export function TrainingPlannerSection() {
       date: "2024-01-08",
       duration: 80,
       exercises: [
-        { name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico" },
-        { name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico" },
-        { name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico" },
+        { id:1, name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas" },
+        { id:2, name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas" },
+        { id:3, name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
       ],
       category: "Primera División",
       focus: "Presión Alta",
@@ -186,6 +190,7 @@ export function TrainingPlannerSection() {
       objective: "Mejorar el juego por las bandas",
       createdAt: "2024-01-15",
       type: "Técnico",
+      description: "Ejercicio de ataque posicional para romper líneas por las bandas y buscar centros al área.",
     },
     {
       id: 2,
@@ -199,6 +204,7 @@ export function TrainingPlannerSection() {
       objective: "Coordinar la presión defensiva",
       createdAt: "2024-01-14",
       type: "Técnico",
+      description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.",
     },
     {
       id: 3,
@@ -212,6 +218,7 @@ export function TrainingPlannerSection() {
       objective: "Mejorar transiciones rápidas",
       createdAt: "2024-01-13",
       type: "Técnico",
+      description: "Ejercicio para practicar la transición rápida de defensa a ataque, creando superioridad numérica.",
     },
     {
       id: 4,
@@ -225,6 +232,7 @@ export function TrainingPlannerSection() {
       objective: "Mejorar precisión en tiros libres",
       createdAt: "2024-01-12",
       type: "Técnico",
+      description: "Práctica de tiros libres directos para mejorar la técnica y la efectividad en estas jugadas.",
     },
     {
       id: 5,
@@ -238,6 +246,7 @@ export function TrainingPlannerSection() {
       objective: "Mejorar distribución del arquero",
       createdAt: "2024-01-11",
       type: "Técnico",
+      description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.",
     },
   ];
 
@@ -254,7 +263,8 @@ export function TrainingPlannerSection() {
       objective: "Mejorar la capacidad aeróbica",
       createdBy: "Preparador Físico",
       type: "Físico",
-      createdAt: "2024-01-15"
+      createdAt: "2024-01-15",
+      description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.",
     },
     {
       id: 102,
@@ -268,7 +278,8 @@ export function TrainingPlannerSection() {
       objective: "Desarrollar fuerza específica para fútbol",
       createdBy: "Preparador Físico",
       type: "Físico",
-      createdAt: "2024-01-14"
+      createdAt: "2024-01-14",
+      description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.",
     },
   ];
 
@@ -285,7 +296,8 @@ export function TrainingPlannerSection() {
       objective: "Recuperar movilidad y fuerza en rodilla",
       createdBy: "Kinesiólogo",
       type: "Kinesiológico",
-      createdAt: "2024-01-15"
+      createdAt: "2024-01-15",
+      description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.",
     },
     {
       id: 202,
@@ -299,7 +311,8 @@ export function TrainingPlannerSection() {
       objective: "Fortalecer músculos estabilizadores del tobillo",
       createdBy: "Kinesiólogo",
       type: "Kinesiológico",
-      createdAt: "2024-01-14"
+      createdAt: "2024-01-14",
+      description: "Fortalecimiento de músculos estabilizadores del tobillo para prevenir lesiones comunes en el fútbol.",
     },
   ];
 
@@ -347,7 +360,7 @@ export function TrainingPlannerSection() {
 
       return matchesSearch && matchesCategory && matchesPlayers && matchesGoalkeepers && matchesDifficulty && matchesTime
     })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => a.id - b.id)
 
   const addExercise = (exercise: any) => {
     if (!selectedExercises.find((e) => e.id === exercise.id)) {
@@ -406,16 +419,16 @@ export function TrainingPlannerSection() {
       Físico: "#25d03f",
       Técnico: "#aff606",
       "Arquero-Jugador": "#ff6b35",
-      Resistencia: "bg-red-500",
-      Fuerza: "bg-blue-500",
-      Velocidad: "bg-green-500",
-      Agilidad: "bg-yellow-500",
-      Flexibilidad: "bg-purple-500",
-      Rehabilitación: "bg-green-500",
-      Prevención: "bg-blue-500",
-      Fortalecimiento: "bg-purple-500",
-      Movilidad: "bg-orange-500",
-      Recuperación: "bg-teal-500",
+      Resistencia: "#25d03f",
+      Fuerza: "#ff6b35",
+      Velocidad: "#4ecdc4",
+      Agilidad: "#45b7d1",
+      Flexibilidad: "#96ceb4",
+      Rehabilitación: "#4ecdc4",
+      Prevención: "#45b7d1",
+      Fortalecimiento: "#96ceb4",
+      Movilidad: "#f1a85f",
+      Recuperación: "#c9d99d",
     }
 
     return categories.map((cat) => ({
@@ -423,6 +436,20 @@ export function TrainingPlannerSection() {
       color: colors[cat as keyof typeof colors] || "#aff606",
     }))
   }
+  
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Fácil":
+        return "bg-[#25d03f] text-black"
+      case "Media":
+        return "bg-[#f4c11a] text-black"
+      case "Difícil":
+        return "bg-red-500 text-white"
+      default:
+        return "bg-gray-500 text-white"
+    }
+  }
+
 
   const handleAttendanceToggle = (playerId: number) => {
     setAttendance((prev) => ({
@@ -456,9 +483,11 @@ export function TrainingPlannerSection() {
       id: trainingSessions.length + previousSessions.length + 1,
       name: newTraining.name,
       date: newTraining.date,
+      time: newTraining.time,
       duration: selectedExercises.reduce((sum, ex) => sum + ex.duration, 0),
       exercises: selectedExercises,
-      category: newTraining.category,
+      category: playersInTraining.find(cat => cat.id === newTraining.category)?.name || "N/A",
+      categoryId: newTraining.category,
       focus: "Custom",
       attendance: "0/0",
       path: "/dashboard/entrenamiento/planificar"
@@ -468,22 +497,17 @@ export function TrainingPlannerSection() {
     handleCancelForm();
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Fácil":
-        return "bg-[#25d03f] text-black"
-      case "Media":
-        return "bg-[#f4c11a] text-black"
-      case "Difícil":
-        return "bg-red-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
+  const playersForAttendance = showTrainingDetail?.categoryId
+  ? allPlayers.filter(p => p.category.toLowerCase() === showTrainingDetail.categoryId.toLowerCase() && p.status === 'DISPONIBLE')
+  : [];
+  
+  const handleDeleteTraining = () => {
+    if (trainingToDelete) {
+      setTrainingSessions(trainingSessions.filter(t => t.id !== trainingToDelete));
+      setTrainingToDelete(null);
+      setShowTrainingDetail(null);
     }
-  }
-
-  const playersForAttendance = newTraining.category
-  ? allPlayers.filter(p => p.category === newTraining.category && p.status === 'DISPONIBLE')
-  : allPlayers.filter(p => p.status === 'DISPONIBLE');
+  };
 
 
   return (
@@ -497,146 +521,143 @@ export function TrainingPlannerSection() {
       </div>
 
       {/* Training Detail Modal */}
-      {showTrainingDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <Card className="bg-[#213041] border-[#305176] w-full max-w-2xl max-h-[90vh] overflow-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white">{showTrainingDetail.name}</CardTitle>
-              <div className="flex space-x-2">
-                <Button
-                  className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea]"
-                  onClick={() => setShowAttendance(!showAttendance)}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Asistencia
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:text-red-400"
-                  onClick={() => setShowTrainingDetail(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!showAttendance ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-400">Fecha:</span>
-                      <p className="text-white">{showTrainingDetail.date.split("-").reverse().join(" - ")}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Hora:</span>
-                      <p className="text-white">{showTrainingDetail.time}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Duración:</span>
-                      <p className="text-white">{showTrainingDetail.duration} min</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Categoría:</span>
-                      <p className="text-white">{showTrainingDetail.category}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Enfoque:</span>
-                      <p className="text-white">{showTrainingDetail.focus}</p>
-                    </div>
-                  </div>
-
+      <Dialog open={!!showTrainingDetail} onOpenChange={() => {setShowTrainingDetail(null); setShowAttendance(false);}}>
+        <DialogContent className="sm:max-w-[500px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              {showTrainingDetail?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Detalles del entrenamiento del {showTrainingDetail?.date.split("-").reverse().join("/")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {!showAttendance ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail.exercises.length})</h4>
-                    <div className="space-y-2">
-                      {showTrainingDetail.exercises.map((exercise: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-[#aff606] font-bold">{index + 1}.</span>
-                            <div>
-                              <p className="text-white font-medium">{exercise.name}</p>
-                              <p className="text-gray-400 text-sm">{exercise.duration} min</p>
-                            </div>
+                    <span className="text-gray-400">Duración:</span>
+                    <p className="text-white">{showTrainingDetail?.duration} min</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Categoría:</span>
+                    <p className="text-white">{showTrainingDetail?.category}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Enfoque:</span>
+                    <p className="text-white">{showTrainingDetail?.focus}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises.length})</h4>
+                  <div className="space-y-2">
+                    {showTrainingDetail?.exercises.map((exercise: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-[#aff606] font-bold">{index + 1}.</span>
+                          <div>
+                            <p className="text-white font-medium">{exercise.name}</p>
+                            <p className="text-gray-400 text-sm">{exercise.duration} min</p>
                           </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <Badge
                             className="text-white"
                             style={{ backgroundColor: getCategoryColors(exercise.category) }}
                           >
                             {exercise.category}
                           </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-white font-medium mb-3">Categorías Trabajadas</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {getCategoriesInTraining(showTrainingDetail.exercises).map((cat, index) => (
-                        <Badge key={index} className="text-white" style={{ backgroundColor: cat.color }}>
-                          {cat.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h4 className="text-white font-medium">Lista de Asistencia</h4>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {playersForAttendance.map((player: any) => (
-                      <div
-                        key={player.id}
-                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                          attendance[player.id]
-                            ? "bg-red-900/30 border border-red-500"
-                            : "bg-[#1d2834] hover:bg-[#305176]"
-                        }`}
-                        onClick={() => handleAttendanceToggle(player.id)}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                              attendance[player.id] ? "border-red-500 bg-red-500" : "border-[#25d03f] bg-[#25d03f]"
-                            }`}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                            onClick={() => setShowExerciseDetail(exercise)}
                           >
-                            {attendance[player.id] ? (
-                              <X className="h-3 w-3 text-white" />
-                            ) : (
-                              <Check className="h-3 w-3 text-black" />
-                            )}
-                          </div>
-                          <span className={`font-medium ${attendance[player.id] ? "text-red-400" : "text-white"}`}>
-                            {player.name}
-                          </span>
+                            Ver Ejercicio
+                          </Button>
                         </div>
-                        <Badge className={attendance[player.id] ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
-                          {attendance[player.id] ? "Inasistente" : "Presente"}
-                        </Badge>
                       </div>
                     ))}
                   </div>
-                  <div className="pt-4 border-t border-[#305176]">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Presentes:</span>
-                      <span className="text-[#25d03f] font-bold">
-                        {playersForAttendance.length - Object.values(attendance).filter(Boolean).length}/
-                        {playersForAttendance.length}
-                      </span>
-                    </div>
+                </div>
+
+                <div>
+                  <h4 className="text-white font-medium mb-3">Categorías Trabajadas</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {getCategoriesInTraining(showTrainingDetail?.exercises || []).map((cat, index) => (
+                      <Badge key={index} className="text-white" style={{ backgroundColor: cat.color }}>
+                        {cat.name}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h4 className="text-white font-medium">Lista de Asistencia - {showTrainingDetail?.category}</h4>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {playersForAttendance.map((player: any) => (
+                    <div
+                      key={player.id}
+                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                        attendance[player.id]
+                          ? "bg-red-900/30 border border-red-500"
+                          : "bg-[#1d2834] hover:bg-[#305176]"
+                      }`}
+                      onClick={() => handleAttendanceToggle(player.id)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                            attendance[player.id] ? "border-red-500 bg-red-500" : "border-[#25d03f] bg-[#25d03f]"
+                          }`}
+                        >
+                          {attendance[player.id] ? (
+                            <X className="h-3 w-3 text-white" />
+                          ) : (
+                            <Check className="h-3 w-3 text-black" />
+                          )}
+                        </div>
+                        <span className={`font-medium ${attendance[player.id] ? "text-red-400" : "text-white"}`}>
+                          {player.name}
+                        </span>
+                      </div>
+                      <Badge className={attendance[player.id] ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
+                        {attendance[player.id] ? "Inasistente" : "Presente"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4 border-t border-[#305176]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Presentes:</span>
+                    <span className="text-[#25d03f] font-bold">
+                      {playersForAttendance.length - Object.values(attendance).filter(Boolean).length}/
+                      {playersForAttendance.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between space-x-4">
+              <Button
+                className="w-full bg-[#33d9f6] text-black hover:bg-[#2bc4ea]"
+                onClick={() => setShowAttendance(!showAttendance)}
+              >
+                {showAttendance ? "Ver Detalles" : "Tomar Asistencia"}
+              </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Contenido principal, que se oculta al planificar */}
       {!showPlannerForm ? (
         <>
           <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader className="flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-white flex items-center">
                 <Calendar className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
@@ -647,7 +668,7 @@ export function TrainingPlannerSection() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {trainingSessions.map((session) => (
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
@@ -688,7 +709,7 @@ export function TrainingPlannerSection() {
                         className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
                         onClick={() => setShowTrainingDetail(session)}
                       >
-                        Ver Detalles
+                        Ver Entrenamiento
                       </Button>
                     </div>
                   </div>
@@ -705,13 +726,13 @@ export function TrainingPlannerSection() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {previousSessions.map((session) => (
+              <div className="space-y-6">
+                {previousSessions.map((session, index) => (
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
                         <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{session.date}</p>
+                        <p className="text-xs text-gray-400">{session.date.split("-").reverse().join(" - ")}</p>
                       </div>
                       <div>
                         <h3 className="text-white font-medium">{session.name}</h3>
@@ -744,12 +765,15 @@ export function TrainingPlannerSection() {
                       </Badge>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-[#305176] text-gray-400 hover:bg-[#305176] hover:text-white bg-transparent"
+                        className="bg-[#305176] h-10 font-bold text-white hover:bg-[#aff606] hover:text-black"
                         onClick={() => setShowTrainingDetail(session)}
                       >
-                        Ver Detalles
+                        Ver Entrenamiento
                       </Button>
+                      <div className="text-right">
+                        <p className="text-[#aff606] font-medium">{session.attendance}</p>
+                        <p className="text-gray-400 text-sm">Asistencia</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1123,6 +1147,104 @@ export function TrainingPlannerSection() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Confirmation Dialog for Deleting Training */}
+      <AlertDialog open={!!trainingToDelete} onOpenChange={() => setTrainingToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar este entrenamiento de forma permanente? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTraining}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Exercise Detail Dialog */}
+      <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              {showExerciseDetail?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Categoría: {showExerciseDetail?.category}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Duración</Label>
+                <Input
+                  value={`${showExerciseDetail?.duration} min`}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Dificultad</Label>
+                <Input
+                  value={showExerciseDetail?.difficulty}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Jugadores</Label>
+                <Input
+                  value={showExerciseDetail?.players}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Arqueros</Label>
+                <Input
+                  value={showExerciseDetail?.goalkeepers}
+                  readOnly
+                  className="bg-[#1d2834] border-[#305176] text-white"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Materiales</Label>
+              <Input
+                value={showExerciseDetail?.materials}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Descripción</Label>
+              <Textarea
+                value={showExerciseDetail?.description}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Objetivo</Label>
+              <Textarea
+                value={showExerciseDetail?.objective}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -52,17 +52,12 @@ export function ExerciseManagement() {
   const [searchQuery, setSearchQuery] = useState("")
 
   const colorOptions = [
-    "#aff606",
-    "#33d9f6",
-    "#f4c11a",
-    "#ea3498",
-    "#25d03f",
-    "#8a46c5",
-    "#ff6b35",
-    "#4ecdc4",
-    "#45b7d1",
-    "#96ceb4",
-  ]
+    "#aff606", "#33d9f6", "#f4c11a", "#ea3498", "#25d03f",
+    "#8a46c5", "#ff6b35", "#4ecdc4", "#45b7d1", "#96ceb4",
+    "#609966", "#c37a6b", "#77c4e4", "#f1a85f", "#d64b5e",
+    "#6d89ff", "#ff8a65", "#b478d1", "#e69138", "#4e7c8e",
+    "#a1c5d9", "#f5d76e", "#e8787c", "#c9d99d", "#7c7c7c"
+  ];
 
   const [exerciseCategories, setExerciseCategories] = useState([
     { name: "Ataque", color: "#ea3498", exercises: 12 },
@@ -321,7 +316,9 @@ export function ExerciseManagement() {
                     className="bg-[#305176] border-[#305176] text-white"
                   />
                   <div className="flex flex-wrap gap-2">
-                    {colorOptions.map((color) => (
+                    {colorOptions
+                      .filter(color => !exerciseCategories.find(cat => cat.color === color))
+                      .map((color) => (
                       <button
                         key={color}
                         className={`w-6 h-6 rounded-full border-2 ${
@@ -559,7 +556,7 @@ export function ExerciseManagement() {
                          <SelectItem value="all" className="text-white text-xs">
                           Todas
                         </SelectItem>
-                        {uniquePlayers.map((num) => (
+                        {[...new Set(exercises.map(ex => ex.players))].sort((a, b) => a - b).map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
                             {num}
                           </SelectItem>
@@ -577,7 +574,7 @@ export function ExerciseManagement() {
                          <SelectItem value="all" className="text-white text-xs">
                           Todas
                         </SelectItem>
-                        {uniqueGoalkeepers.map((num) => (
+                        {[...new Set(exercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b).map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
                             {num}
                           </SelectItem>
@@ -617,7 +614,7 @@ export function ExerciseManagement() {
                         <SelectItem value="all" className="text-white text-xs">
                           Todos
                         </SelectItem>
-                        {uniqueDurations.map((time) => (
+                        {[...new Set(exercises.map(ex => ex.duration))].sort((a, b) => a - b).map((time) => (
                           <SelectItem key={time} value={time.toString()} className="text-white text-xs">
                             {time}min
                           </SelectItem>

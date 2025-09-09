@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Upload, Plus, Search, Edit, Trash2, Users, FileText, Eye } from "lucide-react"
 import Image from 'next/image'
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,20 +49,22 @@ export function ClubManagement() {
   const [playerToDelete, setPlayerToDelete] = useState<number | null>(null)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [showPlayerDetail, setShowPlayerDetail] = useState<Player | null>(null)
+  const [showEditClub, setShowEditClub] = useState(false)
+  const [clubInfo, setClubInfo] = useState({
+    name: "Amigos de Villa Luro",
+    abbreviation: "AVL",
+    logo: "/images/cuatro-cero-logo.png",
+  })
+  const [tempClubInfo, setTempClubInfo] = useState(clubInfo)
 
 
   const colorsOption = [
-    "#aff606",
-    "#33d9f6",
-    "#f4c11a",
-    "#ea3498",
-    "#25d03f",
-    "#8a46c5",
-    "#ff6b35",
-    "#4ecdc4",
-    "#45b7d1",
-    "#96ceb4",
-  ]
+    "#aff606", "#33d9f6", "#f4c11a", "#ea3498", "#25d03f",
+    "#8a46c5", "#ff6b35", "#4ecdc4", "#45b7d1", "#96ceb4",
+    "#609966", "#c37a6b", "#77c4e4", "#f1a85f", "#d64b5e",
+    "#6d89ff", "#ff8a65", "#b478d1", "#e69138", "#4e7c8e",
+    "#a1c5d9", "#f5d76e", "#e8787c", "#c9d99d", "#7c7c7c"
+  ];
 
 
   const [categories, setCategories] = useState([
@@ -219,7 +221,7 @@ export function ClubManagement() {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePlayerFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       const reader = new FileReader()
@@ -228,6 +230,44 @@ export function ClubManagement() {
       }
       reader.readAsDataURL(file)
     }
+  };
+
+  const handleClubLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setTempClubInfo({ ...tempClubInfo, logo: reader.result as string })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSaveClubChanges = () => {
+    setClubInfo(tempClubInfo);
+    setShowEditClub(false); // Cierra el modal
+  }
+
+  const handleCancelClubChanges = () => {
+    setTempClubInfo(clubInfo);
+    setShowEditClub(false); // Cierra el modal
+  }
+
+  const getEstimatedEndDate = (startDate: string, recoveryString: string) => {
+    const recoveryWeeks = recoveryString.match(/\d+/g);
+    if (!recoveryWeeks || recoveryWeeks.length === 0) return "N/A";
+  
+    const weeks = Math.max(...recoveryWeeks.map(Number));
+    const injuryDate = new Date(startDate);
+    
+    // Add weeks to the injury date
+    injuryDate.setDate(injuryDate.getDate() + weeks * 7);
+  
+    const day = String(injuryDate.getDate()).padStart(2, '0');
+    const month = String(injuryDate.getMonth() + 1).padStart(2, '0');
+    const year = injuryDate.getFullYear();
+    
+    return `${day}-${month}-${year}`;
   };
 
 
@@ -242,28 +282,109 @@ export function ClubManagement() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Panel de información del Club y Categorías */}
         <div className="lg:col-span-1 space-y-6">
-          <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-white">Información del Club</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
-                  <Image
-                    src="/images/cuatro-cero-logo.png"
-                    alt="Escudo del club"
-                    width={80}
-                    height={80}
-                    className="object-cover"
+          <Dialog open={showEditClub} onOpenChange={setShowEditClub}>
+            <Card className="bg-[#213041] border-[#305176]">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-white">Información del Club</CardTitle>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-[#aff606]">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
+                    <Image
+                      src={clubInfo.logo}
+                      alt="Escudo del club"
+                      width={80}
+                      height={80}
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-medium text-lg">{clubInfo.name}</h3>
+                    <p className="text-gray-400 text-sm">{clubInfo.abbreviation}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+              <DialogHeader>
+                <DialogTitle className="text-white">Editar Información del Club</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Actualiza el nombre, abreviatura y logo de tu club.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clubName" className="text-white">Nombre del Club</Label>
+                  <Input
+                    id="clubName"
+                    value={tempClubInfo.name}
+                    onChange={(e) => setTempClubInfo({ ...tempClubInfo, name: e.target.value })}
+                    className="bg-[#1d2834] border-[#305176] text-white"
                   />
                 </div>
-                <div>
-                  <h3 className="text-white font-medium text-lg">Amigos de Villa Luro</h3>
-                  <p className="text-gray-400 text-sm">AVL</p>
+                <div className="space-y-2">
+                  <Label htmlFor="clubAbbreviation" className="text-white">Abreviatura</Label>
+                  <Input
+                    id="clubAbbreviation"
+                    value={tempClubInfo.abbreviation}
+                    onChange={(e) => setTempClubInfo({ ...tempClubInfo, abbreviation: e.target.value })}
+                    className="bg-[#1d2834] border-[#305176] text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clubLogo" className="text-white">Logo del Club</Label>
+                  <div className="flex items-center space-x-4">
+                    <div className="relative w-24 h-24 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
+                      <Image
+                        src={tempClubInfo.logo}
+                        alt="Vista previa del logo"
+                        width={96}
+                        height={96}
+                        className="object-cover"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="border-[#305176] text-white hover:bg-[#305176] bg-transparent"
+                      onClick={() => document.getElementById('logo-upload-input')?.click()}
+                    >
+                      Subir Logo
+                    </Button>
+                    <input
+                      id="logo-upload-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleClubLogoUpload}
+                    />
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex justify-end space-x-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                  onClick={handleCancelClubChanges}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+                  onClick={handleSaveClubChanges}
+                >
+                  Guardar Cambios
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
@@ -323,7 +444,9 @@ export function ClubManagement() {
                     className="bg-[#305176] border-[#305176] text-white"
                   />
                   <div className="flex flex-wrap gap-2">
-                    {colorsOption.map((color) => (
+                    {colorsOption
+                      .filter(color => !categories.find(cat => cat.color === color))
+                      .map((color) => (
                       <button
                         key={color}
                         className={`w-6 h-6 rounded-full border-2 ${
@@ -502,7 +625,7 @@ export function ClubManagement() {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={handleFileUpload}
+                        onChange={handlePlayerFileUpload}
                       />
                     </div>
                   </div>
@@ -769,7 +892,7 @@ export function ClubManagement() {
               </Label>
               <Input
                 id="injury-date"
-                value={showMedicalReport?.injury?.date || ""}
+                value={showMedicalReport?.injury?.date.split('-').reverse().join('-') || ""}
                 readOnly
                 className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
               />
@@ -792,6 +915,17 @@ export function ClubManagement() {
               <Input
                 id="injury-recovery"
                 value={showMedicalReport?.injury?.recovery || ""}
+                readOnly
+                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="injury-end-date" className="text-right text-white">
+                Fecha Estimada de Recuperación
+              </Label>
+              <Input
+                id="injury-end-date"
+                value={getEstimatedEndDate(showMedicalReport?.injury?.date || '', showMedicalReport?.injury?.recovery || '')}
                 readOnly
                 className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
               />

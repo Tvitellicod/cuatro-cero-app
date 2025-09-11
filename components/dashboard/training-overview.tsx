@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dumbbell, Target, Users, TrendingUp, Calendar, PieChart, Clock, Trophy } from "lucide-react"
@@ -10,16 +10,99 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-
+import { useProfile } from "@/hooks/use-profile"
+import { useAuth } from "@/hooks/use-auth"
+import { isSupabaseConfigured } from "@/lib/supabase"
+import { trainingSessionsService } from "@/lib/database"
 
 export function TrainingOverview() {
   const [showTrainingDetail, setShowTrainingDetail] = useState<any>(null)
   const [pieFilter, setPieFilter] = useState("lastSession")
+  const [upcomingTrainingSessions, setUpcomingTrainingSessions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Obtener el perfil del usuario para filtrar jugadores
-  const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
-  const profileData = savedProfile ? JSON.parse(savedProfile) : null
-  const profileType = profileData?.profileType
+  const { currentProfile } = useProfile()
+  const { user } = useAuth()
+  const profileType = currentProfile?.profileType
+
+
+  useEffect(() => {
+    const fetchUpcomingTrainings = async () => {
+      setLoading(true)
+
+      if (!isSupabaseConfigured()) {
+        // Modo demo
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const demoSessions = [
+          {
+            id: 1,
+            name: "Entrenamiento Táctico - Ataque",
+            date: today.toISOString().split('T')[0],
+            duration: 90,
+            exercises: [
+              { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
+              { name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
+              { name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico" },
+              { name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
+              { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico" },
+            ],
+            category: "Primera División",
+            focus: "Ataque Posicional",
+            attendance: "20/22",
+            path: "/dashboard/entrenamiento/planificar"
+          },
+          {
+            id: 2,
+            name: "Preparación Física - Resistencia",
+            date: tomorrow.toISOString().split('T')[0],
+            duration: 75,
+            exercises: [
+              { name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico" },
+              { name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico" },
+              { name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico" },
+            ],
+            category: "Primera División",
+            focus: "Resistencia Aeróbica",
+            attendance: "21/22",
+            path: "/dashboard/entrenamiento/planificar"
+          },
+        ]
+        setUpcomingTrainingSessions(demoSessions)
+        setLoading(false)
+        return
+      }
+      
+      if (!user) {
+        setLoading(false)
+        setUpcomingTrainingSessions([])
+        return
+      }
+
+      const { data, error } = await trainingSessionsService.getUpcomingTrainingSessions(user.club_id);
+
+      if (error) {
+        console.error("Error fetching upcoming training sessions:", error);
+        setUpcomingTrainingSessions([]);
+      } else {
+        const formattedSessions = data?.map(session => ({
+          ...session,
+          date: session.date || 'N/A',
+          duration: session.duration_minutes || 0,
+          category: session.category?.name || 'N/A',
+          focus: 'N/A', 
+          exercises: [],
+        })) || [];
+        setUpcomingTrainingSessions(formattedSessions);
+      }
+      setLoading(false)
+    }
+    
+    fetchUpcomingTrainings()
+  }, [user?.club_id])
+
 
   const getAvailableOptions = () => {
     const options = []
@@ -101,41 +184,6 @@ export function TrainingOverview() {
       value: "22",
       icon: Users,
       color: "text-purple-400",
-    },
-  ]
-
-  const trainingSessions = [
-    {
-      id: 1,
-      name: "Entrenamiento Táctico - Ataque",
-      date: "2024-01-16",
-      duration: 90,
-      exercises: [
-        { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
-        { name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
-        { name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico" },
-        { name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
-        { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico" },
-      ],
-      category: "Primera División",
-      focus: "Ataque Posicional",
-      attendance: "20/22",
-      path: "/dashboard/entrenamiento/planificar"
-    },
-    {
-      id: 2,
-      name: "Preparación Física - Resistencia",
-      date: "2024-01-18",
-      duration: 75,
-      exercises: [
-        { name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico" },
-        { name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico" },
-        { name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico" },
-      ],
-      category: "Primera División",
-      focus: "Resistencia Aeróbica",
-      attendance: "21/22",
-      path: "/dashboard/entrenamiento/planificar"
     },
   ]
 
@@ -261,41 +309,47 @@ export function TrainingOverview() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4">
-              {trainingSessions.map((session, index) => (
-                <Link key={session.id} href={session.path}>
-                  <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{session.date}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-white font-medium">{session.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {session.duration}min
+              {loading ? (
+                <p className="text-gray-400 text-center">Cargando entrenamientos...</p>
+              ) : upcomingTrainingSessions.length > 0 ? (
+                upcomingTrainingSessions.map((session, index) => (
+                  <Link key={session.id} href={session.path}>
+                    <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-center">
+                          <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
+                          <p className="text-xs text-gray-400">{session.date}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-white font-medium">{session.name}</h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {session.duration}min
+                            </div>
                           </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {session.exercises.map((cat, index) => (
+                              <div
+                                key={index}
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: cat.color }}
+                                title={cat.name}
+                              ></div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{session.category}</p>
                         </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {getCategoriesInTraining(session.exercises).map((cat, index) => (
-                            <div
-                              key={index}
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: cat.color }}
-                              title={cat.name}
-                            ></div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{session.category}</p>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))
+              ) : (
+                <p className="text-gray-400 text-center">No hay entrenamientos próximos.</p>
+              )}
             </div>
           </CardContent>
         </Card>

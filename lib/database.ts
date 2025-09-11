@@ -145,6 +145,29 @@ export const matchesService = {
     return { data, error }
   },
 
+  async getUpcomingMatches(clubId: string) {
+    const now = new Date().toISOString()
+    const { data, error } = await supabase
+      .from("matches")
+      .select(`
+        id,
+        opponent_name,
+        match_date,
+        location,
+        tournaments (
+          name
+        ),
+        categories (
+          name
+        )
+      `)
+      .eq("club_id", clubId)
+      .gte("match_date", now)
+      .order("match_date", { ascending: true })
+
+    return { data, error }
+  },
+
   async createMatch(matchData: any) {
     const { data, error } = await supabase.from("matches").insert(matchData).select().single()
     return { data, error }
@@ -162,6 +185,53 @@ export const matchesService = {
 
   async createTournament(tournamentData: any) {
     const { data, error } = await supabase.from("tournaments").insert(tournamentData).select().single()
+    return { data, error }
+  },
+}
+
+// Training Sessions
+export const trainingSessionsService = {
+  async getUpcomingTrainingSessions(clubId: string) {
+    const now = new Date().toISOString().split("T")[0]
+    const { data, error } = await supabase
+      .from("training_sessions")
+      .select(`
+        id,
+        name,
+        date,
+        duration_minutes,
+        category:categories (
+          name
+        )
+      `)
+      .eq("club_id", clubId)
+      .gte("date", now)
+      .order("date", { ascending: true })
+
+    return { data, error }
+  },
+
+  async getTrainingSessionExercises(sessionId: string) {
+    const { data, error } = await supabase
+      .from("training_exercises")
+      .select(
+        `
+        id,
+        order_index,
+        notes,
+        exercise:exercises (
+          name,
+          duration_minutes,
+          category:exercise_categories (
+            name,
+            color
+          )
+        )
+      `,
+      )
+      .eq("training_session_id", sessionId)
+      .order("order_index", { ascending: true })
+
     return { data, error }
   },
 }
@@ -205,3 +275,7 @@ export const ordersService = {
     return { data, error }
   },
 }
+
+
+
+

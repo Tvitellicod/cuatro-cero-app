@@ -135,6 +135,10 @@ export function MatchesManagement() {
     const matchesTournament = filterTournament === "all" || match.tournament === filterTournament
 
     return matchesResult && matchesLocation && matchesTournament
+  }).sort((a, b) => {
+      const dateA = a.date.split('-').reverse().join('-');
+      const dateB = b.date.split('-').reverse().join('-');
+      return dateB.localeCompare(dateA);
   })
   
   const handleViewStats = (match: any) => {
@@ -168,7 +172,7 @@ export function MatchesManagement() {
                 </SelectTrigger>
                 <SelectContent className="bg-[#213041] border-[#305176]">
                   <SelectItem value="all" className="text-white text-xs">
-                    Todos
+                    Resultado
                   </SelectItem>
                   <SelectItem value="Victoria" className="text-white text-xs">
                     Victorias
@@ -184,11 +188,11 @@ export function MatchesManagement() {
 
               <Select value={filterLocation} onValueChange={setFilterLocation}>
                 <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Lugar" />
+                  <SelectValue placeholder="Condición" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#213041] border-[#305176]">
                   <SelectItem value="all" className="text-white text-xs">
-                    Todos
+                    Localía
                   </SelectItem>
                   <SelectItem value="Local" className="text-white text-xs">
                     Local
@@ -205,7 +209,7 @@ export function MatchesManagement() {
                 </SelectTrigger>
                 <SelectContent className="bg-[#213041] border-[#305176]">
                   <SelectItem value="all" className="text-white text-xs">
-                    Todos
+                    Torneo
                   </SelectItem>
                   {tournaments.map((tournament) => (
                     <SelectItem key={tournament.name} value={tournament.name} className="text-white text-xs">
@@ -224,8 +228,7 @@ export function MatchesManagement() {
                 <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-center">
-                      <div className="text-white font-bold text-lg">VS</div>
-                      <div className="text-xs text-gray-400">{match.tournament}</div>
+                      <div className="text-white font-medium text-sm">{match.tournament}</div>
                     </div>
                     <Badge
                       className={match.location === "Local" ? "bg-[#25d03f] text-black" : "bg-[#ea3498] text-white"}
@@ -235,6 +238,7 @@ export function MatchesManagement() {
                   </div>
 
                   <div className="mb-3">
+                    <div className="text-white font-medium text-center">VS</div>
                     <h3 className="text-white font-medium text-center">{match.opponent}</h3>
                     <div className="text-center mt-2">
                       <Badge className={getResultColor(match.status)}>{match.result}</Badge>

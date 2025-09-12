@@ -496,10 +496,6 @@ export function TrainingPlannerSection() {
     setTrainingSessions(prevSessions => [...prevSessions, newSession]);
     handleCancelForm();
   };
-
-  const playersForAttendance = showTrainingDetail?.categoryId
-  ? allPlayers.filter(p => p.category.toLowerCase() === showTrainingDetail.categoryId.toLowerCase() && p.status === 'DISPONIBLE')
-  : [];
   
   const handleDeleteTraining = () => {
     if (trainingToDelete) {
@@ -508,6 +504,10 @@ export function TrainingPlannerSection() {
       setShowTrainingDetail(null);
     }
   };
+
+  const playersForAttendance = showTrainingDetail?.categoryId
+  ? allPlayers.filter(p => p.category.toLowerCase() === showTrainingDetail.categoryId.toLowerCase() && p.status === 'DISPONIBLE')
+  : [];
 
 
   return (
@@ -710,6 +710,14 @@ export function TrainingPlannerSection() {
                         onClick={() => setShowTrainingDetail(session)}
                       >
                         Ver Entrenamiento
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                        onClick={() => setTrainingToDelete(session.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

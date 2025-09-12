@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { ShoppingCart, Check } from "lucide-react"
 
 export function StoreSection() {
-  const [activeTab, setActiveTab] = useState("plantillas")
+  const [activeTab, setActiveTab] = useState("pizarras")
   const [addedItems, setAddedItems] = useState<number[]>([])
 
-  const plantillas = [
+  const pizarras = [
     {
       id: 1,
       name: "Ejercicios de Ataque Posicional",
@@ -64,7 +64,7 @@ export function StoreSection() {
     },
   ]
 
-  const currentProducts = activeTab === "plantillas" ? plantillas : ebooks
+  const currentProducts = activeTab === "pizarras" ? pizarras : ebooks
 
   const handleAddToCart = (productId: number) => {
     setAddedItems((prev) => [...prev, productId])
@@ -87,15 +87,15 @@ export function StoreSection() {
       {/* Botones separados */}
       <div className="flex justify-center mb-4 gap-4">
         <Button
-          variant={activeTab === "plantillas" ? "default" : "outline"}
+          variant={activeTab === "pizarras" ? "default" : "outline"}
           className={`px-8 py-2 rounded-lg ${
-            activeTab === "plantillas"
+            activeTab === "pizarras"
               ? "bg-[#aff606] text-black hover:bg-[#25d03f]"
               : "border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
           }`}
-          onClick={() => setActiveTab("plantillas")}
+          onClick={() => setActiveTab("pizarras")}
         >
-          Plantillas
+          Pizarras
         </Button>
         <Button
           variant={activeTab === "ebooks" ? "default" : "outline"}

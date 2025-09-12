@@ -107,6 +107,15 @@ export function TrainingOverview() {
   const getAvailableOptions = () => {
     const options = []
 
+    // Modificación: Se añade la tarjeta de "Ejercicios" aquí
+    options.push({
+      title: "Ejercicios",
+      description: "Gestiona ejercicios reutilizables para tus entrenamientos",
+      icon: Target,
+      href: "/dashboard/entrenamiento/ejercicios",
+      color: "bg-blue-500",
+    })
+
     if (profileType === "DIRECTOR TECNICO") {
       options.push({
         title: "Ejercicios",
@@ -297,9 +306,9 @@ export function TrainingOverview() {
         ))}
       </div>
 
-      {/* Bloque de 2 columnas para Próximos Entrenamientos y Opciones */}
+      {/* Bloque de 2 columnas principales, con la segunda dividida en 2 filas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Próximos Entrenamientos */}
+        {/* Columna 1: Ocupa la mitad de la pantalla */}
         <Card className="bg-[#213041] border-[#305176]">
           <CardHeader>
             <CardTitle className="text-white flex items-center">
@@ -354,45 +363,41 @@ export function TrainingOverview() {
           </CardContent>
         </Card>
 
-        {/* Contenedor para las dos tarjetas de opciones, apiladas */}
+        {/* Columna 2: Contiene las otras dos tarjetas apiladas */}
         <div className="space-y-6">
-          {availableOptions.find(opt => opt.title === "Ejercicios" || opt.title === "Ejercicios Físicos" || opt.title === "Ejercicios Kinesiología") && (
-            <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors w-full">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className={`p-3 rounded-lg bg-blue-500`}>
-                    <Target className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-white">Ejercicios</CardTitle>
+          <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className={`p-3 rounded-lg bg-blue-500`}>
+                  <Target className="h-6 w-6 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 mb-4">Gestiona ejercicios reutilizables para entrenamientos</p>
-                <Link href="/dashboard/entrenamiento/ejercicios">
-                  <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
+                <CardTitle className="text-white">Ejercicios</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-400 mb-4">Gestiona ejercicios reutilizables para tus entrenamientos</p>
+              <Link href="/dashboard/entrenamiento/ejercicios">
+                <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-          {availableOptions.find(opt => opt.title === "Planificar Entrenamiento") && (
-            <Card className="bg-[#213041] border-[#305176] hover:border-[#aff606] transition-colors w-full">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className={`p-3 rounded-lg bg-[#aff606]`}>
-                    <Calendar className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-white">Planificar Entrenamiento</CardTitle>
+          <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className={`p-3 rounded-lg bg-[#aff606]`}>
+                  <Calendar className="h-6 w-6 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 mb-4">Crea y programa entrenamientos para tu equipo</p>
-                <Link href="/dashboard/entrenamiento/planificar">
-                  <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
+                <CardTitle className="text-white">Planificar Entrenamiento</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-400 mb-4">Crea y programa entrenamientos para tu equipo</p>
+              <Link href="/dashboard/entrenamiento/planificar">
+                <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -510,55 +515,6 @@ export function TrainingOverview() {
           </div>
         </CardContent>
       </Card>
-
-
-      {/* Training Detail Dialog */}
-      <Dialog open={!!showTrainingDetail} onOpenChange={() => setShowTrainingDetail(null)}>
-        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">{showTrainingDetail?.name}</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Detalles del entrenamiento del {showTrainingDetail?.date}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-white">Duración</Label>
-              <Input
-                value={`${showTrainingDetail?.duration} min`}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Categoría</Label>
-              <Input
-                value={showTrainingDetail?.category}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Enfoque</Label>
-              <Input
-                value={showTrainingDetail?.focus}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Ejercicios</Label>
-              <ul className="space-y-2">
-                {showTrainingDetail?.exercises.map((exercise: any, index: number) => (
-                  <li key={index} className="p-2 bg-[#1d2834] rounded-lg text-sm">
-                    {exercise.name} ({exercise.duration} min)
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

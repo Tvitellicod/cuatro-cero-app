@@ -42,6 +42,7 @@ export function ExerciseManagement() {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
   const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null)
+  const [showValidationAlert, setShowValidationAlert] = useState(false)
 
 
   // Filtros
@@ -156,26 +157,35 @@ export function ExerciseManagement() {
   }
 
   const handleCreateExercise = () => {
-    if (newExercise.name && newExercise.category && newExercise.difficulty) {
-      const exerciseToAdd = {
-        ...newExercise,
-        id: exercises.length + 1,
-        createdAt: new Date().toISOString().split('T')[0],
-      }
-      setExercises([...exercises, exerciseToAdd])
-      setNewExercise({
-        name: "",
-        category: "",
-        duration: 0,
-        players: 0,
-        goalkeepers: 0,
-        difficulty: "",
-        materials: "",
-        description: "",
-        objective: "",
-      })
-      setShowCreateForm(false)
+    if (
+        !newExercise.name || 
+        !newExercise.category || 
+        !newExercise.difficulty || 
+        newExercise.duration === 0 || 
+        newExercise.players === 0
+      ) {
+      setShowValidationAlert(true);
+      return;
     }
+    
+    const exerciseToAdd = {
+      ...newExercise,
+      id: exercises.length + 1,
+      createdAt: new Date().toISOString().split('T')[0],
+    }
+    setExercises([...exercises, exerciseToAdd])
+    setNewExercise({
+      name: "",
+      category: "",
+      duration: 0,
+      players: 0,
+      goalkeepers: 0,
+      difficulty: "",
+      materials: "",
+      description: "",
+      objective: "",
+    })
+    setShowCreateForm(false)
   }
 
   const handleEditExercise = (exercise: any) => {
@@ -534,27 +544,23 @@ export function ExerciseManagement() {
                   </Button>
                 </div>
                 <div className="flex items-center flex-wrap gap-2 mt-4">
-                  <div className="space-y-1">
-                    <Label className="text-white text-xs">Búsqueda</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        placeholder="Buscar ejercicio..."
-                        className="pl-10 bg-[#1d2834] border-[#305176] text-white"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Búsqueda de Ejercicios"
+                      className="pl-10 h-9 bg-[#1d2834] border-[#305176] text-white"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-white text-xs">Jugadores</Label>
                     <Select value={filterPlayers} onValueChange={setFilterPlayers}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                      <SelectTrigger className="h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-[120px]">
                         <SelectValue placeholder="Jugadores" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                         <SelectItem value="all" className="text-white text-xs">
-                          Todas
+                        <SelectItem value="all" className="text-white text-xs">
+                          Jugadores
                         </SelectItem>
                         {[...new Set(exercises.map(ex => ex.players))].sort((a, b) => a - b).map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
@@ -565,14 +571,13 @@ export function ExerciseManagement() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-white text-xs">Arqueros</Label>
                     <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                      <SelectTrigger className="h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-[120px]">
                         <SelectValue placeholder="Arqueros" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                         <SelectItem value="all" className="text-white text-xs">
-                          Todas
+                        <SelectItem value="all" className="text-white text-xs">
+                          Arqueros
                         </SelectItem>
                         {[...new Set(exercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b).map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
@@ -583,14 +588,13 @@ export function ExerciseManagement() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-white text-xs">Dificultad</Label>
                     <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                      <SelectTrigger className="h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-[120px]">
                         <SelectValue placeholder="Dificultad" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
                         <SelectItem value="all" className="text-white text-xs">
-                          Todas
+                          Dificultad
                         </SelectItem>
                         <SelectItem value="Fácil" className="text-white text-xs">
                           Fácil
@@ -605,14 +609,13 @@ export function ExerciseManagement() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-white text-xs">Tiempo</Label>
                     <Select value={filterTime} onValueChange={setFilterTime}>
-                      <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                      <SelectTrigger className="h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-[120px]">
                         <SelectValue placeholder="Tiempo" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
                         <SelectItem value="all" className="text-white text-xs">
-                          Todos
+                          Tiempo
                         </SelectItem>
                         {[...new Set(exercises.map(ex => ex.duration))].sort((a, b) => a - b).map((time) => (
                           <SelectItem key={time} value={time.toString()} className="text-white text-xs">

@@ -854,104 +854,84 @@ export function TrainingPlannerSection() {
                 {/* Filtros para Ejercicios Disponibles */}
                 <div className="space-y-3">
                   <Label className="text-white">Ejercicios Disponibles</Label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="space-y-1 flex-1 min-w-[150px]">
-                      <Label className="text-white text-xs">Búsqueda</Label>
+                  <div className="flex items-center gap-2 flex-nowrap">
+                    <div className="w-90 min-w-[128px]">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
                           placeholder="Buscar ejercicio..."
-                          className="pl-10 h-9 bg-[#1d2834] border-[#305176] text-white"
+                          className="pl-8 h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-full" // Alto igual a los filtros
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-white text-xs">Categoría</Label>
+                    <div>
                       <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Categoría" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
-                          {categoriesOptions.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id} className="text-white text-xs">
-                              {cat.name}
-                            </SelectItem>
+                          <SelectItem value="all" className="text-white text-xs">Categoría</SelectItem>
+                          {uniqueCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat} className="text-white text-xs">{cat}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-white text-xs">Jugadores</Label>
+                    <div>
                       <Select value={filterPlayers} onValueChange={setFilterPlayers}>
-                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Jugadores" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">
-                            Todos
-                          </SelectItem>
+                          <SelectItem value="all" className="text-white text-xs">Jugadores</SelectItem>
                           {uniquePlayers.map((num) => (
-                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">
-                              {num}
-                            </SelectItem>
+                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">{num}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-white text-xs">Arqueros</Label>
+                    <div>
                       <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
-                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Arqueros" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">
-                            Todos
-                          </SelectItem>
+                          <SelectItem value="all" className="text-white text-xs">Arqueros</SelectItem>
                           {uniqueGoalkeepers.map((num) => (
-                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">
-                              {num}
-                            </SelectItem>
+                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">{num}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-white text-xs">Dificultad</Label>
+                    <div>
                       <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Dificultad" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
-                          {difficultyOptions.map((opt) => (
-                            <SelectItem key={opt.id} value={opt.id} className="text-white text-xs">
-                              {opt.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="all" className="text-white text-xs">Dificultad</SelectItem>
+                          <SelectItem value="Fácil" className="text-white text-xs">Fácil</SelectItem>
+                          <SelectItem value="Media" className="text-white text-xs">Media</SelectItem>
+                          <SelectItem value="Difícil" className="text-white text-xs">Difícil</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-white text-xs">Tiempo</Label>
+                    <div>
                       <Select value={filterTime} onValueChange={setFilterTime}>
-                        <SelectTrigger className="w-24 h-9 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Tiempo" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">
-                            Todos
-                          </SelectItem>
+                          <SelectItem value="all" className="text-white text-xs">Tiempo</SelectItem>
                           {uniqueDurations.map((time) => (
-                            <SelectItem key={time} value={time.toString()} className="text-white text-xs">
-                              {time}min
-                            </SelectItem>
+                            <SelectItem key={time} value={time.toString()} className="text-white text-xs">{time}min</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="mt-auto">
+                    <div>
                       <Button
                         size="icon"
                         variant="ghost"

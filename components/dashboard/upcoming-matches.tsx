@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,10 @@ export function UpcomingMatches() {
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [matchToDelete, setMatchToDelete] = useState<number | null>(null)
   const [showMatchDetail, setShowMatchDetail] = useState<any>(null)
+  const [showRosterModal, setShowRosterModal] = useState(false)
+  const [rosterToEdit, setRosterToEdit] = useState<any>(null)
+  const [rosterEditPlayers, setRosterEditPlayers] = useState<number[]>([])
+
 
   // Lista de partidos próximos con datos de ejemplo
   const [upcomingMatches, setUpcomingMatches] = useState([
@@ -45,6 +50,8 @@ export function UpcomingMatches() {
       tournament: "Liga Profesional",
       category: "Primera División",
       status: "Próximamente",
+      citedPlayers: [1, 2, 3, 4, 5, 6],
+      categoryId: "primera",
     },
     {
       id: 2,
@@ -55,6 +62,8 @@ export function UpcomingMatches() {
       tournament: "Copa Argentina",
       category: "Primera División",
       status: "Próximamente",
+      citedPlayers: [1, 2, 3, 4, 5],
+      categoryId: "primera",
     },
   ]);
 
@@ -101,6 +110,7 @@ export function UpcomingMatches() {
   ];
 
   const availablePlayers = allPlayers.filter(p => p.category === selectedCategory && p.status === "DISPONIBLE")
+  const playersForRosterEdit = rosterToEdit ? allPlayers.filter(p => p.category === rosterToEdit.categoryId) : [];
 
   const tournaments = [
     { name: "Liga Profesional", matches: 8 },
@@ -112,6 +122,10 @@ export function UpcomingMatches() {
   
   const handlePlayerToggle = (playerId: number) => {
     setSelectedPlayers((prev) => (prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]))
+  }
+
+  const handleRosterToggle = (playerId: number) => {
+    setRosterEditPlayers((prev) => (prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]))
   }
 
   const handleSaveMatch = () => {
@@ -129,6 +143,8 @@ export function UpcomingMatches() {
         tournament: newMatch.tournament,
         category: categories.find(c => c.id === newMatch.category)?.name || "",
         status: "Próximamente",
+        citedPlayers: selectedPlayers,
+        categoryId: newMatch.category,
     };
 
     setUpcomingMatches(prevMatches => [...prevMatches, newMatchData]);
@@ -145,6 +161,25 @@ export function UpcomingMatches() {
     setSelectedPlayers([]);
     setShowScheduleForm(false);
   }
+
+  const handleSaveRosterEdit = () => {
+    if (rosterToEdit) {
+      const updatedMatches = upcomingMatches.map(match =>
+        match.id === rosterToEdit.id ? { ...match, citedPlayers: rosterEditPlayers } : match
+      );
+      setUpcomingMatches(updatedMatches);
+      setShowRosterModal(false);
+      setShowMatchDetail({ ...rosterToEdit, citedPlayers: rosterEditPlayers });
+      setRosterToEdit(null);
+    }
+  };
+
+  const handleCancelRosterEdit = () => {
+    setShowRosterModal(false);
+    setShowMatchDetail(rosterToEdit);
+    setRosterToEdit(null);
+  };
+
 
   const handleDeleteMatch = () => {
     if (matchToDelete !== null) {
@@ -164,12 +199,6 @@ export function UpcomingMatches() {
           <h2 className="text-2xl font-bold text-white mb-2">Próximos Partidos</h2>
           <p className="text-gray-400">Gestiona los próximos encuentros y acciones de juego</p>
         </div>
-        {!showScheduleForm && (
-          <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowScheduleForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Agendar Próximo Partido
-          </Button>
-        )}
       </div>
 
       {/* Player Selection Modal */}
@@ -250,21 +279,21 @@ export function UpcomingMatches() {
             <CardTitle className="text-white">Agendar Nuevo Partido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-white text-sm">Rival</label>
-                <Input 
-                  placeholder="Nombre del equipo rival" 
-                  className="bg-[#1d2834] border-[#305176] text-white" 
+                <Input
+                  placeholder="Nombre del equipo rival"
+                  className="bg-[#1d2834] border-[#305176] text-white"
                   value={newMatch.opponent}
-                  onChange={(e) => setNewMatch({...newMatch, opponent: e.target.value})}
+                  onChange={(e) => setNewMatch({ ...newMatch, opponent: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-white text-sm">Torneo</label>
                 <Select
                   value={newMatch.tournament}
-                  onValueChange={(value) => setNewMatch({...newMatch, tournament: value})}
+                  onValueChange={(value) => setNewMatch({ ...newMatch, tournament: value })}
                 >
                   <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                     <SelectValue placeholder="Seleccionar torneo" />
@@ -278,15 +307,11 @@ export function UpcomingMatches() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Nuevo bloque para los 4 campos en una misma fila */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <label className="text-white text-sm">Condición</label>
                 <Select
                   value={newMatch.location}
-                  onValueChange={(value) => setNewMatch({...newMatch, location: value})}
+                  onValueChange={(value) => setNewMatch({ ...newMatch, location: value })}
                 >
                   <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                     <SelectValue placeholder="Seleccionar" />
@@ -301,13 +326,39 @@ export function UpcomingMatches() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+            </div>
+
+            <div className="flex flex-col md:flex-row items-end justify-between gap-4">
+              <div className="grid grid-cols-2 gap-4 w-full md:w-auto">
+                <div className="space-y-2">
+                  <label className="text-white text-sm">Fecha</label>
+                  <Input
+                    type="date"
+                    className="bg-[#1d2834] border-[#305176] text-white w-full h-11"
+                    value={newMatch.date}
+                    onChange={(e) => setNewMatch({ ...newMatch, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-white text-sm">Hora</label>
+                  <Input
+                    type="time"
+                    className="bg-[#1d2834] border-[#305176] text-white w-full h-11"
+                    value={newMatch.time}
+                    onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 w-full md:w-auto">
                 <label className="text-white text-sm">Categoría</label>
-                <Select value={newMatch.category} onValueChange={(value) => {
-                  setNewMatch({...newMatch, category: value});
-                  setSelectedCategory(value);
-                  setSelectedPlayers([]);
-                }}>
+                <Select
+                  value={newMatch.category}
+                  onValueChange={(value) => {
+                    setNewMatch({ ...newMatch, category: value })
+                    setSelectedCategory(value)
+                    setSelectedPlayers([])
+                  }}
+                >
                   <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
@@ -320,44 +371,26 @@ export function UpcomingMatches() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-white text-sm">Fecha</label>
-                <Input 
-                  type="date" 
-                  className="bg-[#1d2834] border-[#305176] text-white w-full" 
-                  value={newMatch.date}
-                  onChange={(e) => setNewMatch({...newMatch, date: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-white text-sm">Hora</label>
-                <Input 
-                  type="time" 
-                  className="bg-[#1d2834] border-[#305176] text-white w-full" 
-                  value={newMatch.time}
-                  onChange={(e) => setNewMatch({...newMatch, time: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
               <Button
-                className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea]"
+                className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11 w-full md:w-auto mt-auto"
                 onClick={() => setShowPlayerSelection(true)}
               >
                 <Users className="h-4 w-4 mr-2" />
                 Seleccionar Jugadores ({selectedPlayers.length})
               </Button>
-              <div className="flex space-x-4">
-                <Button
-                  variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-                  onClick={() => setShowScheduleForm(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveMatch}>Agendar Partido</Button>
-              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
+              <Button
+                variant="outline"
+                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11"
+                onClick={() => setShowScheduleForm(false)}
+              >
+                Cancelar
+              </Button>
+              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f] h-11" onClick={handleSaveMatch}>
+                Agendar Partido
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -365,8 +398,14 @@ export function UpcomingMatches() {
 
       {/* Upcoming Matches */}
       <Card className="bg-[#213041] border-[#305176]">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Partidos Programados</CardTitle>
+          {!showScheduleForm && (
+            <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowScheduleForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agendar Próximo Partido
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -392,7 +431,7 @@ export function UpcomingMatches() {
                           </div>
                           <div className="flex items-center">
                             <Users className="h-4 w-4 mr-1" />
-                            {selectedPlayers.length} jugadores citados
+                            {upcomingMatches.find(m => m.id === match.id)?.citedPlayers.length} jugadores citados
                           </div>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">{match.tournament}</div>
@@ -482,10 +521,104 @@ export function UpcomingMatches() {
                 <Input value={showMatchDetail?.time} readOnly className="bg-[#1d2834] border-[#305176] text-white" />
               </div>
             </div>
+            
+            <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+              <span className="text-gray-400 text-sm">
+                Jugadores citados: {showMatchDetail?.citedPlayers.length || 0}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                onClick={() => {
+                  setRosterToEdit(showMatchDetail);
+                  setRosterEditPlayers(showMatchDetail?.citedPlayers || []);
+                  setShowMatchDetail(null); // Cierra la vista de detalles
+                  setShowRosterModal(true); // Abre la vista de edición
+                }}
+              >
+                Editar Citación
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 pt-4 border-t border-[#305176]">
+            <Link href={`/dashboard/partidos/${showMatchDetail?.id}`} passHref target="_blank" rel="noopener noreferrer">
+              <Button asChild className="w-full bg-red-500 text-white hover:bg-red-600">
+                <span>
+                  <Play className="h-4 w-4 mr-2" />
+                  Gestionar Partido en Tiempo Real
+                </span>
+              </Button>
+            </Link>
           </div>
         </DialogContent>
       </Dialog>
       
+      {/* Modal para ver y editar la lista de citados */}
+      <Dialog open={showRosterModal} onOpenChange={handleCancelRosterEdit}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">Lista de Citados</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {rosterToEdit?.category} - VS {rosterToEdit?.opponent}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-gray-400">
+              Jugadores citados: {rosterEditPlayers?.length}/{allPlayers.filter(p => p.category.toLowerCase() === rosterToEdit?.categoryId.toLowerCase()).length}
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {allPlayers
+                .filter(p => p.category.toLowerCase() === rosterToEdit?.categoryId.toLowerCase())
+                .map((player) => (
+                  <div
+                    key={player.id}
+                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                      rosterEditPlayers?.includes(player.id)
+                        ? "bg-[#aff606]/20 border border-[#aff606]"
+                        : "bg-[#1d2834] hover:bg-[#305176]"
+                    }`}
+                    onClick={() => handleRosterToggle(player.id)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          rosterEditPlayers?.includes(player.id) ? "border-[#aff606] bg-[#aff606]" : "border-gray-400"
+                        }`}
+                      >
+                        {rosterEditPlayers?.includes(player.id) && <Check className="h-3 w-3 text-black" />}
+                      </div>
+                      <div>
+                        <span className="text-white font-medium">{player.name}</span>
+                        <p className="text-gray-400 text-sm">{player.position}</p>
+                      </div>
+                    </div>
+                    <Badge className={rosterEditPlayers?.includes(player.id) ? "bg-[#25d03f] text-black" : "bg-gray-500 text-white"}>
+                      {rosterEditPlayers?.includes(player.id) ? "Citado" : "No Citado"}
+                    </Badge>
+                  </div>
+                ))}
+            </div>
+          </div>
+          <div className="flex justify-end space-x-4">
+            <Button
+              variant="outline"
+              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={handleCancelRosterEdit}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={handleSaveRosterEdit}
+            >
+              Aceptar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       {/* Alert Dialog for Form Validation */}
       <AlertDialog open={showValidationAlert} onOpenChange={setShowValidationAlert}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">

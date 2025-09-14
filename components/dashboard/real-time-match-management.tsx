@@ -44,7 +44,7 @@ type PlayerStats = {
   faltaRecibida: number;
   golAFavor: number;
   golEnContra: number;
-  expulsado?: boolean; // Nuevo campo para saber si está expulsado
+  expulsado?: boolean;
 };
 
 type Player = {
@@ -53,7 +53,6 @@ type Player = {
   position: string;
   photo: string;
   stats: PlayerStats;
-  hasRedCard: boolean;
 };
 
 type GameState = "roster_selection" | "in_game" | "paused" | "second_half_roster" | "finished";
@@ -108,7 +107,6 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
         golAFavor: 0,
         golEnContra: 0,
       },
-      hasRedCard: false,
     }))
   );
 
@@ -123,8 +121,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
         setActivePlayerTimers((timers) => {
           const newTimers = { ...timers };
           starters.forEach((player) => {
-            // Solo sumar tiempo si no está expulsado
-            if (!player.hasRedCard && !(player.stats.expulsado)) {
+            if (!(player.stats.expulsado)) {
               newTimers[player.id] = (newTimers[player.id] || 0) + 1;
             }
           });
@@ -148,8 +145,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
     setGameState("second_half_roster");
     setTimer(0);
     setRedCardedPlayer(null);
-    // Los expulsados siguen en suplentes pero no pueden volver a ingresar
-    setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.hasRedCard && !p.stats.expulsado));
+    setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.stats.expulsado));
   };
 
   const finishGame = () => {
@@ -167,7 +163,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
     }
 
     const playerToAdd = allPlayers.find((p) => p.id === playerId);
-    if (!playerToAdd || playerToAdd.hasRedCard) return;
+    if (!playerToAdd || playerToAdd.stats.expulsado) return;
 
     if (starters.some(s => s.id === playerToAdd.id)) {
       setStarters(starters.filter((p) => p.id !== playerToAdd.id));
@@ -180,13 +176,12 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
 
   const confirmRoster = () => {
     if (starters.length !== 5) return;
-    // Los expulsados no pueden volver a ingresar en el segundo tiempo
-    setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.hasRedCard && !p.stats.expulsado));
+    setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.stats.expulsado));
     setGameState("in_game");
   };
 
   const handleSubstituteClick = (player: Player) => {
-    if (gameState !== "in_game" || player.hasRedCard) return;
+    if (gameState !== "in_game" || player.stats.expulsado) return;
 
     if (isSubbing) {
       setSelectedSubstitute(null);
@@ -202,9 +197,8 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
       return;
     }
     
-    if (player.hasRedCard) {
+    if (player.stats.expulsado) {
       if (isSubbing && selectedSubstitute) {
-        // Realizar la sustitución del jugador expulsado
         const newStarters = starters.filter(p => p.id !== player.id).concat(selectedSubstitute);
         setStarters(newStarters);
         setSubstitutes(substitutes.filter(p => p.id !== selectedSubstitute.id));
@@ -222,29 +216,30 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
         setIsSubbing(false);
         setRedCardedPlayer(null);
       } else {
-        // Opción para anular la tarjeta roja si no hay sustitución en curso
         setSelectedPlayerForAction(player);
       }
       return;
     }
 
     if (isSubbing && selectedSubstitute) {
+      const exitingPlayer = starters.find(p => p.id === player.id);
+      if (exitingPlayer) {
+          setAllPlayers(prevPlayers => prevPlayers.map(p => {
+              if (p.id === exitingPlayer.id) {
+                  return { ...p, stats: { ...p.stats, minutosJugados: (p.stats.minutosJugados || 0) + (activePlayerTimers[p.id] || 0) } };
+              }
+              return p;
+          }));
+      }
+
       setStarters(starters.map(p => p.id === player.id ? selectedSubstitute : p));
       setSubstitutes(substitutes.map(p => p.id === selectedSubstitute.id ? player : p));
       
-      setAllPlayers(prevPlayers => prevPlayers.map(p => {
-        if (p.id === player.id) {
-          return { ...p, stats: { ...p.stats, minutosJugados: (p.stats.minutosJugados || 0) + (activePlayerTimers[p.id] || 0) } };
-        }
-        return p;
-      }));
-
       setActivePlayerTimers(prevTimers => ({ ...prevTimers, [selectedSubstitute.id]: 0 }));
       
       setSelectedSubstitute(null);
       setIsSubbing(false);
       setRedCardedPlayer(null);
-
     } else {
       setSelectedPlayerForAction(player);
     }
@@ -254,8 +249,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   const handleActionClick = (actionId: string) => {
     if (!selectedPlayerForAction) return;
 
-    // Si el jugador está expulsado, no permitir acciones
-    if (selectedPlayerForAction.hasRedCard || selectedPlayerForAction.stats.expulsado) return;
+    if (selectedPlayerForAction.stats.expulsado) return;
 
     if (actionId === "tarjetaRoja") {
       setAllPlayers((prevPlayers) =>
@@ -263,8 +257,12 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
           player.id === selectedPlayerForAction.id
             ? {
                 ...player,
-                stats: { ...player.stats, tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1, expulsado: true },
-                hasRedCard: true,
+                stats: { 
+                  ...player.stats, 
+                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1, 
+                  expulsado: true,
+                  minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[player.id] || 0)
+                },
               }
             : player
         )
@@ -281,12 +279,16 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
         prevPlayers.map((player) => {
           if (player.id === selectedPlayerForAction.id) {
             const amarillas = (player.stats.tarjetaAmarilla || 0) + 1;
-            // Si llega a 2 amarillas, expulsar igual que roja
             if (amarillas >= 2) {
               return {
                 ...player,
-                stats: { ...player.stats, tarjetaAmarilla: amarillas, tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1, expulsado: true },
-                hasRedCard: true,
+                stats: { 
+                  ...player.stats, 
+                  tarjetaAmarilla: amarillas, 
+                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1, 
+                  expulsado: true,
+                  minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[player.id] || 0)
+                },
               };
             }
             return {
@@ -297,7 +299,6 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
           return player;
         })
       );
-      // Si fue expulsado por doble amarilla, pausar tiempo y setear redCardedPlayer
       const updatedPlayer = allPlayers.find(p => p.id === selectedPlayerForAction.id);
       if (updatedPlayer && ((updatedPlayer.stats.tarjetaAmarilla || 0) + 1) >= 2) {
         setActivePlayerTimers(prevTimers => {
@@ -321,7 +322,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   };
   
   const handleHomeGoal = () => {
-    if (selectedPlayerForAction && !selectedPlayerForAction.hasRedCard) {
+    if (selectedPlayerForAction && !selectedPlayerForAction.stats.expulsado) {
       setHomeScore(homeScore + 1);
       handleActionClick("golAFavor");
     } else {
@@ -366,77 +367,79 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   };
 
   const getPlayerDisplayTime = (playerId: number) => {
+    const player = allPlayers.find(p => p.id === playerId);
+    if (player?.stats.expulsado) {
+      return formatTime(player.stats.minutosJugados || 0);
+    }
     return formatTime(activePlayerTimers[playerId] || 0);
   };
 
   const renderPlayerList = (playersList: Player[], isStarter: boolean) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2">
       {playersList.map((player) => {
-        const isExpulsado = player.hasRedCard || player.stats.expulsado;
+        const isExpulsado = player.stats.expulsado;
         const amarillas = player.stats.tarjetaAmarilla || 0;
+        const hasRedCard = player.stats.tarjetaRoja > 0;
+        
+        const isSelected = isStarter ? (isSubbing && selectedSubstitute?.id !== player.id) : (isSubbing && selectedSubstitute?.id === player.id);
+        const canBeSelected = !isExpulsado;
+        
         return (
           <div
             key={player.id}
-            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-              isExpulsado
-                ? "bg-red-500/20 border border-red-500 opacity-50"
-                : isStarter
-                  ? (isSubbing && selectedSubstitute?.id !== player.id ? "bg-red-500/20 border border-red-500" : "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]")
-                  : (isSubbing && selectedSubstitute?.id === player.id ? "bg-blue-600/20 border border-blue-500" : "bg-[#1d2834] hover:bg-[#305176]")
-            }`}
+            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors 
+              ${isExpulsado ? "opacity-50" : ""}
+              ${isStarter ? (isSubbing && !isExpulsado ? "bg-red-500/20 border border-red-500" : "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]") : ""}
+              ${!isStarter ? (isSubbing && selectedSubstitute?.id === player.id ? "bg-blue-600/20 border border-blue-500" : "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]") : ""}
+            `}
             onClick={() => {
-              // Si está expulsado, solo permitir sustitución
-              if (isExpulsado) {
-                if (isStarter && isSubbing && selectedSubstitute) {
-                  handleStarterClick(player);
-                }
-                return;
+              if (isStarter) {
+                handleStarterClick(player);
+              } else {
+                handleSubstituteClick(player);
               }
-              isStarter ? handleStarterClick(player) : handleSubstituteClick(player);
             }}
           >
             <div className="flex items-center space-x-3">
-              <Avatar className={`h-8 w-8 ${!isStarter || gameState === "paused" || isExpulsado ? "opacity-50" : ""}`}>
+              <Avatar className={`h-8 w-8 ${isExpulsado ? "opacity-50" : ""}`}>
                 <AvatarImage src={player.photo} alt={player.name} />
                 <AvatarFallback className="bg-[#305176] text-white text-xs">
                   {player.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
-              <p className={`text-white text-sm ${!isStarter || gameState === "paused" || isExpulsado ? "opacity-50" : ""}`}>{player.name}</p>
+              <p className={`text-white text-sm ${isExpulsado ? "opacity-50" : ""}`}>{player.name}</p>
             </div>
-            {isStarter && !isExpulsado && (
-              <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
+            {(hasRedCard || isExpulsado) ? (
+              <Badge className="bg-red-500 text-white text-xs font-medium flex items-center space-x-1">
                 <Clock className="h-3 w-3 mr-1" />
                 {getPlayerDisplayTime(player.id)}
-                {amarillas === 1 && (
-                  <ShieldOff className="h-3 w-3 ml-1 text-[#f4c11a]" title="Tarjeta Amarilla" />
+                {amarillas >= 2 && (
+                  <>
+                    <ShieldOff className="h-3 w-3 text-[#f4c11a]" title="Doble Amarilla" />
+                    <ShieldOff className="h-3 w-3 text-[#f4c11a]" />
+                  </>
+                )}
+                {hasRedCard && (amarillas < 2) && (
+                  <ShieldOff className="h-3 w-3" title="Tarjeta Roja" />
                 )}
               </Badge>
-            )}
-            {isStarter && isExpulsado && (
-              <Badge className="bg-red-500 text-white text-xs font-medium flex items-center">
-                <Clock className="h-3 w-3 mr-1" />
-                {getPlayerDisplayTime(player.id)}
-                <ShieldOff className="h-3 w-3 ml-1" title="Tarjeta Roja" />
-              </Badge>
-            )}
-            {amarillas === 1 && !isStarter && !isExpulsado && (
-              <Badge className="bg-[#f4c11a] text-black text-xs font-medium flex items-center ml-2">
-                <ShieldOff className="h-3 w-3" title="Tarjeta Amarilla" />
-              </Badge>
-            )}
-            {isExpulsado && !isStarter && (
-              <Badge className="bg-red-500 text-white text-xs font-medium flex items-center ml-2">
-                <ShieldOff className="h-3 w-3" title="Tarjeta Roja" />
-              </Badge>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {getPlayerDisplayTime(player.id)}
+                </Badge>
+                {amarillas === 1 && (
+                  <ShieldOff className="h-3 w-3 text-[#f4c11a]" title="Tarjeta Amarilla" />
+                )}
+              </div>
             )}
           </div>
         );
       })}
     </div>
   );
-
-  const initialRosterPlayers = useMemo(() => allPlayers.filter(p => !p.hasRedCard), [allPlayers]);
+  const initialRosterPlayers = useMemo(() => allPlayers.filter(p => !p.stats.expulsado), [allPlayers]);
 
   const starterSelectionUI = (
     <div className="space-y-4">
@@ -490,7 +493,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
             key={action.id}
             className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
             onClick={action.id === 'golAFavor' ? handleHomeGoal : handleOpponentGoal}
-            disabled={action.id === 'golAFavor' && !selectedPlayerForAction}
+            disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
           >
             <action.icon className="h-6 w-6" />
             {action.name}
@@ -503,7 +506,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
             key={action.id}
             className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
             onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction || selectedPlayerForAction.hasRedCard}
+            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
           >
             <action.icon className="h-6 w-6" />
             {action.name}
@@ -516,7 +519,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
             key={action.id}
             className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
             onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction}
+            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
           >
             <action.icon className="h-6 w-6" />
             {action.name}
@@ -529,7 +532,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
             key={action.id}
             className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
             onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction}
+            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
           >
             <action.icon className="h-6 w-6" />
             {action.name}
@@ -542,7 +545,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
             key={action.id}
             className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
             onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction}
+            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
           >
             <action.icon className="h-6 w-6" />
             {action.name}
@@ -584,7 +587,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
                   handleOpponentGoal();
                 }
               }}
-              disabled={action.id === 'golAFavor' && !selectedPlayerForAction}
+              disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
             >
               <action.icon className="h-6 w-6" />
               {action.name}
@@ -596,6 +599,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
               key={action.id}
               className={`flex-col h-20 ${action.color} text-white font-bold`}
               onClick={() => handleActionClick(action.id)}
+              disabled={selectedPlayerForAction?.stats.expulsado}
             >
               <action.icon className="h-6 w-6" />
               {action.name}
@@ -681,7 +685,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
                 {renderPlayerList(starters, true)}
               </div>
               <div>
-                <h3 className="text-white font-medium mb-2">Suplentes ({allPlayers.length - starters.length})</h3>
+                <h3 className="text-white font-medium mb-2">Suplentes ({substitutes.length})</h3>
                 {renderPlayerList(substitutes, false)}
               </div>
             </CardContent>
@@ -695,7 +699,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
               {gameControlUI}
               {isSubbing && (
                 <div className="bg-blue-500/20 text-white p-3 rounded-lg text-sm text-center">
-                  Selecciona al jugador titular que saldrá por {selectedSubstitute.name}
+                  Selecciona al jugador titular que saldrá por {selectedSubstitute?.name}
                 </div>
               )}
               {isMobile ? mobileGameActions : desktopGameActions}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Play, Pause, StopCircle, Goal, ShieldOff, Footprints,
-  X, Plus, Clock, ChevronsRight, Award, History, FileText, CheckCircle2
+  Play, Pause, Goal, ShieldOff, Footprints,
+  X, Clock, Award, History, CheckCircle2,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,7 +30,6 @@ const GOAL_ACTIONS = [
   { id: "golEnContra", name: "Gol en Contra", icon: Goal, color: "bg-red-500" },
 ];
 
-// Tipos para la gestión del partido
 type PlayerStats = {
   goles: number;
   asistencias: number;
@@ -61,7 +61,7 @@ interface RealTimeMatchManagementProps {
   matchId: string;
 }
 
-export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProps) {
+export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProps) {
   const isMobile = useIsMobile();
   const [gameState, setGameState] = useState<GameState>("roster_selection");
   const [timer, setTimer] = useState(0);
@@ -73,9 +73,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   const [selectedSubstitute, setSelectedSubstitute] = useState<Player | null>(null);
   const [isSubbing, setIsSubbing] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
-  const [redCardedPlayer, setRedCardedPlayer] = useState<Player | null>(null);
 
-  // Datos de ejemplo para el partido y los jugadores
   const [matchInfo] = useState({
     id: "1",
     opponent: "Club Atlético River",
@@ -87,7 +85,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   });
 
   const [allPlayers, setAllPlayers] = useState<Player[]>(
-    Array.from({ length: 25 }, (_, i) => ({
+    Array.from({ length: 14 }, (_, i) => ({
       id: i + 1,
       name: `Jugador ${i + 1}`,
       position: ["Arquero", "Defensor", "Mediocampista", "Delantero"][Math.floor(Math.random() * 4)],
@@ -121,7 +119,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
         setActivePlayerTimers((timers) => {
           const newTimers = { ...timers };
           starters.forEach((player) => {
-            if (!(player.stats.expulsado)) {
+            if (!player.stats.expulsado) {
               newTimers[player.id] = (newTimers[player.id] || 0) + 1;
             }
           });
@@ -144,7 +142,6 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
     setCurrentHalf(2);
     setGameState("second_half_roster");
     setTimer(0);
-    setRedCardedPlayer(null);
     setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.stats.expulsado));
   };
 
@@ -186,38 +183,16 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
     if (isSubbing) {
       setSelectedSubstitute(null);
       setIsSubbing(false);
+      setSelectedPlayerForAction(null);
     } else {
       setSelectedSubstitute(player);
       setIsSubbing(true);
+      setSelectedPlayerForAction(null);
     }
   };
 
   const handleStarterClick = (player: Player) => {
     if (gameState !== "in_game") {
-      return;
-    }
-    
-    if (player.stats.expulsado) {
-      if (isSubbing && selectedSubstitute) {
-        const newStarters = starters.filter(p => p.id !== player.id).concat(selectedSubstitute);
-        setStarters(newStarters);
-        setSubstitutes(substitutes.filter(p => p.id !== selectedSubstitute.id));
-        
-        setAllPlayers(prevPlayers => prevPlayers.map(p => {
-          if (p.id === player.id) {
-            return { ...p, stats: { ...p.stats, minutosJugados: (p.stats.minutosJugados || 0) + (activePlayerTimers[p.id] || 0) } };
-          }
-          return p;
-        }));
-
-        setActivePlayerTimers(prevTimers => ({ ...prevTimers, [selectedSubstitute.id]: 0 }));
-        
-        setSelectedSubstitute(null);
-        setIsSubbing(false);
-        setRedCardedPlayer(null);
-      } else {
-        setSelectedPlayerForAction(player);
-      }
       return;
     }
 
@@ -239,17 +214,15 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
       
       setSelectedSubstitute(null);
       setIsSubbing(false);
-      setRedCardedPlayer(null);
     } else {
       setSelectedPlayerForAction(player);
+      setSelectedSubstitute(null);
+      setIsSubbing(false);
     }
   };
 
-
   const handleActionClick = (actionId: string) => {
     if (!selectedPlayerForAction) return;
-
-    if (selectedPlayerForAction.stats.expulsado) return;
 
     if (actionId === "tarjetaRoja") {
       setAllPlayers((prevPlayers) =>
@@ -257,9 +230,9 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
           player.id === selectedPlayerForAction.id
             ? {
                 ...player,
-                stats: { 
-                  ...player.stats, 
-                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1, 
+                stats: {
+                  ...player.stats,
+                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1,
                   expulsado: true,
                   minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[player.id] || 0)
                 },
@@ -272,7 +245,6 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
         delete newTimers[selectedPlayerForAction.id];
         return newTimers;
       });
-      setRedCardedPlayer(selectedPlayerForAction);
       setSelectedPlayerForAction(null);
     } else if (actionId === "tarjetaAmarilla") {
       setAllPlayers((prevPlayers) =>
@@ -282,10 +254,10 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
             if (amarillas >= 2) {
               return {
                 ...player,
-                stats: { 
-                  ...player.stats, 
-                  tarjetaAmarilla: amarillas, 
-                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1, 
+                stats: {
+                  ...player.stats,
+                  tarjetaAmarilla: amarillas,
+                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1,
                   expulsado: true,
                   minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[player.id] || 0)
                 },
@@ -306,7 +278,6 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
           delete newTimers[selectedPlayerForAction.id];
           return newTimers;
         });
-        setRedCardedPlayer(selectedPlayerForAction);
       }
       setSelectedPlayerForAction(null);
     } else {
@@ -339,27 +310,6 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
     setSelectedPlayerForAction(null);
   }
 
-  const handleRedCardSubstitution = (substitutePlayer: Player) => {
-    if (!redCardedPlayer) return;
-
-    const newStarters = starters.filter(p => p.id !== redCardedPlayer.id).concat(substitutePlayer);
-    setStarters(newStarters);
-    setSubstitutes(substitutes.filter(p => p.id !== substitutePlayer.id));
-
-    setAllPlayers(prevPlayers => prevPlayers.map(p => {
-      if (p.id === redCardedPlayer.id) {
-        return { ...p, stats: { ...p.stats, minutosJugados: (p.stats.minutosJugados || 0) + (activePlayerTimers[p.id] || 0) } };
-      }
-      return p;
-    }));
-
-    setActivePlayerTimers(prevTimers => ({ ...prevTimers, [substitutePlayer.id]: 0 }));
-    
-    setSelectedSubstitute(null);
-    setIsSubbing(false);
-    setRedCardedPlayer(null);
-  };
-
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -375,23 +325,29 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   };
 
   const renderPlayerList = (playersList: Player[], isStarter: boolean) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2">
+    <div className="grid grid-cols-3 gap-4 w-full mx-auto">
       {playersList.map((player) => {
+        const isSelectedForAction = selectedPlayerForAction?.id === player.id;
+        const isSelectedForSubbing = isSubbing && selectedSubstitute?.id === player.id;
         const isExpulsado = player.stats.expulsado;
         const amarillas = player.stats.tarjetaAmarilla || 0;
         const hasRedCard = player.stats.tarjetaRoja > 0;
+
+        let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
+        if (isExpulsado || hasRedCard) {
+            cardClasses = "bg-red-500/20 border-2 border-red-500";
+        } else if (amarillas >= 1) {
+            cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
+        }
         
-        const isSelected = isStarter ? (isSubbing && selectedSubstitute?.id !== player.id) : (isSubbing && selectedSubstitute?.id === player.id);
-        const canBeSelected = !isExpulsado;
+        if (isSelectedForAction || isSelectedForSubbing) {
+            cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
+        }
         
         return (
           <div
             key={player.id}
-            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors 
-              ${isExpulsado ? "opacity-50" : ""}
-              ${isStarter ? (isSubbing && !isExpulsado ? "bg-red-500/20 border border-red-500" : "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]") : ""}
-              ${!isStarter ? (isSubbing && selectedSubstitute?.id === player.id ? "bg-blue-600/20 border border-blue-500" : "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]") : ""}
-            `}
+            className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
             onClick={() => {
               if (isStarter) {
                 handleStarterClick(player);
@@ -400,76 +356,66 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
               }
             }}
           >
-            <div className="flex items-center space-x-3">
-              <Avatar className={`h-8 w-8 ${isExpulsado ? "opacity-50" : ""}`}>
+            <Avatar className={`h-16 w-16`}>
                 <AvatarImage src={player.photo} alt={player.name} />
-                <AvatarFallback className="bg-[#305176] text-white text-xs">
-                  {player.name.split(' ').map(n => n[0]).join('')}
+                <AvatarFallback className="bg-[#305176] text-white text-base">
+                    {player.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
-              </Avatar>
-              <p className={`text-white text-sm ${isExpulsado ? "opacity-50" : ""}`}>{player.name}</p>
-            </div>
-            {(hasRedCard || isExpulsado) ? (
-              <Badge className="bg-red-500 text-white text-xs font-medium flex items-center space-x-1">
-                <Clock className="h-3 w-3 mr-1" />
-                {getPlayerDisplayTime(player.id)}
+            </Avatar>
+            <div className="flex flex-col items-center justify-center space-y-1 mt-2">
+              <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
+              <div className="flex items-center space-x-1">
+                {hasRedCard && (
+                  <ShieldOff className="h-4 w-4 text-red-500" title="Tarjeta Roja" />
+                )}
+                {amarillas === 1 && !hasRedCard && (
+                  <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Tarjeta Amarilla" />
+                )}
                 {amarillas >= 2 && (
                   <>
-                    <ShieldOff className="h-3 w-3 text-[#f4c11a]" title="Doble Amarilla" />
-                    <ShieldOff className="h-3 w-3 text-[#f4c11a]" />
+                    <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
+                    <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
                   </>
                 )}
-                {hasRedCard && (amarillas < 2) && (
-                  <ShieldOff className="h-3 w-3" title="Tarjeta Roja" />
-                )}
-              </Badge>
-            ) : (
-              <div className="flex items-center space-x-2">
                 <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
                   <Clock className="h-3 w-3 mr-1" />
                   {getPlayerDisplayTime(player.id)}
                 </Badge>
-                {amarillas === 1 && (
-                  <ShieldOff className="h-3 w-3 text-[#f4c11a]" title="Tarjeta Amarilla" />
-                )}
               </div>
-            )}
+            </div>
           </div>
         );
       })}
     </div>
   );
+
   const initialRosterPlayers = useMemo(() => allPlayers.filter(p => !p.stats.expulsado), [allPlayers]);
 
   const starterSelectionUI = (
-    <div className="space-y-4">
+    <div className="space-y-4 text-center">
       <p className="text-gray-400">
         Selecciona los 5 jugadores que irán de titulares.
         <span className="text-[#aff606] font-bold ml-2">({starters.length}/5)</span>
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex justify-center flex-wrap gap-4 w-full mx-auto max-w-4xl">
         {initialRosterPlayers.map((player) => (
           <div
             key={player.id}
             onClick={() => handlePlayerSelect(player.id)}
-            className={`p-4 bg-[#1d2834] rounded-lg border-2 cursor-pointer transition-colors ${
-              starters.some(s => s.id === player.id)
+            className={`p-2 bg-[#1d2834] rounded-lg border-2 aspect-square flex flex-col justify-center items-center cursor-pointer transition-colors w-[150px]
+              ${starters.some(s => s.id === player.id)
                 ? "border-[#aff606]"
                 : "border-transparent hover:border-[#305176]"
             }`}
           >
-            <div className="flex items-center space-x-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={player.photo} alt={player.name} />
-                <AvatarFallback className="bg-[#305176] text-white text-xs">
-                  {player.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="text-white font-medium">{player.name}</h3>
-                <p className="text-gray-400 text-sm">{player.position}</p>
-              </div>
-            </div>
+            <Avatar className="h-20 w-20 mb-2">
+              <AvatarImage src={player.photo} alt={player.name} />
+              <AvatarFallback className="bg-[#305176] text-white text-base">
+                {player.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+            <h3 className="text-white font-medium text-sm text-center">{player.name}</h3>
+            <p className="text-gray-400 text-xs text-center">{player.position}</p>
           </div>
         ))}
       </div>
@@ -484,82 +430,15 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
       </div>
     </div>
   );
-  
+
   const desktopGameActions = (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        {GOAL_ACTIONS.map((action) => (
-          <Button
-            key={action.id}
-            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-            onClick={action.id === 'golAFavor' ? handleHomeGoal : handleOpponentGoal}
-            disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
-          >
-            <action.icon className="h-6 w-6" />
-            {action.name}
-          </Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {GAME_ACTIONS.slice(0, 2).map((action) => (
-          <Button
-            key={action.id}
-            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-            onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-          >
-            <action.icon className="h-6 w-6" />
-            {action.name}
-          </Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {GAME_ACTIONS.slice(2, 4).map((action) => (
-          <Button
-            key={action.id}
-            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-            onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-          >
-            <action.icon className="h-6 w-6" />
-            {action.name}
-          </Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {GAME_ACTIONS.slice(4, 6).map((action) => (
-          <Button
-            key={action.id}
-            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-            onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-          >
-            <action.icon className="h-6 w-6" />
-            {action.name}
-          </Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {GAME_ACTIONS.slice(6, 8).map((action) => (
-          <Button
-            key={action.id}
-            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-            onClick={() => handleActionClick(action.id)}
-            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-          >
-            <action.icon className="h-6 w-6" />
-            {action.name}
-          </Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <Button
-          onClick={handleCancelAction}
-          className="col-span-2 h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold"
-        >
-          Cancelar acción
-        </Button>
-      </div>
+    <div className="grid grid-cols-2 gap-4">
+      <Button
+        onClick={handleCancelAction}
+        className="col-span-2 h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold"
+      >
+        Cancelar acción
+      </Button>
     </div>
   );
 
@@ -617,7 +496,7 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   );
 
   const gameControlUI = (
-    <div className="flex justify-center space-x-4">
+    <div className="flex justify-center space-x-4 w-full">
       {gameState === "in_game" && (
         <Button
           onClick={pauseGame}
@@ -648,61 +527,128 @@ export function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProp
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-2">
-            Gestión en vivo: {matchInfo.opponent}
-          </h2>
-          <p className="text-gray-400">
-            {matchInfo.tournament} - {matchInfo.category} - Tiempo: {currentHalf}
-          </p>
-        </div>
-        {(gameState === "in_game" || gameState === "paused") && (
-          <div className="flex items-center space-x-4">
-            <Badge className="bg-[#aff606] text-black">
-              {homeScore} - {awayScore}
-            </Badge>
-            <Badge className="bg-[#33d9f6] text-black">
-              <Clock className="h-4 w-4 mr-1" />
-              {formatTime(timer)}
-            </Badge>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-6 p-4 lg:p-8">
       {(gameState === "roster_selection" || gameState === "second_half_roster") ? (
-        starterSelectionUI
+        initialRosterPlayers.length > 0 ? (
+          starterSelectionUI
+        ) : (
+          <p className="text-center text-gray-400">No hay jugadores disponibles para esta categoría.</p>
+        )
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="bg-[#213041] border-[#305176] lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-white">Jugadores</CardTitle>
+              <CardTitle className="text-white flex items-center space-x-2">
+                <Users className="h-5 w-5 text-gray-400" />
+                <span>Jugadores</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
               <div>
-                <h3 className="text-white font-medium mb-2">Jugadores en Juego ({starters.length})</h3>
-                {renderPlayerList(starters, true)}
+                <h3 className="text-white font-medium mb-2 text-center">Jugadores en Juego ({starters.length})</h3>
+                <div className="flex justify-center flex-wrap gap-4">
+                  {renderPlayerList(starters, true)}
+                </div>
               </div>
               <div>
-                <h3 className="text-white font-medium mb-2">Suplentes ({substitutes.length})</h3>
-                {renderPlayerList(substitutes, false)}
+                <h3 className="text-white font-medium mb-2 text-center">Suplentes ({substitutes.length})</h3>
+                <div className="flex justify-center flex-wrap gap-4">
+                  {renderPlayerList(substitutes, false)}
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#213041] border-[#305176] lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-white">Acciones en vivo</CardTitle>
+          <Card className="bg-[#213041] border-[#305176] lg:col-span-2 flex flex-col h-full">
+            <CardHeader className="flex flex-col items-center space-y-2 flex-grow-0 h-[35%]">
+              <h2 className="text-xl font-bold text-white text-center">
+                {matchInfo.location === "Local" ? `Mi Club vs ${matchInfo.opponent}` : `${matchInfo.opponent} vs Mi Club`}
+              </h2>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center space-x-4 text-center">
+                  <span className="text-4xl font-bold text-white">{homeScore}</span>
+                  <span className="text-xl text-gray-400">-</span>
+                  <span className="text-4xl font-bold text-white">{awayScore}</span>
+                </div>
+                <Badge className="bg-[#33d9f6] text-black mt-2 text-base font-bold flex items-center space-x-2">
+                  <Clock className="h-5 w-5" />
+                  <span>{formatTime(timer)}</span>
+                </Badge>
+              </div>
+              <div className="w-full max-w-md">
+                {gameControlUI}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {gameControlUI}
+            <CardContent className="space-y-4 flex flex-col flex-grow h-[65%] overflow-y-auto scrollbar-hide">
               {isSubbing && (
-                <div className="bg-blue-500/20 text-white p-3 rounded-lg text-sm text-center">
+                <div className="bg-[#aff606]/20 text-white p-3 rounded-lg text-sm text-center border border-[#aff606]">
                   Selecciona al jugador titular que saldrá por {selectedSubstitute?.name}
                 </div>
               )}
-              {isMobile ? mobileGameActions : desktopGameActions}
+              <CardTitle className="text-white">Acciones en vivo</CardTitle>
+              <div className="grid grid-cols-2 gap-4">
+                {GOAL_ACTIONS.map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={action.id === 'golAFavor' ? handleHomeGoal : handleOpponentGoal}
+                    disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(0, 2).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(2, 4).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(4, 6).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(6, 8).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                onClick={handleCancelAction}
+                className="w-full h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold mt-auto"
+              >
+                Cancelar acción
+              </Button>
             </CardContent>
           </Card>
         </div>

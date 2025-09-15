@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   const [selectedSubstitute, setSelectedSubstitute] = useState<Player | null>(null);
   const [isSubbing, setIsSubbing] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const actionHistoryRef = useRef<any[]>([]);
 
   const [matchInfo] = useState({
     id: "1",
@@ -83,6 +84,15 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     tournament: "Liga Profesional",
     category: "Primera División",
   });
+
+  const [clubName, setClubName] = useState("Amigos de Villa Luro");
+
+  useEffect(() => {
+    const savedClubName = localStorage.getItem("clubName");
+    if (savedClubName) {
+      setClubName(savedClubName);
+    }
+  }, []);
 
   const [allPlayers, setAllPlayers] = useState<Player[]>(
     Array.from({ length: 14 }, (_, i) => ({
@@ -180,7 +190,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   const handleSubstituteClick = (player: Player) => {
     if (gameState !== "in_game" || player.stats.expulsado) return;
 
-    if (isSubbing) {
+    if (selectedSubstitute?.id === player.id) {
       setSelectedSubstitute(null);
       setIsSubbing(false);
       setSelectedPlayerForAction(null);
@@ -214,15 +224,19 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
       
       setSelectedSubstitute(null);
       setIsSubbing(false);
+    } else if (selectedPlayerForAction?.id === player.id) {
+        setSelectedPlayerForAction(null);
     } else {
-      setSelectedPlayerForAction(player);
-      setSelectedSubstitute(null);
-      setIsSubbing(false);
+        setSelectedPlayerForAction(player);
+        setSelectedSubstitute(null);
+        setIsSubbing(false);
     }
   };
 
   const handleActionClick = (actionId: string) => {
     if (!selectedPlayerForAction) return;
+
+    const oldStats = { ...selectedPlayerForAction.stats };
 
     if (actionId === "tarjetaRoja") {
       setAllPlayers((prevPlayers) =>
@@ -340,29 +354,29 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
         }
         
-        if (isSelectedForAction || isSelectedForSubbing) {
+        if (isSelectedForAction) {
             cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
         }
-        
+        if (isSelectedForSubbing) {
+            cardClasses = "bg-red-500/20 border-2 border-red-500";
+        }
+        if (isStarter && isSubbing && !isExpulsado) {
+            cardClasses = "bg-red-500/20 border-2 border-red-500";
+        }
+
         return (
           <div
             key={player.id}
             className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
-            onClick={() => {
-              if (isStarter) {
-                handleStarterClick(player);
-              } else {
-                handleSubstituteClick(player);
-              }
-            }}
+            onClick={() => handleStarterClick(player)}
           >
             <Avatar className={`h-16 w-16`}>
-                <AvatarImage src={player.photo} alt={player.name} />
-                <AvatarFallback className="bg-[#305176] text-white text-base">
-                    {player.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
+              <AvatarImage src={player.photo} alt={player.name} />
+              <AvatarFallback className="bg-[#305176] text-white text-base">
+                {player.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col items-center justify-center space-y-1 mt-2">
+            <div className="flex flex-col items-center justify-center space-y-1">
               <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
               <div className="flex items-center space-x-1">
                 {hasRedCard && (
@@ -433,12 +447,28 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
   const desktopGameActions = (
     <div className="grid grid-cols-2 gap-4">
-      <Button
-        onClick={handleCancelAction}
-        className="col-span-2 h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold"
-      >
-        Cancelar acción
-      </Button>
+      {GOAL_ACTIONS.map((action) => (
+        <Button
+          key={action.id}
+          className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+          onClick={action.id === 'golAFavor' ? handleHomeGoal : handleOpponentGoal}
+          disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
+        >
+          <action.icon className="h-6 w-6" />
+          {action.name}
+        </Button>
+      ))}
+      {GAME_ACTIONS.map((action) => (
+        <Button
+          key={action.id}
+          className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+          onClick={() => handleActionClick(action.id)}
+          disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+        >
+          <action.icon className="h-6 w-6" />
+          {action.name}
+        </Button>
+      ))}
     </div>
   );
 
@@ -546,23 +576,94 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             <CardContent className="space-y-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
               <div>
                 <h3 className="text-white font-medium mb-2 text-center">Jugadores en Juego ({starters.length})</h3>
-                <div className="flex justify-center flex-wrap gap-4">
-                  {renderPlayerList(starters, true)}
+                <div className="grid grid-cols-3 gap-4 mx-auto max-w-md">
+                  {starters.map((player) => {
+                    const isSelectedForAction = selectedPlayerForAction?.id === player.id;
+                    const canBeSubbed = isSubbing && !player.stats.expulsado;
+                    const isExpulsado = player.stats.expulsado;
+                    const amarillas = player.stats.tarjetaAmarilla || 0;
+                    const hasRedCard = player.stats.tarjetaRoja > 0;
+
+                    let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
+                    if (isExpulsado || hasRedCard) {
+                        cardClasses = "bg-red-500/20 border-2 border-red-500";
+                    } else if (amarillas >= 1) {
+                        cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
+                    }
+                    
+                    if (isSelectedForAction) {
+                        cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
+                    }
+                    if (canBeSubbed) {
+                      cardClasses = "bg-red-500/20 border-2 border-red-500";
+                    }
+
+                    return (
+                      <div
+                        key={player.id}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
+                        onClick={() => handleStarterClick(player)}
+                      >
+                        <Avatar className={`h-16 w-16`}>
+                          <AvatarImage src={player.photo} alt={player.name} />
+                          <AvatarFallback className="bg-[#305176] text-white text-base">
+                            {player.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
+                        <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {getPlayerDisplayTime(player.id)}
+                        </Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               <div>
                 <h3 className="text-white font-medium mb-2 text-center">Suplentes ({substitutes.length})</h3>
-                <div className="flex justify-center flex-wrap gap-4">
-                  {renderPlayerList(substitutes, false)}
+                <div className="grid grid-cols-3 gap-4 mx-auto max-w-md">
+                  {substitutes.map((player) => {
+                    const isSelectedForSubbing = selectedSubstitute?.id === player.id;
+                    const isExpulsado = player.stats.expulsado;
+
+                    let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
+                    if (isExpulsado) {
+                      cardClasses = "bg-red-500/20 border-2 border-red-500";
+                    }
+                    if (isSelectedForSubbing) {
+                      cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
+                    }
+                    
+                    return (
+                      <div
+                        key={player.id}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
+                        onClick={() => handleSubstituteClick(player)}
+                      >
+                        <Avatar className={`h-16 w-16`}>
+                          <AvatarImage src={player.photo} alt={player.name} />
+                          <AvatarFallback className="bg-[#305176] text-white text-base">
+                            {player.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
+                        <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {getPlayerDisplayTime(player.id)}
+                        </Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-[#213041] border-[#305176] lg:col-span-2 flex flex-col h-full">
-            <CardHeader className="flex flex-col items-center space-y-2 flex-grow-0 h-[35%]">
+            <CardHeader className="flex-grow-0 h-1/3 flex flex-col items-center space-y-2">
               <h2 className="text-xl font-bold text-white text-center">
-                {matchInfo.location === "Local" ? `Mi Club vs ${matchInfo.opponent}` : `${matchInfo.opponent} vs Mi Club`}
+                {matchInfo.location === "Local" ? `${clubName} vs ${matchInfo.opponent}` : `${matchInfo.opponent} vs ${clubName}`}
               </h2>
               <div className="flex flex-col items-center">
                 <div className="flex items-center space-x-4 text-center">
@@ -579,7 +680,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 {gameControlUI}
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 flex flex-col flex-grow h-[65%] overflow-y-auto scrollbar-hide">
+            <CardContent className="space-y-4 flex flex-col flex-grow h-2/3 pt-0">
               {isSubbing && (
                 <div className="bg-[#aff606]/20 text-white p-3 rounded-lg text-sm text-center border border-[#aff606]">
                   Selecciona al jugador titular que saldrá por {selectedSubstitute?.name}
@@ -598,40 +699,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                     {action.name}
                   </Button>
                 ))}
-                {GAME_ACTIONS.slice(0, 2).map((action) => (
-                  <Button
-                    key={action.id}
-                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-                    onClick={() => handleActionClick(action.id)}
-                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-                  >
-                    <action.icon className="h-6 w-6" />
-                    {action.name}
-                  </Button>
-                ))}
-                {GAME_ACTIONS.slice(2, 4).map((action) => (
-                  <Button
-                    key={action.id}
-                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-                    onClick={() => handleActionClick(action.id)}
-                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-                  >
-                    <action.icon className="h-6 w-6" />
-                    {action.name}
-                  </Button>
-                ))}
-                {GAME_ACTIONS.slice(4, 6).map((action) => (
-                  <Button
-                    key={action.id}
-                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-                    onClick={() => handleActionClick(action.id)}
-                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-                  >
-                    <action.icon className="h-6 w-6" />
-                    {action.name}
-                  </Button>
-                ))}
-                {GAME_ACTIONS.slice(6, 8).map((action) => (
+                {GAME_ACTIONS.map((action) => (
                   <Button
                     key={action.id}
                     className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
@@ -644,10 +712,12 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 ))}
               </div>
               <Button
-                onClick={handleCancelAction}
+                onClick={() => {
+                  /* Lógica para cancelar última acción */
+                }}
                 className="w-full h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold mt-auto"
               >
-                Cancelar acción
+                Cancelar última acción
               </Button>
             </CardContent>
           </Card>

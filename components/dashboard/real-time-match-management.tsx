@@ -79,7 +79,6 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     id: "1",
     opponent: "Club Atlético River",
     date: "15-09-2025",
-    time: "16:00",
     location: "Local",
     tournament: "Liga Profesional",
     category: "Primera División",
@@ -88,9 +87,12 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   const [clubName, setClubName] = useState("Amigos de Villa Luro");
 
   useEffect(() => {
-    const savedClubName = localStorage.getItem("clubName");
-    if (savedClubName) {
-      setClubName(savedClubName);
+    const savedProfile = localStorage.getItem("userProfile");
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile);
+      if (profile.clubName) {
+        setClubName(profile.clubName);
+      }
     }
   }, []);
 
@@ -145,6 +147,54 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   }, [gameState, starters]);
 
 
+  const addActionToHistory = (action: any) => {
+    actionHistoryRef.current.push(action);
+  };
+
+  const undoLastAction = () => {
+    const lastAction = actionHistoryRef.current.pop();
+    if (!lastAction) return;
+  
+    const { type, playerId, oldValue } = lastAction;
+  
+    if (type === 'golAFavor') {
+      setHomeScore(s => Math.max(0, s - 1));
+      setAllPlayers(prevPlayers => prevPlayers.map(p => p.id === playerId ? { ...p, stats: { ...p.stats, golAFavor: oldValue } } : p));
+    } else if (type === 'golEnContra') {
+      setAwayScore(s => Math.max(0, s - 1));
+    } else if (type === 'tarjetaAmarilla') {
+      setAllPlayers(prevPlayers => prevPlayers.map(p => {
+        if (p.id === playerId) {
+          const newStats = { ...p.stats, tarjetaAmarilla: oldValue };
+          if (p.stats.tarjetaAmarilla === 2) {
+            newStats.tarjetaRoja = Math.max(0, newStats.tarjetaRoja - 1);
+            delete newStats.expulsado;
+            setActivePlayerTimers(prevTimers => ({ ...prevTimers, [p.id]: newStats.minutosJugados || 0 }));
+          }
+          return { ...p, stats: newStats };
+        }
+        return p;
+      }));
+    } else if (type === 'tarjetaRoja') {
+      setAllPlayers(prevPlayers => prevPlayers.map(p => {
+        if (p.id === playerId) {
+          const newStats = { ...p.stats, tarjetaRoja: oldValue };
+          delete newStats.expulsado;
+          setActivePlayerTimers(prevTimers => ({ ...prevTimers, [p.id]: newStats.minutosJugados || 0 }));
+          return { ...p, stats: newStats };
+        }
+        return p;
+      }));
+    } else if (type === 'substitution') {
+      const { exitingPlayerId, enteringPlayerId, minutes } = lastAction;
+      setStarters(prevStarters => prevStarters.map(ps => ps.id === enteringPlayerId ? allPlayers.find(p => p.id === exitingPlayerId) : ps));
+      setSubstitutes(prevSubs => prevSubs.map(ps => ps.id === exitingPlayerId ? allPlayers.find(p => p.id === enteringPlayerId) : ps));
+      setActivePlayerTimers(prevTimers => ({...prevTimers, [exitingPlayerId]: minutes, [enteringPlayerId]: 0}));
+    } else {
+      setAllPlayers(prevPlayers => prevPlayers.map(p => p.id === playerId ? { ...p, stats: { ...p.stats, [type]: oldValue } } : p));
+    }
+  };
+
   const startGame = () => setGameState("in_game");
   const pauseGame = () => setGameState("paused");
 
@@ -153,6 +203,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     setGameState("second_half_roster");
     setTimer(0);
     setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.stats.expulsado));
+    setActivePlayerTimers({});
   };
 
   const finishGame = () => {
@@ -206,49 +257,69 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
       return;
     }
 
+    if (selectedPlayerForAction?.id === player.id) {
+      setSelectedPlayerForAction(null);
+      return;
+    }
+
     if (isSubbing && selectedSubstitute) {
+      if (player.stats.expulsado) return;
+
       const exitingPlayer = starters.find(p => p.id === player.id);
-      if (exitingPlayer) {
-          setAllPlayers(prevPlayers => prevPlayers.map(p => {
-              if (p.id === exitingPlayer.id) {
-                  return { ...p, stats: { ...p.stats, minutosJugados: (p.stats.minutosJugados || 0) + (activePlayerTimers[p.id] || 0) } };
-              }
-              return p;
-          }));
-      }
+      
+      const minutesPlayed = (exitingPlayer?.stats.minutosJugados || 0) + (activePlayerTimers[exitingPlayer?.id || 0] || 0);
+
+      setAllPlayers(prevPlayers => prevPlayers.map(p => {
+          if (p.id === exitingPlayer?.id) {
+              return { ...p, stats: { ...p.stats, minutosJugados: minutesPlayed } };
+          }
+          return p;
+      }));
 
       setStarters(starters.map(p => p.id === player.id ? selectedSubstitute : p));
-      setSubstitutes(substitutes.map(p => p.id === selectedSubstitute.id ? player : p));
+      setSubstitutes(substitutes.filter(p => p.id !== selectedSubstitute.id).concat(player));
       
-      setActivePlayerTimers(prevTimers => ({ ...prevTimers, [selectedSubstitute.id]: 0 }));
+      setActivePlayerTimers(prevTimers => {
+        const newTimers = { ...prevTimers };
+        delete newTimers[exitingPlayer?.id || 0];
+        newTimers[selectedSubstitute.id] = 0;
+        return newTimers;
+      });
+
+      addActionToHistory({ 
+        type: 'substitution', 
+        exitingPlayerId: exitingPlayer?.id, 
+        enteringPlayerId: selectedSubstitute.id,
+        minutes: minutesPlayed
+      });
       
       setSelectedSubstitute(null);
       setIsSubbing(false);
-    } else if (selectedPlayerForAction?.id === player.id) {
-        setSelectedPlayerForAction(null);
     } else {
-        setSelectedPlayerForAction(player);
-        setSelectedSubstitute(null);
-        setIsSubbing(false);
+      setSelectedPlayerForAction(player);
+      setSelectedSubstitute(null);
+      setIsSubbing(false);
     }
   };
 
   const handleActionClick = (actionId: string) => {
     if (!selectedPlayerForAction) return;
+    if (selectedPlayerForAction.stats.expulsado) return;
 
+    const playerId = selectedPlayerForAction.id;
     const oldStats = { ...selectedPlayerForAction.stats };
 
     if (actionId === "tarjetaRoja") {
       setAllPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
-          player.id === selectedPlayerForAction.id
+          player.id === playerId
             ? {
                 ...player,
                 stats: {
                   ...player.stats,
                   tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1,
                   expulsado: true,
-                  minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[player.id] || 0)
+                  minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[playerId] || 0)
                 },
               }
             : player
@@ -256,40 +327,33 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
       );
       setActivePlayerTimers(prevTimers => {
         const newTimers = { ...prevTimers };
-        delete newTimers[selectedPlayerForAction.id];
+        delete newTimers[playerId];
         return newTimers;
       });
+      addActionToHistory({ type: 'tarjetaRoja', playerId, oldValue: oldStats.tarjetaRoja});
       setSelectedPlayerForAction(null);
+
     } else if (actionId === "tarjetaAmarilla") {
       setAllPlayers((prevPlayers) =>
         prevPlayers.map((player) => {
-          if (player.id === selectedPlayerForAction.id) {
+          if (player.id === playerId) {
             const amarillas = (player.stats.tarjetaAmarilla || 0) + 1;
+            const newStats = { ...player.stats, tarjetaAmarilla: amarillas };
             if (amarillas >= 2) {
-              return {
-                ...player,
-                stats: {
-                  ...player.stats,
-                  tarjetaAmarilla: amarillas,
-                  tarjetaRoja: (player.stats.tarjetaRoja || 0) + 1,
-                  expulsado: true,
-                  minutosJugados: (player.stats.minutosJugados || 0) + (activePlayerTimers[player.id] || 0)
-                },
-              };
+              newStats.tarjetaRoja = (newStats.tarjetaRoja || 0) + 1;
+              newStats.expulsado = true;
+              newStats.minutosJugados = (newStats.minutosJugados || 0) + (activePlayerTimers[playerId] || 0);
             }
-            return {
-              ...player,
-              stats: { ...player.stats, tarjetaAmarilla: amarillas },
-            };
+            addActionToHistory({ type: 'tarjetaAmarilla', playerId, oldValue: oldStats.tarjetaAmarilla});
+            return { ...player, stats: newStats };
           }
           return player;
         })
       );
-      const updatedPlayer = allPlayers.find(p => p.id === selectedPlayerForAction.id);
-      if (updatedPlayer && ((updatedPlayer.stats.tarjetaAmarilla || 0) + 1) >= 2) {
+      if (((selectedPlayerForAction.stats.tarjetaAmarilla || 0) + 1) >= 2) {
         setActivePlayerTimers(prevTimers => {
           const newTimers = { ...prevTimers };
-          delete newTimers[selectedPlayerForAction.id];
+          delete newTimers[playerId];
           return newTimers;
         });
       }
@@ -297,31 +361,43 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     } else {
       setAllPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
-          player.id === selectedPlayerForAction.id
+          player.id === playerId
             ? { ...player, stats: { ...player.stats, [actionId]: (player.stats[actionId as keyof PlayerStats] as number) + 1 } }
             : player
         )
       );
+      addActionToHistory({ type: actionId, playerId, oldValue: oldStats[actionId as keyof PlayerStats] });
       setSelectedPlayerForAction(null);
     }
   };
-  
+
   const handleHomeGoal = () => {
     if (selectedPlayerForAction && !selectedPlayerForAction.stats.expulsado) {
-      setHomeScore(homeScore + 1);
-      handleActionClick("golAFavor");
+      setHomeScore(s => s + 1);
+      addActionToHistory({ type: 'golAFavor', playerId: selectedPlayerForAction.id, oldValue: selectedPlayerForAction.stats.golAFavor});
+      setAllPlayers((prevPlayers) =>
+        prevPlayers.map((player) =>
+          player.id === selectedPlayerForAction.id
+            ? { ...player, stats: { ...player.stats, golAFavor: (player.stats.golAFavor || 0) + 1 } }
+            : player
+        )
+      );
+      setSelectedPlayerForAction(null);
     } else {
       alert("Selecciona un jugador para registrar el Gol a Favor.");
     }
   };
 
   const handleOpponentGoal = () => {
-    setAwayScore(awayScore + 1);
+    setAwayScore(s => s + 1);
+    addActionToHistory({ type: 'golEnContra', playerId: null});
     setSelectedPlayerForAction(null);
   };
 
   const handleCancelAction = () => {
     setSelectedPlayerForAction(null);
+    setSelectedSubstitute(null);
+    setIsSubbing(false);
   }
 
   const formatTime = (seconds: number) => {
@@ -358,7 +434,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
         }
         if (isSelectedForSubbing) {
-            cardClasses = "bg-red-500/20 border-2 border-red-500";
+            cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
         }
         if (isStarter && isSubbing && !isExpulsado) {
             cardClasses = "bg-red-500/20 border-2 border-red-500";
@@ -368,7 +444,13 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
           <div
             key={player.id}
             className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
-            onClick={() => handleStarterClick(player)}
+            onClick={() => {
+              if (isStarter) {
+                handleStarterClick(player);
+              } else {
+                handleSubstituteClick(player);
+              }
+            }}
           >
             <Avatar className={`h-16 w-16`}>
               <AvatarImage src={player.photo} alt={player.name} />
@@ -446,30 +528,39 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   );
 
   const desktopGameActions = (
-    <div className="grid grid-cols-2 gap-4">
-      {GOAL_ACTIONS.map((action) => (
-        <Button
-          key={action.id}
-          className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-          onClick={action.id === 'golAFavor' ? handleHomeGoal : handleOpponentGoal}
-          disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
-        >
-          <action.icon className="h-6 w-6" />
-          {action.name}
-        </Button>
-      ))}
-      {GAME_ACTIONS.map((action) => (
-        <Button
-          key={action.id}
-          className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
-          onClick={() => handleActionClick(action.id)}
-          disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
-        >
-          <action.icon className="h-6 w-6" />
-          {action.name}
-        </Button>
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        {GOAL_ACTIONS.map((action) => (
+          <Button
+            key={action.id}
+            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+            onClick={action.id === 'golAFavor' ? handleHomeGoal : handleOpponentGoal}
+            disabled={action.id === 'golAFavor' && (!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado)}
+          >
+            <action.icon className="h-6 w-6" />
+            {action.name}
+          </Button>
+        ))}
+        {GAME_ACTIONS.map((action) => (
+          <Button
+            key={action.id}
+            className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+            onClick={() => handleActionClick(action.id)}
+            disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+          >
+            <action.icon className="h-6 w-6" />
+            {action.name}
+          </Button>
+        ))}
+      </div>
+      <Button
+        onClick={undoLastAction}
+        className="w-full h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold mt-4"
+        disabled={actionHistoryRef.current.length === 0}
+      >
+        Cancelar Última Acción
+      </Button>
+    </>
   );
 
   const mobileGameActions = (
@@ -579,7 +670,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 <div className="grid grid-cols-3 gap-4 mx-auto max-w-md">
                   {starters.map((player) => {
                     const isSelectedForAction = selectedPlayerForAction?.id === player.id;
-                    const canBeSubbed = isSubbing && !player.stats.expulsado;
+                    const isSelectedForSubbing = isSubbing && selectedSubstitute?.id === player.id;
                     const isExpulsado = player.stats.expulsado;
                     const amarillas = player.stats.tarjetaAmarilla || 0;
                     const hasRedCard = player.stats.tarjetaRoja > 0;
@@ -594,8 +685,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                     if (isSelectedForAction) {
                         cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
                     }
-                    if (canBeSubbed) {
-                      cardClasses = "bg-red-500/20 border-2 border-red-500";
+                    if (isStarter && isSubbing && !isExpulsado) {
+                        cardClasses = "bg-red-500/20 border-2 border-red-500";
                     }
 
                     return (
@@ -611,10 +702,24 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                           </AvatarFallback>
                         </Avatar>
                         <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
-                        <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {getPlayerDisplayTime(player.id)}
-                        </Badge>
+                        <div className="flex items-center space-x-1">
+                          {hasRedCard && (
+                            <ShieldOff className="h-4 w-4 text-red-500" title="Tarjeta Roja" />
+                          )}
+                          {amarillas === 1 && !hasRedCard && (
+                            <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Tarjeta Amarilla" />
+                          )}
+                          {amarillas >= 2 && (
+                            <>
+                              <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
+                              <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
+                            </>
+                          )}
+                          <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {getPlayerDisplayTime(player.id)}
+                          </Badge>
+                        </div>
                       </div>
                     );
                   })}
@@ -682,8 +787,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             </CardHeader>
             <CardContent className="space-y-4 flex flex-col flex-grow h-2/3 pt-0">
               {isSubbing && (
-                <div className="bg-[#aff606]/20 text-white p-3 rounded-lg text-sm text-center border border-[#aff606]">
-                  Selecciona al jugador titular que saldrá por {selectedSubstitute?.name}
+                <div className="bg-red-500/20 text-white p-3 rounded-lg text-sm text-center border border-red-500">
+                  Selecciona el jugador titular que saldrá
                 </div>
               )}
               <CardTitle className="text-white">Acciones en vivo</CardTitle>
@@ -699,7 +804,40 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                     {action.name}
                   </Button>
                 ))}
-                {GAME_ACTIONS.map((action) => (
+                {GAME_ACTIONS.slice(0, 2).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(2, 4).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(4, 6).map((action) => (
+                  <Button
+                    key={action.id}
+                    className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
+                    onClick={() => handleActionClick(action.id)}
+                    disabled={!selectedPlayerForAction || selectedPlayerForAction.stats.expulsado}
+                  >
+                    <action.icon className="h-6 w-6" />
+                    {action.name}
+                  </Button>
+                ))}
+                {GAME_ACTIONS.slice(6, 8).map((action) => (
                   <Button
                     key={action.id}
                     className={`flex-col h-20 ${action.color} text-white font-bold text-xs md:text-sm`}
@@ -712,12 +850,11 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 ))}
               </div>
               <Button
-                onClick={() => {
-                  /* Lógica para cancelar última acción */
-                }}
+                onClick={undoLastAction}
                 className="w-full h-12 bg-gray-500 text-white hover:bg-gray-600 font-bold mt-auto"
+                disabled={actionHistoryRef.current.length === 0}
               >
-                Cancelar última acción
+                Cancelar Última Acción
               </Button>
             </CardContent>
           </Card>
@@ -731,22 +868,22 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
               Finalizar Partido
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              ¿Estás seguro de que quieres finalizar el partido? Se guardarán todas las estadísticas.
+              ¿Estás seguro de que quieres finalizar el partido? Se guardarán todas las estadísticas y se generará un PDF.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center space-x-4">
-            <Button
-              className="bg-red-500 text-white hover:bg-red-600"
-              onClick={finishGame}
-            >
-              Finalizar Partido
-            </Button>
             <Button
               variant="outline"
               className="border-[#305176] text-white hover:bg-[#305176]"
               onClick={() => setIsFinalizing(false)}
             >
               Cancelar
+            </Button>
+            <Button
+              className="bg-red-500 text-white hover:bg-red-600"
+              onClick={finishGame}
+            >
+              Finalizar Partido
             </Button>
           </div>
         </DialogContent>

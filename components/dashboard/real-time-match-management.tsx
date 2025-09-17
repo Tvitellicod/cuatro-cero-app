@@ -269,42 +269,36 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
     if (isSubbing && selectedSubstitute) {
       if (player.stats.expulsado) return;
-
+  
+      // Encuentra al jugador que está saliendo
       const exitingPlayer = starters.find(p => p.id === player.id);
       
+      // Calcula los minutos acumulados del jugador que sale
       const minutesPlayed = (exitingPlayer?.stats.minutosJugados || 0) + (activePlayerTimers[exitingPlayer?.id || 0] || 0);
-
-      setAllPlayers(prevPlayers => prevPlayers.map(p => {
-          if (p.id === exitingPlayer?.id) {
-              return { ...p, stats: { ...p.stats, minutosJugados: minutesPlayed } };
-          }
-          return p;
-      }));
-
-      // Find the index of the player being substituted out from the starters
-      const starterIndex = starters.findIndex(p => p.id === player.id);
-      // Create a new starters array by replacing the player at that index with the selected substitute
-      const newStarters = [...starters];
-      newStarters.splice(starterIndex, 1, selectedSubstitute);
+  
+      // Crea un objeto actualizado para el jugador que sale con su tiempo total
+      const updatedExitingPlayer = exitingPlayer ? { ...exitingPlayer, stats: { ...exitingPlayer.stats, minutosJugados: minutesPlayed } } : null;
+  
+      // Actualiza la lista general de jugadores para reflejar el tiempo acumulado
+      setAllPlayers(prevPlayers => prevPlayers.map(p => p.id === updatedExitingPlayer?.id ? updatedExitingPlayer : p));
       
-      // Find the index of the selected substitute from the substitutes list
-      const substituteIndex = substitutes.findIndex(p => p.id === selectedSubstitute.id);
-      // Create a new substitutes array by replacing the substitute with the player being subbed out
-      const newSubstitutes = [...substitutes];
-      if (exitingPlayer) {
-          newSubstitutes.splice(substituteIndex, 1, exitingPlayer);
-      }
+      // Reemplaza al jugador que sale con el que entra en la lista de titulares
+      const newStarters = starters.map(p => p.id === player.id ? selectedSubstitute : p) as Player[];
       
+      // Reemplaza al jugador que entra con el que sale en la lista de suplentes
+      const newSubstitutes = substitutes.map(p => p.id === selectedSubstitute.id ? updatedExitingPlayer : p).filter(Boolean) as Player[];
+
       setStarters(newStarters);
       setSubstitutes(newSubstitutes);
-      
+  
+      // Reinicia el contador del jugador que entra y elimina el del que sale
       setActivePlayerTimers(prevTimers => {
         const newTimers = { ...prevTimers };
         delete newTimers[exitingPlayer?.id || 0];
         newTimers[selectedSubstitute.id] = 0;
         return newTimers;
       });
-
+  
       addActionToHistory({ 
         type: 'substitution', 
         exitingPlayerId: exitingPlayer?.id, 
@@ -424,14 +418,16 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     const remainingSeconds = seconds % 60;
     return `${minutes < 10 ? "0" : ""}${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
-
+  
   const getPlayerDisplayTime = (playerId: number) => {
     const player = allPlayers.find(p => p.id === playerId);
     if (!player) return "00:00";
-    const totalMinutes = (player.stats.minutosJugados || 0) + (activePlayerTimers[playerId] || 0);
-    return formatTime(totalMinutes);
+    const accumulatedTime = player.stats.minutosJugados || 0;
+    const currentTimeInStint = activePlayerTimers[playerId] || 0;
+    const totalDisplayTime = accumulatedTime + currentTimeInStint;
+    return formatTime(totalDisplayTime);
   };
-
+  
   const renderPlayerCard = (player: Player, isStarter: boolean) => {
     const isSelectedForAction = selectedPlayerForAction?.id === player.id;
     const isSelectedForSubbing = isSubbing && selectedSubstitute?.id === player.id;

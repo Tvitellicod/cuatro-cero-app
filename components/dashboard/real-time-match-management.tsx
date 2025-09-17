@@ -199,11 +199,16 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   const pauseGame = () => setGameState("paused");
 
   const startSecondHalf = () => {
+    setAllPlayers(prevPlayers => prevPlayers.map(p => {
+        const minutes = (p.stats.minutosJugados || 0) + (activePlayerTimers[p.id] || 0);
+        return { ...p, stats: { ...p.stats, minutosJugados: minutes } };
+    }));
+    
+    setTimer(0);
+    setActivePlayerTimers({});
+    setStarters([]);
     setCurrentHalf(2);
     setGameState("second_half_roster");
-    setTimer(0);
-    setSubstitutes(allPlayers.filter((p) => !starters.some(s => s.id === p.id) && !p.stats.expulsado));
-    setActivePlayerTimers({});
   };
 
   const finishGame = () => {
@@ -276,8 +281,22 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
           return p;
       }));
 
-      setStarters(starters.map(p => p.id === player.id ? selectedSubstitute : p));
-      setSubstitutes(substitutes.filter(p => p.id !== selectedSubstitute.id).concat(player));
+      // Find the index of the player being substituted out from the starters
+      const starterIndex = starters.findIndex(p => p.id === player.id);
+      // Create a new starters array by replacing the player at that index with the selected substitute
+      const newStarters = [...starters];
+      newStarters.splice(starterIndex, 1, selectedSubstitute);
+      
+      // Find the index of the selected substitute from the substitutes list
+      const substituteIndex = substitutes.findIndex(p => p.id === selectedSubstitute.id);
+      // Create a new substitutes array by replacing the substitute with the player being subbed out
+      const newSubstitutes = [...substitutes];
+      if (exitingPlayer) {
+          newSubstitutes.splice(substituteIndex, 1, exitingPlayer);
+      }
+      
+      setStarters(newStarters);
+      setSubstitutes(newSubstitutes);
       
       setActivePlayerTimers(prevTimers => {
         const newTimers = { ...prevTimers };
@@ -470,7 +489,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                     <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
                   </>
                 )}
-                <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
+                <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center space-x-2">
                   <Clock className="h-3 w-3 mr-1" />
                   {getPlayerDisplayTime(player.id)}
                 </Badge>

@@ -408,55 +408,52 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
   const getPlayerDisplayTime = (playerId: number) => {
     const player = allPlayers.find(p => p.id === playerId);
-    if (player?.stats.expulsado) {
-      return formatTime(player.stats.minutosJugados || 0);
-    }
-    return formatTime(activePlayerTimers[playerId] || 0);
+    if (!player) return "00:00";
+    const totalMinutes = (player.stats.minutosJugados || 0) + (activePlayerTimers[playerId] || 0);
+    return formatTime(totalMinutes);
   };
 
-  const renderPlayerList = (playersList: Player[], isStarter: boolean) => (
-    <div className="grid grid-cols-3 gap-4 w-full mx-auto">
-      {playersList.map((player) => {
-        const isSelectedForAction = selectedPlayerForAction?.id === player.id;
-        const isSelectedForSubbing = isSubbing && selectedSubstitute?.id === player.id;
-        const isExpulsado = player.stats.expulsado;
-        const amarillas = player.stats.tarjetaAmarilla || 0;
-        const hasRedCard = player.stats.tarjetaRoja > 0;
+  const renderPlayerCard = (player: Player, isStarter: boolean) => {
+    const isSelectedForAction = selectedPlayerForAction?.id === player.id;
+    const isSelectedForSubbing = isSubbing && selectedSubstitute?.id === player.id;
+    const isExpulsado = player.stats.expulsado;
+    const amarillas = player.stats.tarjetaAmarilla || 0;
+    const hasRedCard = player.stats.tarjetaRoja > 0;
 
-        let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
-        if (isExpulsado || hasRedCard) {
-            cardClasses = "bg-red-500/20 border-2 border-red-500";
-        } else if (amarillas >= 1) {
-            cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
-        }
-        
-        if (isSelectedForAction) {
-            cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
-        }
-        if (isSelectedForSubbing) {
-            cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
-        }
-        if (isStarter && isSubbing && !isExpulsado) {
-            cardClasses = "bg-red-500/20 border-2 border-red-500";
-        }
+    let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
+    if (isExpulsado || hasRedCard) {
+        cardClasses = "bg-red-500/20 border-2 border-red-500";
+    } else if (amarillas >= 1) {
+        cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
+    }
+    
+    if (isSelectedForAction) {
+        cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
+    }
+    if (isSelectedForSubbing) {
+        cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
+    }
+    if (isStarter && isSubbing && !isExpulsado) {
+        cardClasses = "bg-red-500/20 border-2 border-red-500";
+    }
 
-        return (
-          <div
+    return (
+        <div
             key={player.id}
             className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
             onClick={() => {
-              if (isStarter) {
-                handleStarterClick(player);
-              } else {
-                handleSubstituteClick(player);
-              }
+                if (isStarter) {
+                    handleStarterClick(player);
+                } else {
+                    handleSubstituteClick(player);
+                }
             }}
-          >
+        >
             <Avatar className={`h-16 w-16`}>
-              <AvatarImage src={player.photo} alt={player.name} />
-              <AvatarFallback className="bg-[#305176] text-white text-base">
-                {player.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
+                <AvatarImage src={player.photo} alt={player.name} />
+                <AvatarFallback className="bg-[#305176] text-white text-base">
+                    {player.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-center justify-center space-y-1">
               <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
@@ -479,11 +476,10 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 </Badge>
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+        </div>
+    );
+  };
+
 
   const initialRosterPlayers = useMemo(() => allPlayers.filter(p => !p.stats.expulsado), [allPlayers]);
 
@@ -668,98 +664,13 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
               <div>
                 <h3 className="text-white font-medium mb-2 text-center">Jugadores en Juego ({starters.length})</h3>
                 <div className="grid grid-cols-3 gap-4 mx-auto max-w-md">
-                  {starters.map((player) => {
-                    const isSelectedForAction = selectedPlayerForAction?.id === player.id;
-                    const isSelectedForSubbing = isSubbing && selectedSubstitute?.id === player.id;
-                    const isExpulsado = player.stats.expulsado;
-                    const amarillas = player.stats.tarjetaAmarilla || 0;
-                    const hasRedCard = player.stats.tarjetaRoja > 0;
-
-                    let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
-                    if (isExpulsado || hasRedCard) {
-                        cardClasses = "bg-red-500/20 border-2 border-red-500";
-                    } else if (amarillas >= 1) {
-                        cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
-                    }
-                    
-                    if (isSelectedForAction) {
-                        cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
-                    }
-                    if (isStarter && isSubbing && !isExpulsado) {
-                        cardClasses = "bg-red-500/20 border-2 border-red-500";
-                    }
-
-                    return (
-                      <div
-                        key={player.id}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
-                        onClick={() => handleStarterClick(player)}
-                      >
-                        <Avatar className={`h-16 w-16`}>
-                          <AvatarImage src={player.photo} alt={player.name} />
-                          <AvatarFallback className="bg-[#305176] text-white text-base">
-                            {player.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
-                        <div className="flex items-center space-x-1">
-                          {hasRedCard && (
-                            <ShieldOff className="h-4 w-4 text-red-500" title="Tarjeta Roja" />
-                          )}
-                          {amarillas === 1 && !hasRedCard && (
-                            <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Tarjeta Amarilla" />
-                          )}
-                          {amarillas >= 2 && (
-                            <>
-                              <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
-                              <ShieldOff className="h-4 w-4 text-[#f4c11a]" title="Doble Amarilla" />
-                            </>
-                          )}
-                          <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {getPlayerDisplayTime(player.id)}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {starters.map((player) => renderPlayerCard(player, true))}
                 </div>
               </div>
               <div>
-                <h3 className="text-white font-medium mb-2 text-center">Suplentes ({substitutes.length})</h3>
+                <h3 className="text-white font-medium mb-2 text-center">Jugadores Suplentes ({substitutes.length})</h3>
                 <div className="grid grid-cols-3 gap-4 mx-auto max-w-md">
-                  {substitutes.map((player) => {
-                    const isSelectedForSubbing = selectedSubstitute?.id === player.id;
-                    const isExpulsado = player.stats.expulsado;
-
-                    let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
-                    if (isExpulsado) {
-                      cardClasses = "bg-red-500/20 border-2 border-red-500";
-                    }
-                    if (isSelectedForSubbing) {
-                      cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
-                    }
-                    
-                    return (
-                      <div
-                        key={player.id}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
-                        onClick={() => handleSubstituteClick(player)}
-                      >
-                        <Avatar className={`h-16 w-16`}>
-                          <AvatarImage src={player.photo} alt={player.name} />
-                          <AvatarFallback className="bg-[#305176] text-white text-base">
-                            {player.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <p className={`text-white text-sm font-medium text-center`}>{player.name}</p>
-                        <Badge className="bg-[#33d9f6] text-black text-xs font-medium flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {getPlayerDisplayTime(player.id)}
-                        </Badge>
-                      </div>
-                    );
-                  })}
+                  {substitutes.map((player) => renderPlayerCard(player, false))}
                 </div>
               </div>
             </CardContent>
@@ -786,11 +697,6 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
               </div>
             </CardHeader>
             <CardContent className="space-y-4 flex flex-col flex-grow h-2/3 pt-0">
-              {isSubbing && (
-                <div className="bg-red-500/20 text-white p-3 rounded-lg text-sm text-center border border-red-500">
-                  Selecciona el jugador titular que saldrá
-                </div>
-              )}
               <CardTitle className="text-white">Acciones en vivo</CardTitle>
               <div className="grid grid-cols-2 gap-4">
                 {GOAL_ACTIONS.map((action) => (

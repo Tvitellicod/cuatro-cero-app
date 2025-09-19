@@ -424,6 +424,12 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     if (!player) return "00:00";
     const accumulatedTime = player.stats.minutosJugados || 0;
     const currentTimeInStint = activePlayerTimers[playerId] || 0;
+    
+    // Si es la segunda mitad, el reloj se reinicia visualmente.
+    if (currentHalf === 2) {
+      return formatTime(currentTimeInStint);
+    }
+
     const totalDisplayTime = accumulatedTime + currentTimeInStint;
     return formatTime(totalDisplayTime);
   };

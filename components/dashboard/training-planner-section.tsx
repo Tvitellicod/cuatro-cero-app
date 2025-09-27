@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2 } from "lucide-react"
+import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2, Edit } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 
 import {
@@ -620,7 +620,7 @@ export function TrainingPlannerSection() {
                           )}
                         </div>
                         <span className={`font-medium ${attendance[player.id] ? "text-red-400" : "text-white"}`}>
-                          {player.name}
+                          {player.firstName} {player.lastName}
                         </span>
                       </div>
                       <Badge className={attendance[player.id] ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
@@ -1012,16 +1012,17 @@ export function TrainingPlannerSection() {
                   </div>
                 )}
 
-                <div className="flex flex-col space-y-2">
+                {/* Bloque modificado: Botones lado a lado */}
+                <div className="flex justify-between space-x-4">
                   <Button
-                    className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
+                    className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
                     onClick={handleSaveTraining}
                   >
                     Guardar Entrenamiento
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
+                    className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
                     onClick={handleCancelForm}
                   >
                     Cancelar
@@ -1230,6 +1231,27 @@ export function TrainingPlannerSection() {
                 className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
               />
             </div>
+          </div>
+          <div className="flex justify-between space-x-4">
+            <Button
+              variant="default"
+              className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={() => handleEditExercise(showExerciseDetail)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Ejercicio
+            </Button>
+            <Button
+              variant="outline"
+              className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={() => {
+                setShowExerciseDetail(null);
+                setExerciseToDelete(showExerciseDetail?.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar Ejercicio
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

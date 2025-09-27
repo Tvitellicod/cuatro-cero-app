@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Dumbbell, Target, Users, TrendingUp, Calendar, PieChart, Clock, Trophy } from "lucide-react"
+import { Dumbbell, Target, Users, TrendingUp, Calendar, PieChart, Clock, Trophy, Eye } from "lucide-react"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,49 @@ export function TrainingOverview() {
   const { user } = useAuth()
   const profileType = currentProfile?.profileType
 
+  // Helper function to get consistent colors for the pie chart
+  const getCategoryColors = (category: string) => {
+    switch (category) {
+        case 'Ataque': return '#ea3498';
+        case 'Defensa': return '#33d9f6';
+        case 'Transiciones': return '#f4c11a';
+        case 'Balón Parado': return '#8a46c5';
+        case 'Físico': return '#25d03f';
+        case 'Técnico': return '#aff606';
+        case 'Arquero-Jugador': return '#ff6b35';
+        case 'Resistencia': return '#25d03f';
+        case 'Fuerza': return '#ff6b35';
+        case 'Rehabilitación': return '#4ecdc4';
+        case 'Prevención': return '#45b7d1';
+        case 'Fortalecimiento': return '#96ceb4';
+        case 'Movilidad': return '#f1a85f';
+        case 'Recuperación': return '#c9d99d';
+        default: return '#aff606';
+    }
+  };
+
+  // Helper function to calculate pie data for a specific session
+  const calculatePieDataForSession = (exercises: any[]) => {
+    const categoryCount = exercises.reduce(
+      (acc, exercise) => {
+        const category = exercise.category;
+        // Asumiendo que los ejercicios de ejemplo ya tienen 'duration' en minutos
+        acc[category] = (acc[category] || 0) + (exercise.duration || 0);
+        return acc;
+      },
+      {} as Record<string, number>,
+    )
+
+    const total = Object.values(categoryCount).reduce((sum, duration) => sum + duration, 0)
+
+    return Object.entries(categoryCount).map(([category, duration]) => ({
+      category,
+      duration,
+      percentage: total > 0 ? Math.round((duration / total) * 100) : 0,
+      color: getCategoryColors(category),
+      duration,
+    }))
+  }
 
   useEffect(() => {
     const fetchUpcomingTrainings = async () => {
@@ -43,11 +86,11 @@ export function TrainingOverview() {
             date: today.toISOString().split('T')[0],
             duration: 90,
             exercises: [
-              { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
-              { name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
-              { name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico" },
-              { name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
-              { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico" },
+              { name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico", color: "#ea3498" },
+              { name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico", color: "#f4c11a" },
+              { name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico", color: "#33d9f6" },
+              { name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico", color: "#8a46c5" },
+              { name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico", color: "#ff6b35" },
             ],
             category: "Primera División",
             focus: "Ataque Posicional",
@@ -60,9 +103,9 @@ export function TrainingOverview() {
             date: tomorrow.toISOString().split('T')[0],
             duration: 75,
             exercises: [
-              { name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico" },
-              { name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico" },
-              { name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico" },
+              { name: "Circuito de resistencia", category: "Resistencia", duration: 30, type: "Físico", color: "#25d03f" },
+              { name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico", color: "#ff6b35" },
+              { name: "Trabajo aeróbico", category: "Resistencia", duration: 25, type: "Físico", color: "#25d03f" },
             ],
             category: "Primera División",
             focus: "Resistencia Aeróbica",
@@ -203,9 +246,9 @@ export function TrainingOverview() {
       date: "2024-01-10",
       duration: 60,
       exercises: [
-        { name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico" },
-        { name: "Definición", category: "Ataque", duration: 25, type: "Técnico" },
-        { name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico" },
+        { name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico", color: "#aff606" },
+        { name: "Definición", category: "Ataque", duration: 25, type: "Técnico", color: "#ea3498" },
+        { name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico", color: "#33d9f6" },
       ],
       category: "Juveniles",
       focus: "Técnica Individual",
@@ -217,9 +260,9 @@ export function TrainingOverview() {
       date: "2024-01-08",
       duration: 80,
       exercises: [
-        { name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico" },
-        { name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico" },
-        { name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico" },
+        { name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico", color: "#33d9f6" },
+        { name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico", color: "#33d9f6" },
+        { name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico", color: "#33d9f6" },
       ],
       category: "Primera División",
       focus: "Presión Alta",
@@ -245,7 +288,7 @@ export function TrainingOverview() {
     }))
   }
 
-  // Datos para los 4 gráficos
+  // Datos para los 4 gráficos (Mantenidos para la sección de estadísticas general)
   const pieChartData = [
     {
       title: "Último Entrenamiento",
@@ -495,15 +538,14 @@ export function TrainingOverview() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                    {session.focus}
-                  </Badge>
+                  {/* Badge de session.focus eliminado */}
                   <Button
                     size="sm"
-                    className="bg-[#305176] h-10 font-bold text-white hover:bg-[#aff606] hover:text-black"
+                    className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
                     onClick={() => setShowTrainingDetail(session)}
                   >
-                    VER DETALLE
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver Entrenamiento
                   </Button>
                   <div className="text-right">
                     <p className="text-[#aff606] font-medium">{session.attendance}</p>
@@ -515,6 +557,137 @@ export function TrainingOverview() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Modal de Detalle del Entrenamiento con Gráfico de Pizza */}
+      <Dialog open={!!showTrainingDetail} onOpenChange={setShowTrainingDetail}>
+        <DialogContent className="sm:max-w-[700px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              {showTrainingDetail?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Detalles del entrenamiento del {showTrainingDetail?.date}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
+            
+            {/* Columna Izquierda: Ejercicios y Resumen */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-400">Duración Total:</span>
+                  <p className="text-white font-bold">{showTrainingDetail?.duration} min</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Categoría:</span>
+                  <p className="text-white">{showTrainingDetail?.category}</p>
+                </div>
+                {/* Se mantiene el bloque focus por si existe en el modelo de datos, aunque el badge se eliminó en la vista anterior */}
+                {showTrainingDetail?.focus && (
+                  <div>
+                    <span className="text-gray-400">Enfoque:</span>
+                    <p className="text-white">{showTrainingDetail?.focus}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Bloque de Asistencia No Modificable */}
+              <div className="col-span-2">
+                <span className="text-gray-400">Asistencia Registrada:</span>
+                <div className="flex items-center justify-between p-3 mt-1 bg-[#305176] rounded-lg">
+                  <p className="text-white font-medium">VER ASISTENCIA</p>
+                  <Badge className="bg-[#aff606] text-black">
+                    {showTrainingDetail?.attendance}
+                  </Badge>
+                </div>
+              </div>
+              
+
+              {/* Lista de Ejercicios */}
+              <div>
+                <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises.length})</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {showTrainingDetail?.exercises.map((exercise: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-[#aff606] font-bold">{index + 1}.</span>
+                        <div>
+                          <p className="text-white font-medium">{exercise.name}</p>
+                          <p className="text-gray-400 text-sm">{exercise.duration} min</p>
+                        </div>
+                      </div>
+                      <Badge
+                        className="text-white"
+                        style={{ backgroundColor: exercise.color || getCategoryColors(exercise.category) }}
+                      >
+                        {exercise.category}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Columna Derecha: Gráfico de Distribución (Pie Chart) */}
+            <div className="space-y-4">
+              <h3 className="text-white font-medium mb-3 flex items-center">
+                <PieChart className="h-5 w-5 mr-2" />
+                Distribución por Categoría
+              </h3>
+              <div className="flex flex-col items-center">
+                <div className="relative w-48 h-48 mx-auto mb-4">
+                  {/* Renderizado del gráfico de pizza */}
+                  {showTrainingDetail?.exercises.length > 0 ? (
+                    <svg viewBox="0 0 200 200" className="w-full h-full">
+                      {calculatePieDataForSession(showTrainingDetail.exercises).map((segment, segIndex) => {
+                        const pieData = calculatePieDataForSession(showTrainingDetail.exercises);
+                        const startAngle = pieData.slice(0, segIndex).reduce((sum, s) => sum + s.percentage * 3.6, 0)
+                        const endAngle = startAngle + segment.percentage * 3.6
+                        const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
+                        const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
+                        const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
+                        const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
+                        const largeArc = segment.percentage > 50 ? 1 : 0
+
+                        return (
+                          <path
+                            key={segIndex}
+                            d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                            fill={segment.color}
+                            stroke="#1d2834"
+                            strokeWidth="2"
+                          />
+                        )
+                      })}
+                    </svg>
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full text-gray-500">
+                      Sin datos para el gráfico
+                    </div>
+                  )}
+                </div>
+                {/* Leyenda/Detalle de Porcentajes */}
+                <div className="w-full space-y-1">
+                  {calculatePieDataForSession(showTrainingDetail?.exercises || []).map((segment, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                        <span className="text-white text-sm">{segment.category}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-bold">{segment.percentage}%</p>
+                        <p className="text-gray-400 text-xs">{segment.duration}min</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

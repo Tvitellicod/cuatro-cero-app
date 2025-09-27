@@ -187,12 +187,12 @@ export function MatchesManagement() {
               </Select>
 
               <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger className="w-24 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                <SelectTrigger className="w-30 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                   <SelectValue placeholder="Condición" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#213041] border-[#305176]">
                   <SelectItem value="all" className="text-white text-xs">
-                    Localía
+                    Condición
                   </SelectItem>
                   <SelectItem value="Local" className="text-white text-xs">
                     Local

@@ -25,6 +25,17 @@ export function TrainingOverview() {
   const { user } = useAuth()
   const profileType = currentProfile?.profileType
 
+  // Helper function to format the date as DD - MM - YYYY
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "N/A"
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day} - ${month} - ${year}`;
+    }
+    return dateString;
+  };
+
   // Helper function to get consistent colors for the pie chart
   const getCategoryColors = (category: string) => {
     switch (category) {
@@ -370,7 +381,7 @@ export function TrainingOverview() {
                       <div className="flex items-center space-x-4">
                         <div className="text-center">
                           <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                          <p className="text-xs text-gray-400">{session.date}</p>
+                          <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
                         </div>
                         <div>
                           <h3 className="text-white font-medium">{session.name}</h3>
@@ -510,7 +521,7 @@ export function TrainingOverview() {
                 <div className="flex items-center space-x-4">
                   <div className="text-center">
                     <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-1" />
-                    <p className="text-xs text-gray-400">{session.date}</p>
+                    <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
                   </div>
                   <div>
                     <h3 className="text-white font-medium">{session.name}</h3>
@@ -566,7 +577,7 @@ export function TrainingOverview() {
               {showTrainingDetail?.name}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Detalles del entrenamiento del {showTrainingDetail?.date}
+              Detalles del entrenamiento del {formatDate(showTrainingDetail?.date)}
             </DialogDescription>
           </DialogHeader>
           
@@ -606,9 +617,9 @@ export function TrainingOverview() {
 
               {/* Lista de Ejercicios */}
               <div>
-                <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises.length})</h4>
+                <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises?.length || 0})</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {showTrainingDetail?.exercises.map((exercise: any, index: number) => (
+                  {showTrainingDetail?.exercises?.map((exercise: any, index: number) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
                       <div className="flex items-center space-x-3">
                         <span className="text-[#aff606] font-bold">{index + 1}.</span>
@@ -638,7 +649,7 @@ export function TrainingOverview() {
               <div className="flex flex-col items-center">
                 <div className="relative w-48 h-48 mx-auto mb-4">
                   {/* Renderizado del gráfico de pizza */}
-                  {showTrainingDetail?.exercises.length > 0 ? (
+                  {showTrainingDetail?.exercises?.length > 0 ? (
                     <svg viewBox="0 0 200 200" className="w-full h-full">
                       {calculatePieDataForSession(showTrainingDetail.exercises).map((segment, segIndex) => {
                         const pieData = calculatePieDataForSession(showTrainingDetail.exercises);

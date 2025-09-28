@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2, Edit } from "lucide-react"
+import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2, Edit, Eye } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 
 import {
@@ -21,8 +21,25 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" // <-- CORREGIDO: DialogTrigger añadido
 
+// Función de ayuda para obtener la fecha y hora actual predeterminada
+const getInitialDateTime = () => {
+  const now = new Date();
+  
+  // Formato YYYY-MM-DD para input type="date"
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateString = `${year}-${month}-${day}`;
+  
+  // Formato HH:MM para input type="time"
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const timeString = `${hours}:${minutes}`;
+
+  return { date: dateString, time: timeString };
+};
 
 export function TrainingPlannerSection() {
   const [showPlannerForm, setShowPlannerForm] = useState(false)
@@ -35,11 +52,14 @@ export function TrainingPlannerSection() {
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
 
 
-  const [newTraining, setNewTraining] = useState({
-    name: "",
-    date: "",
-    time: "",
-    category: "",
+  const [newTraining, setNewTraining] = useState(() => {
+    const initialDateTime = getInitialDateTime();
+    return {
+      name: "",
+      date: initialDateTime.date,
+      time: initialDateTime.time,
+      category: "",
+    }
   });
 
   const [trainingSessions, setTrainingSessions] = useState([
@@ -69,7 +89,7 @@ export function TrainingPlannerSection() {
       duration: 75,
       exercises: [
         { id:101, name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
-        { id:102, name: "Sprints cortos", category: "Físico", duration: 20, type: "Físico", players:12, goalkeepers:0, difficulty:"Difícil", materials:"Pesas, bandas elásticas", objective:"Desarrollar fuerza específica para fútbol", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
+        { id:102, name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico", players:12, goalkeepers:0, difficulty:"Difícil", materials:"Pesas, bandas elásticas", objective:"Desarrollar fuerza específica para fútbol", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
         { id:103, name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
       ],
       category: "Primera División",
@@ -92,6 +112,18 @@ export function TrainingPlannerSection() {
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
   const profileType = profileData?.profileType
+
+  // Helper function to format the date as DD - MM - YYYY
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "N/A"
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day} - ${month} - ${year}`;
+    }
+    return dateString;
+  };
+
 
   // Generar jugadores para la categoría
   const generatePlayersForCategory = () => {
@@ -388,13 +420,15 @@ export function TrainingPlannerSection() {
   };
 
   const calculatePieData = () => {
-    const categoryCount = selectedExercises.reduce(
-      (acc, exercise) => {
+    const sessionToDisplay = showTrainingDetail || { exercises: selectedExercises };
+
+    const categoryCount = sessionToDisplay.exercises.reduce(
+      (acc: Record<string, number>, exercise: any) => {
         const category = exercise.category;
         acc[category] = (acc[category] || 0) + exercise.duration;
         return acc;
       },
-      {} as Record<string, number>,
+      {},
     )
 
     const total = Object.values(categoryCount).reduce((sum, duration) => sum + duration, 0)
@@ -468,8 +502,14 @@ export function TrainingPlannerSection() {
   }
 
   const handleCancelForm = () => {
+    const initialDateTime = getInitialDateTime();
     setShowPlannerForm(false);
-    setNewTraining({ name: "", date: "", time: "", category: "" });
+    setNewTraining({ 
+      name: "", 
+      date: initialDateTime.date,
+      time: initialDateTime.time,
+      category: "" 
+    });
     setSelectedExercises([]);
   };
 
@@ -499,7 +539,7 @@ export function TrainingPlannerSection() {
   
   const handleDeleteTraining = () => {
     if (trainingToDelete) {
-      setTrainingSessions(trainingSessions.filter(t => t.id !== trainingToDelete));
+      setTrainingSessions(prevSessions => prevSessions.filter(t => t.id !== trainingToDelete));
       setTrainingToDelete(null);
       setShowTrainingDetail(null);
     }
@@ -508,6 +548,20 @@ export function TrainingPlannerSection() {
   const playersForAttendance = showTrainingDetail?.categoryId
   ? allPlayers.filter(p => p.category.toLowerCase() === showTrainingDetail.categoryId.toLowerCase() && p.status === 'DISPONIBLE')
   : [];
+
+  const sortedAttendance = playersForAttendance.sort((a: any, b: any) => {
+    // False in attendance means Presente, True means Inasistente (simulado)
+    // Orden: Inasistentes (-1) antes que Presentes (1)
+    const isMissingA = (a.id % 5) === 0; 
+    const isMissingB = (b.id % 5) === 0;
+
+    if (isMissingA && !isMissingB) return -1;
+    if (!isMissingA && isMissingB) return 1;
+    return 0;
+  });
+
+  // Determina si el entrenamiento es uno "programado" (que permite tomar asistencia en vivo)
+  const isScheduledSession = trainingSessions.some(s => s.id === showTrainingDetail?.id);
 
 
   return (
@@ -520,135 +574,220 @@ export function TrainingPlannerSection() {
         
       </div>
 
-      {/* Training Detail Modal */}
+      {/* Training Detail Modal (COMPARTIDO Y FUNCIONAL) */}
       <Dialog open={!!showTrainingDetail} onOpenChange={() => {setShowTrainingDetail(null); setShowAttendance(false);}}>
-        <DialogContent className="sm:max-w-[500px] bg-[#213041] border-[#305176] text-white">
+        <DialogContent className="sm:max-w-[700px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">
               {showTrainingDetail?.name}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Detalles del entrenamiento del {showTrainingDetail?.date.split("-").reverse().join("/")}
+              Detalles del entrenamiento del {formatDate(showTrainingDetail?.date)}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {!showAttendance ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Duración:</span>
-                    <p className="text-white">{showTrainingDetail?.duration} min</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Categoría:</span>
-                    <p className="text-white">{showTrainingDetail?.category}</p>
-                  </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
+            
+            {/* Columna Izquierda: Ejercicios y Resumen */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-400">Duración Total:</span>
+                  <p className="text-white font-bold">{showTrainingDetail?.duration} min</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Categoría:</span>
+                  <p className="text-white">{showTrainingDetail?.category}</p>
+                </div>
+                {showTrainingDetail?.focus && (
                   <div>
                     <span className="text-gray-400">Enfoque:</span>
                     <p className="text-white">{showTrainingDetail?.focus}</p>
                   </div>
-                </div>
-
-                <div>
-                  <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises.length})</h4>
-                  <div className="space-y-2">
-                    {showTrainingDetail?.exercises.map((exercise: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-[#aff606] font-bold">{index + 1}.</span>
-                          <div>
-                            <p className="text-white font-medium">{exercise.name}</p>
-                            <p className="text-gray-400 text-sm">{exercise.duration} min</p>
+                )}
+              </div>
+              
+              {/* Botón de Asistencia para alternar la vista */}
+              <div className="col-span-2">
+                <Button 
+                  className={`w-full justify-between h-12 text-white font-medium ${isScheduledSession ? 'bg-[#ff6b35] hover:bg-[#d4552b]' : 'bg-[#305176] hover:bg-[#305176]/80'}`}
+                  onClick={() => setShowAttendance(!showAttendance)}
+                >
+                  <Users className="h-5 w-5 mr-2" />
+                  {showAttendance ? "Ver Detalles" : (isScheduledSession ? "Tomar Asistencia" : "Ver Asistencia")}
+                  <Badge className="bg-[#aff606] text-black ml-auto">
+                    {showTrainingDetail?.attendance}
+                  </Badge>
+                </Button>
+              </div>
+              
+              {!showAttendance ? (
+                /* Contenido de Detalles */
+                <>
+                  {/* Lista de Ejercicios */}
+                  <div>
+                    <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises?.length || 0})</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {showTrainingDetail?.exercises?.map((exercise: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-[#aff606] font-bold">{index + 1}.</span>
+                            <div>
+                              <p className="text-white font-medium">{exercise.name}</p>
+                              <p className="text-gray-400 text-sm">{exercise.duration} min</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              className="text-white"
+                              style={{ backgroundColor: getCategoryColors(exercise.category) }}
+                            >
+                              {exercise.category}
+                            </Badge>
+                            <DialogTrigger asChild> 
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                                onClick={() => setShowExerciseDetail(exercise)}
+                              >
+                                Ver Ejercicio
+                              </Button>
+                            </DialogTrigger>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            className="text-white"
-                            style={{ backgroundColor: getCategoryColors(exercise.category) }}
-                          >
-                            {exercise.category}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                            onClick={() => setShowExerciseDetail(exercise)}
-                          >
-                            Ver Ejercicio
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <h4 className="text-white font-medium mb-3">Categorías Trabajadas</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {getCategoriesInTraining(showTrainingDetail?.exercises || []).map((cat, index) => (
-                      <Badge key={index} className="text-white" style={{ backgroundColor: cat.color }}>
-                        {cat.name}
-                      </Badge>
-                    ))}
+                  <div>
+                    <h4 className="text-white font-medium mb-3">Categorías Trabajadas</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {getCategoriesInTraining(showTrainingDetail?.exercises || []).map((cat, index) => (
+                        <Badge key={index} className="text-white" style={{ backgroundColor: cat.color }}>
+                          {cat.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Contenido de Asistencia */
+                <div className="space-y-4 lg:col-span-2">
+                  <h4 className="text-white font-medium">Lista de Asistencia - {showTrainingDetail?.category}</h4>
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {sortedAttendance.map((player: any) => {
+                      // NOTA: Se está usando un valor de ejemplo (divisible por 5) para simular la inasistencia.
+                      const isMissing = (player.id % 5) === 0;
+
+                      return (
+                        <div
+                          key={player.id}
+                          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                            isMissing
+                              ? "bg-red-900/30 border border-red-500"
+                              : "bg-[#1d2834] hover:bg-[#305176]"
+                          } ${isScheduledSession ? 'cursor-pointer' : 'cursor-default'}`}
+                          onClick={() => {
+                            // La lógica de toggle de asistencia solo debería ocurrir en sesiones PROGRAMADAS
+                            if (isScheduledSession) {
+                              handleAttendanceToggle(player.id);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                isMissing ? "border-red-500 bg-red-500" : "border-[#25d03f] bg-[#25d03f]"
+                              }`}
+                            >
+                              {isMissing ? (
+                                <X className="h-3 w-3 text-white" />
+                              ) : (
+                                <Check className="h-3 w-3 text-black" />
+                              )}
+                            </div>
+                            <span className={`font-medium ${isMissing ? "text-red-400" : "text-white"}`}>
+                              {player.firstName} {player.lastName}
+                            </span>
+                          </div>
+                          <Badge className={isMissing ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
+                            {isMissing ? "Inasistente" : "Presente"}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="pt-4 border-t border-[#305176]">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Presentes:</span>
+                      <span className="text-[#25d03f] font-bold">
+                        {playersForAttendance.length - sortedAttendance.filter(p => (p.id % 5) === 0).length}/
+                        {playersForAttendance.length}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h4 className="text-white font-medium">Lista de Asistencia - {showTrainingDetail?.category}</h4>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {playersForAttendance.map((player: any) => (
-                    <div
-                      key={player.id}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                        attendance[player.id]
-                          ? "bg-red-900/30 border border-red-500"
-                          : "bg-[#1d2834] hover:bg-[#305176]"
-                      }`}
-                      onClick={() => handleAttendanceToggle(player.id)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                            attendance[player.id] ? "border-red-500 bg-red-500" : "border-[#25d03f] bg-[#25d03f]"
-                          }`}
-                        >
-                          {attendance[player.id] ? (
-                            <X className="h-3 w-3 text-white" />
-                          ) : (
-                            <Check className="h-3 w-3 text-black" />
-                          )}
-                        </div>
-                        <span className={`font-medium ${attendance[player.id] ? "text-red-400" : "text-white"}`}>
-                          {player.firstName} {player.lastName}
-                        </span>
+              )}
+            </div>
+            
+            {/* Columna Derecha: Gráfico de Distribución (Pie Chart) */}
+            <div className={`space-y-4 ${showAttendance ? 'hidden lg:block' : ''}`}> 
+              <h3 className="text-white font-medium mb-3 flex items-center">
+                <PieChart className="h-5 w-5 mr-2" />
+                Distribución por Categoría
+              </h3>
+              <div className="flex flex-col items-center">
+                <div className="relative w-48 h-48 mx-auto mb-4">
+                  {/* Renderizado del gráfico de pizza */}
+                  {showTrainingDetail?.exercises?.length > 0 ? (
+                    <svg viewBox="0 0 200 200" className="w-full h-full">
+                      {calculatePieData().map((segment, segIndex) => {
+                        const pieData = calculatePieData();
+                        const startAngle = pieData.slice(0, segIndex).reduce((sum, s) => sum + s.percentage * 3.6, 0)
+                        const endAngle = startAngle + segment.percentage * 3.6
+                        const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
+                        const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
+                        const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
+                        const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
+                        const largeArc = segment.percentage > 50 ? 1 : 0
+
+                        return (
+                          <path
+                            key={segIndex}
+                            d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                            fill={segment.color}
+                            stroke="#1d2834"
+                            strokeWidth="2"
+                          />
+                        )
+                      })}
+                    </svg>
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full text-gray-500">
+                      Sin datos para el gráfico
+                    </div>
+                  )}
+                </div>
+                {/* Leyenda/Detalle de Porcentajes */}
+                <div className="w-full space-y-1">
+                  {calculatePieData().map((segment, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                        <span className="text-white text-sm">{segment.category}</span>
                       </div>
-                      <Badge className={attendance[player.id] ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
-                        {attendance[player.id] ? "Inasistente" : "Presente"}
-                      </Badge>
+                      <div className="text-right">
+                        <p className="text-white font-bold">{segment.percentage}%</p>
+                        <p className="text-gray-400 text-xs">{segment.duration}min</p>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div className="pt-4 border-t border-[#305176]">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Presentes:</span>
-                    <span className="text-[#25d03f] font-bold">
-                      {playersForAttendance.length - Object.values(attendance).filter(Boolean).length}/
-                      {playersForAttendance.length}
-                    </span>
-                  </div>
-                </div>
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex justify-between space-x-4">
-              <Button
-                className="w-full bg-[#33d9f6] text-black hover:bg-[#2bc4ea]"
-                onClick={() => setShowAttendance(!showAttendance)}
-              >
-                {showAttendance ? "Ver Detalles" : "Tomar Asistencia"}
-              </Button>
-          </div>
+          
         </DialogContent>
       </Dialog>
 
@@ -662,8 +801,12 @@ export function TrainingPlannerSection() {
                 <Calendar className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
               </CardTitle>
-              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowPlannerForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button 
+                size="sm"
+                className="bg-[#aff606] text-black hover:bg-[#25d03f] whitespace-nowrap font-semibold" 
+                onClick={() => setShowPlannerForm(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
                 Planificar Próximo Entrenamiento
               </Button>
             </CardHeader>
@@ -674,7 +817,7 @@ export function TrainingPlannerSection() {
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
                         <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{session.date.split("-").reverse().join(" - ")}</p>
+                        <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
                         <p className="text-xs text-gray-400">{session.time}</p>
                       </div>
                       <div>
@@ -728,19 +871,16 @@ export function TrainingPlannerSection() {
 
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
-                Anteriores Entrenamientos
-              </CardTitle>
+              <CardTitle className="text-white">Entrenamientos Recientes</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {previousSessions.map((session, index) => (
+                {previousSessions.map((session) => (
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
                         <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{session.date.split("-").reverse().join(" - ")}</p>
+                        <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
                       </div>
                       <div>
                         <h3 className="text-white font-medium">{session.name}</h3>
@@ -768,14 +908,12 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                        {session.focus}
-                      </Badge>
                       <Button
                         size="sm"
-                        className="bg-[#305176] h-10 font-bold text-white hover:bg-[#aff606] hover:text-black"
+                        className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
                         onClick={() => setShowTrainingDetail(session)}
                       >
+                        <Eye className="h-4 w-4 mr-2" />
                         Ver Entrenamiento
                       </Button>
                       <div className="text-right">
@@ -1159,7 +1297,7 @@ export function TrainingPlannerSection() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Exercise Detail Dialog */}
+      {/* Exercise Detail Dialog (READ-ONLY) */}
       <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1232,27 +1370,7 @@ export function TrainingPlannerSection() {
               />
             </div>
           </div>
-          <div className="flex justify-between space-x-4">
-            <Button
-              variant="default"
-              className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-              onClick={() => handleEditExercise(showExerciseDetail)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar Ejercicio
-            </Button>
-            <Button
-              variant="outline"
-              className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-              onClick={() => {
-                setShowExerciseDetail(null);
-                setExerciseToDelete(showExerciseDetail?.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar Ejercicio
-            </Button>
-          </div>
+          {/* Se eliminan los botones de edición/eliminación para que sea read-only */}
         </DialogContent>
       </Dialog>
     </div>

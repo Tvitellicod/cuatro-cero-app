@@ -168,9 +168,10 @@ export function ExerciseManagement() {
       return;
     }
     
+    // CORREGIDO: Usar Date.now() para un ID numérico único y robusto
     const exerciseToAdd = {
       ...newExercise,
-      id: exercises.length + 1,
+      id: Date.now(), 
       createdAt: new Date().toISOString().split('T')[0],
     }
     setExercises([...exercises, exerciseToAdd])
@@ -196,6 +197,7 @@ export function ExerciseManagement() {
 
   const handleDeleteExercise = () => {
     if (exerciseToDelete) {
+      // CORREGIDO: La lógica de filtrado es correcta, utiliza el ID numérico
       setExercises(exercises.filter(ex => ex.id !== exerciseToDelete));
       setExerciseToDelete(null);
       setShowExerciseDetail(null);
@@ -537,14 +539,17 @@ export function ExerciseManagement() {
                   <Button
                     size="default"
                     className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
-                    onClick={() => setShowCreateForm(true)}
+                    onClick={() => {
+                      setEditingPlayer(null);
+                      setShowCreateForm(true);
+                    }}
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Nuevo Ejercicio
                   </Button>
                 </div>
                 <div className="flex items-center flex-wrap gap-2 mt-4">
-                  <div className="relative">
+                  <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
                       placeholder="Búsqueda de Ejercicios"
@@ -780,7 +785,11 @@ export function ExerciseManagement() {
             <Button
               variant="default"
               className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-              onClick={() => handleEditExercise(showExerciseDetail)}
+              onClick={() => {
+                setShowExerciseDetail(null);
+                setNewExercise(showExerciseDetail);
+                setShowCreateForm(true);
+              }}
             >
               <Edit className="h-4 w-4 mr-2" />
               Editar Ejercicio

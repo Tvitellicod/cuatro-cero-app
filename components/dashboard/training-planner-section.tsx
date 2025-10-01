@@ -21,7 +21,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" // <-- CORREGIDO: DialogTrigger añadido
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 // Función de ayuda para obtener la fecha y hora actual predeterminada
 const getInitialDateTime = () => {
@@ -46,10 +46,21 @@ export function TrainingPlannerSection() {
   const [selectedExercises, setSelectedExercises] = useState<any[]>([])
   const [showTrainingDetail, setShowTrainingDetail] = useState<any>(null)
   const [showAttendance, setShowAttendance] = useState(false)
+  // attendance: Guarda { playerId: true } si el jugador está AUSENTE
   const [attendance, setAttendance] = useState<Record<number, boolean>>({})
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [trainingToDelete, setTrainingToDelete] = useState<number | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
+  
+  // NUEVOS ESTADOS PARA NOTAS/DESCANSOS
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [newNote, setNewNote] = useState({
+    type: 'note', // Distinguir del tipo 'exercise'
+    name: '', // Título
+    description: '',
+    duration: 0, // Tiempo en minutos
+    id: 0, // Placeholder, se inicializará con Date.now()
+  });
 
 
   const [newTraining, setNewTraining] = useState(() => {
@@ -79,7 +90,8 @@ export function TrainingPlannerSection() {
       category: "Primera División",
       focus: "Ataque Posicional",
       attendance: "20/22",
-      path: "/dashboard/entrenamiento/planificar"
+      path: "/dashboard/entrenamiento/planificar",
+      categoryId: "primera", // CORREGIDO: Añadido categoryId
     },
     {
       id: 2,
@@ -88,14 +100,15 @@ export function TrainingPlannerSection() {
       time: "15:00",
       duration: 75,
       exercises: [
-        { id:101, name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
+        { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
         { id:102, name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico", players:12, goalkeepers:0, difficulty:"Difícil", materials:"Pesas, bandas elásticas", objective:"Desarrollar fuerza específica para fútbol", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
         { id:103, name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
       ],
       category: "Primera División",
       focus: "Resistencia Aeróbica",
       attendance: "21/22",
-      path: "/dashboard/entrenamiento/planificar"
+      path: "/dashboard/entrenamiento/planificar",
+      categoryId: "primera", // CORREGIDO: Añadido categoryId
     },
   ]);
 
@@ -422,7 +435,9 @@ export function TrainingPlannerSection() {
   const calculatePieData = () => {
     const sessionToDisplay = showTrainingDetail || { exercises: selectedExercises };
 
-    const categoryCount = sessionToDisplay.exercises.reduce(
+    const categoryCount = sessionToDisplay.exercises
+        .filter((ex: any) => ex.type !== 'note') // IGNORAR NOTAS en el cálculo del pie chart
+      .reduce(
       (acc: Record<string, number>, exercise: any) => {
         const category = exercise.category;
         acc[category] = (acc[category] || 0) + exercise.duration;
@@ -488,7 +503,7 @@ export function TrainingPlannerSection() {
   const handleAttendanceToggle = (playerId: number) => {
     setAttendance((prev) => ({
       ...prev,
-      [playerId]: !prev[playerId],
+      [playerId]: !prev[playerId], // Togglea entre true (Inasistente) y undefined/false (Presente)
     }))
   }
 
@@ -545,20 +560,53 @@ export function TrainingPlannerSection() {
     }
   };
 
+  // Lógica para guardar la nota personalizada
+  const handleSaveNote = () => {
+    // CAMBIO CLAVE: Solo se requiere que el Título (name) esté presente.
+    if (!newNote.name.trim()) { 
+      setShowValidationAlert(true); 
+      return; 
+    }
+    
+    const noteWithId = {
+      ...newNote,
+      id: Date.now(),
+      duration: newNote.duration || 0, // Asegura que si está vacío, sea 0 minutos
+    };
+    
+    setSelectedExercises(prev => [...prev, noteWithId]);
+    setNewNote({ // Resetear estado de la nota
+        type: 'note',
+        name: '',
+        description: '',
+        duration: 0,
+        id: 0,
+    });
+    setShowNoteDialog(false);
+  };
+
+
+  // Lógica de filtrado de jugadores para la asistencia
   const playersForAttendance = showTrainingDetail?.categoryId
   ? allPlayers.filter(p => p.category.toLowerCase() === showTrainingDetail.categoryId.toLowerCase() && p.status === 'DISPONIBLE')
   : [];
 
   const sortedAttendance = playersForAttendance.sort((a: any, b: any) => {
-    // False in attendance means Presente, True means Inasistente (simulado)
-    // Orden: Inasistentes (-1) antes que Presentes (1)
-    const isMissingA = (a.id % 5) === 0; 
-    const isMissingB = (b.id % 5) === 0;
+    // Orden: Presentes (no en el state) primero, Inasistentes (en el state) después
+    const isAbsentA = !!attendance[a.id]; 
+    const isAbsentB = !!attendance[b.id];
 
-    if (isMissingA && !isMissingB) return -1;
-    if (!isMissingA && isMissingB) return 1;
+    // Si A está ausente y B está presente, A va después (return 1)
+    if (isAbsentA && !isAbsentB) return 1; 
+    // Si B está ausente y A está presente, A va primero (return -1)
+    if (!isAbsentA && isAbsentB) return -1;
+    // Mantiene el orden si ambos son iguales (ambos presentes o ambos ausentes)
     return 0;
   });
+
+  const totalPlayers = playersForAttendance.length;
+  const absentCount = playersForAttendance.filter(p => !!attendance[p.id]).length;
+  const presentCount = totalPlayers - absentCount;
 
   // Determina si el entrenamiento es uno "programado" (que permite tomar asistencia en vivo)
   const isScheduledSession = trainingSessions.some(s => s.id === showTrainingDetail?.id);
@@ -611,7 +659,13 @@ export function TrainingPlannerSection() {
               <div className="col-span-2">
                 <Button 
                   className={`w-full justify-between h-12 text-white font-medium ${isScheduledSession ? 'bg-[#ff6b35] hover:bg-[#d4552b]' : 'bg-[#305176] hover:bg-[#305176]/80'}`}
-                  onClick={() => setShowAttendance(!showAttendance)}
+                  onClick={() => {
+                    setShowAttendance(!showAttendance);
+                    // Resetear el estado de asistencia si se vuelve a la vista de detalles
+                    if (showAttendance) {
+                       setAttendance({});
+                    }
+                  }}
                 >
                   <Users className="h-5 w-5 mr-2" />
                   {showAttendance ? "Ver Detalles" : (isScheduledSession ? "Tomar Asistencia" : "Ver Asistencia")}
@@ -677,14 +731,14 @@ export function TrainingPlannerSection() {
                   <h4 className="text-white font-medium">Lista de Asistencia - {showTrainingDetail?.category}</h4>
                   <div className="space-y-2 max-h-72 overflow-y-auto">
                     {sortedAttendance.map((player: any) => {
-                      // NOTA: Se está usando un valor de ejemplo (divisible por 5) para simular la inasistencia.
-                      const isMissing = (player.id % 5) === 0;
+                      // El jugador está ausente si está en el estado de attendance (se asume true)
+                      const isAbsent = !!attendance[player.id];
 
                       return (
                         <div
                           key={player.id}
                           className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                            isMissing
+                            isAbsent
                               ? "bg-red-900/30 border border-red-500"
                               : "bg-[#1d2834] hover:bg-[#305176]"
                           } ${isScheduledSession ? 'cursor-pointer' : 'cursor-default'}`}
@@ -698,21 +752,21 @@ export function TrainingPlannerSection() {
                           <div className="flex items-center space-x-3">
                             <div
                               className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                                isMissing ? "border-red-500 bg-red-500" : "border-[#25d03f] bg-[#25d03f]"
+                                isAbsent ? "border-red-500 bg-red-500" : "border-[#25d03f] bg-[#25d03f]"
                               }`}
                             >
-                              {isMissing ? (
+                              {isAbsent ? (
                                 <X className="h-3 w-3 text-white" />
                               ) : (
                                 <Check className="h-3 w-3 text-black" />
                               )}
                             </div>
-                            <span className={`font-medium ${isMissing ? "text-red-400" : "text-white"}`}>
+                            <span className={`font-medium ${isAbsent ? "text-red-400" : "text-white"}`}>
                               {player.firstName} {player.lastName}
                             </span>
                           </div>
-                          <Badge className={isMissing ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
-                            {isMissing ? "Inasistente" : "Presente"}
+                          <Badge className={isAbsent ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
+                            {isAbsent ? "Inasistente" : "Presente"}
                           </Badge>
                         </div>
                       )
@@ -721,9 +775,9 @@ export function TrainingPlannerSection() {
                   <div className="pt-4 border-t border-[#305176]">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Presentes:</span>
+                      {/* CONTADOR CORREGIDO */}
                       <span className="text-[#25d03f] font-bold">
-                        {playersForAttendance.length - sortedAttendance.filter(p => (p.id % 5) === 0).length}/
-                        {playersForAttendance.length}
+                        {presentCount}/{totalPlayers}
                       </span>
                     </div>
                   </div>
@@ -732,524 +786,97 @@ export function TrainingPlannerSection() {
             </div>
             
             {/* Columna Derecha: Gráfico de Distribución (Pie Chart) */}
-            <div className={`space-y-4 ${showAttendance ? 'hidden lg:block' : ''}`}> 
-              <h3 className="text-white font-medium mb-3 flex items-center">
-                <PieChart className="h-5 w-5 mr-2" />
-                Distribución por Categoría
-              </h3>
-              <div className="flex flex-col items-center">
-                <div className="relative w-48 h-48 mx-auto mb-4">
-                  {/* Renderizado del gráfico de pizza */}
-                  {showTrainingDetail?.exercises?.length > 0 ? (
-                    <svg viewBox="0 0 200 200" className="w-full h-full">
-                      {calculatePieData().map((segment, segIndex) => {
-                        const pieData = calculatePieData();
-                        const startAngle = pieData.slice(0, segIndex).reduce((sum, s) => sum + s.percentage * 3.6, 0)
-                        const endAngle = startAngle + segment.percentage * 3.6
-                        const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
-                        const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
-                        const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
-                        const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
-                        const largeArc = segment.percentage > 50 ? 1 : 0
-
-                        return (
-                          <path
-                            key={segIndex}
-                            d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                            fill={segment.color}
-                            stroke="#1d2834"
-                            strokeWidth="2"
-                          />
-                        )
-                      })}
-                    </svg>
-                  ) : (
-                    <div className="flex items-center justify-center w-full h-full text-gray-500">
-                      Sin datos para el gráfico
-                    </div>
-                  )}
-                </div>
-                {/* Leyenda/Detalle de Porcentajes */}
-                <div className="w-full space-y-1">
-                  {calculatePieData().map((segment, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
-                        <span className="text-white text-sm">{segment.category}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-bold">{segment.percentage}%</p>
-                        <p className="text-gray-400 text-xs">{segment.duration}min</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-        </DialogContent>
-      </Dialog>
-
-
-      {/* Contenido principal, que se oculta al planificar */}
-      {!showPlannerForm ? (
-        <>
-          <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
-                Entrenamientos Programados
-              </CardTitle>
-              <Button 
-                size="sm"
-                className="bg-[#aff606] text-black hover:bg-[#25d03f] whitespace-nowrap font-semibold" 
-                onClick={() => setShowPlannerForm(true)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Planificar Próximo Entrenamiento
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {trainingSessions.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
-                        <p className="text-xs text-gray-400">{session.time}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-white font-medium">{session.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {session.duration}min
-                          </div>
-                          <div className="flex items-center">
-                            <Target className="h-4 w-4 mr-1" />
-                            {session.exercises.length} ejercicios
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {getCategoriesInTraining(session.exercises).map((cat, index) => (
-                            <div
-                              key={index}
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: cat.color }}
-                              title={cat.name}
-                            ></div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{session.category}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                        onClick={() => setShowTrainingDetail(session)}
-                      >
-                        Ver Entrenamiento
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
-                        onClick={() => setTrainingToDelete(session.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader>
-              <CardTitle className="text-white">Entrenamientos Recientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {previousSessions.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-white font-medium">{session.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {session.duration}min
-                          </div>
-                          <div className="flex items-center">
-                            <Target className="h-4 w-4 mr-1" />
-                            {session.exercises.length} ejercicios
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {getCategoriesInTraining(session.exercises).map((cat, index) => (
-                            <div
-                              key={index}
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: cat.color }}
-                              title={cat.name}
-                            ></div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{session.category}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Button
-                        size="sm"
-                        className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
-                        onClick={() => setShowTrainingDetail(session)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Entrenamiento
-                      </Button>
-                      <div className="text-right">
-                        <p className="text-[#aff606] font-medium">{session.attendance}</p>
-                        <p className="text-gray-400 text-sm">Asistencia</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Formulario de Planificación */}
-          <div className="lg:col-span-2">
-            <Card className="bg-[#213041] border-[#305176]">
-              <CardHeader>
-                <CardTitle className="text-white">Nuevo Entrenamiento</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="training-name" className="text-white">
-                      Nombre del Entrenamiento
-                    </Label>
-                    <Input
-                      id="training-name"
-                      placeholder="Ej: Entrenamiento Táctico"
-                      className="bg-[#1d2834] border-[#305176] text-white"
-                      value={newTraining.name}
-                      onChange={(e) => setNewTraining({ ...newTraining, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="training-date" className="text-white">
-                        Fecha
-                      </Label>
-                      <Input
-                        id="training-date"
-                        type="date"
-                        className="bg-[#1d2834] border-[#305176] text-white"
-                        value={newTraining.date}
-                        onChange={(e) => setNewTraining({ ...newTraining, date: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="training-time" className="text-white">
-                        Hora
-                      </Label>
-                      <Input
-                        id="training-time"
-                        type="time"
-                        className="bg-[#1d2834] border-[#305176] text-white"
-                        value={newTraining.time}
-                        onChange={(e) => setNewTraining({ ...newTraining, time: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white">Categoría de la Plantilla</Label>
-                  <Select
-                    value={newTraining.category}
-                    onValueChange={(value) => setNewTraining({ ...newTraining, category: value })}
-                  >
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                      <SelectValue placeholder="Seleccionar categoría" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#213041] border-[#305176]">
-                      {playersInTraining.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id} className="text-white">
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-
-                {/* Filtros para Ejercicios Disponibles */}
-                <div className="space-y-3">
-                  <Label className="text-white">Ejercicios Disponibles</Label>
-                  <div className="flex items-center gap-2 flex-nowrap">
-                    <div className="w-90 min-w-[128px]">
-                      <div className="relative">
-                        <Input
-                          placeholder="Buscar ejercicio..."
-                          className="pl-8 h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-full" // Alto igual a los filtros
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                          <SelectValue placeholder="Categoría" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">Categoría</SelectItem>
-                          {uniqueCategories.map((cat) => (
-                            <SelectItem key={cat} value={cat} className="text-white text-xs">{cat}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Select value={filterPlayers} onValueChange={setFilterPlayers}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                          <SelectValue placeholder="Jugadores" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">Jugadores</SelectItem>
-                          {uniquePlayers.map((num) => (
-                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">{num}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                          <SelectValue placeholder="Arqueros" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">Arqueros</SelectItem>
-                          {uniqueGoalkeepers.map((num) => (
-                            <SelectItem key={num} value={num.toString()} className="text-white text-xs">{num}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                          <SelectValue placeholder="Dificultad" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">Dificultad</SelectItem>
-                          <SelectItem value="Fácil" className="text-white text-xs">Fácil</SelectItem>
-                          <SelectItem value="Media" className="text-white text-xs">Media</SelectItem>
-                          <SelectItem value="Difícil" className="text-white text-xs">Difícil</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Select value={filterTime} onValueChange={setFilterTime}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
-                          <SelectValue placeholder="Tiempo" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#213041] border-[#305176]">
-                          <SelectItem value="all" className="text-white text-xs">Tiempo</SelectItem>
-                          {uniqueDurations.map((time) => (
-                            <SelectItem key={time} value={time.toString()} className="text-white text-xs">{time}min</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
-                        onClick={handleClearFilters}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto mt-4">
-                    {filteredExercises.map((exercise) => (
-                      <div key={exercise.id} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                        <div>
-                          <p className="text-white font-medium">{exercise.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                             <p className="text-gray-400 text-sm">
-                               {exercise.category} • {exercise.duration}min
-                             </p>
-                             <Badge
-                               className={getDifficultyColor(exercise.difficulty)}
-                            >
-                              {exercise.difficulty}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                           <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                            onClick={() => addExercise(exercise)}
-                          >
-                            Agregar
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Ejercicios Seleccionados */}
-                {selectedExercises.length > 0 && (
-                  <div className="space-y-3">
-                    <Label className="text-white">Ejercicios Seleccionados ({selectedExercises.length})</Label>
-                    <div className="space-y-2">
-                      {selectedExercises.map((exercise, index) => (
-                        <div
-                          key={exercise.id}
-                          className="flex items-center justify-between p-2 bg-[#305176] rounded-lg"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <span className="text-[#aff606] font-bold">{index + 1}.</span>
-                            <div>
-                              <p className="text-white text-sm font-medium">{exercise.name}</p>
-                              <p className="text-gray-300 text-xs">{exercise.duration}min</p>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                            onClick={() => removeExercise(exercise.id)}
-                          >
-                            Quitar
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Bloque modificado: Botones lado a lado */}
-                <div className="flex justify-between space-x-4">
+            <div className="lg:col-span-1">
+              <Card className="bg-[#213041] border-[#305176]">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-white flex items-center text-lg font-semibold">
+                    <PieChart className="h-5 w-5 mr-2" />
+                    Distribución del Entrenamiento
+                  </CardTitle>
+                  {/* BOTÓN MOVIDO A ESTA POSICIÓN */}
                   <Button
-                    className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
-                    onClick={handleSaveTraining}
+                      size="sm"
+                      className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] font-bold h-7 px-2 text-xs"
+                      onClick={() => {
+                        setNewNote({ type: 'note', name: '', description: '', duration: 0, id: 0 }); // Resetear la nota antes de abrir
+                        setShowNoteDialog(true);
+                      }}
                   >
-                    Guardar Entrenamiento
+                      <Plus className="h-3 w-3 mr-1" />
+                      + Nota
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
-                    onClick={handleCancelForm}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardHeader>
+                <CardContent>
+                  {selectedExercises.length > 0 ? (
+                    <div className="space-y-4">
+                      {/* Gráfico Pizza Simple */}
+                      <div className="relative w-48 h-48 mx-auto">
+                        <svg viewBox="0 0 200 200" className="w-full h-full">
+                          {calculatePieData().length === 1 ? (
+                            <circle
+                              cx="100"
+                              cy="100"
+                              r="80"
+                              fill={pieData[0].color}
+                              stroke="#1d2834"
+                              strokeWidth="2"
+                            />
+                          ) : (
+                            pieData.map((segment, index) => {
+                              const startAngle = pieData.slice(0, index).reduce((sum, s) => sum + s.percentage * 3.6, 0)
+                              const endAngle = startAngle + segment.percentage * 3.6
+                              const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
+                              const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
+                              const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
+                              const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
+                              const largeArc = segment.percentage > 50 ? 1 : 0
 
-          {/* Gráfico Pizza */}
-          <div className="lg:col-span-1">
-            <Card className="bg-[#213041] border-[#305176]">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <PieChart className="h-5 w-5 mr-2" />
-                  Distribución del Entrenamiento
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedExercises.length > 0 ? (
-                  <div className="space-y-4">
-                    {/* Gráfico Pizza Simple */}
-                    <div className="relative w-48 h-48 mx-auto">
-                      <svg viewBox="0 0 200 200" className="w-full h-full">
-                        {pieData.length === 1 ? (
-                          <circle
-                            cx="100"
-                            cy="100"
-                            r="80"
-                            fill={pieData[0].color}
-                            stroke="#1d2834"
-                            strokeWidth="2"
-                          />
-                        ) : (
-                          pieData.map((segment, index) => {
-                            const startAngle = pieData.slice(0, index).reduce((sum, s) => sum + s.percentage * 3.6, 0)
-                            const endAngle = startAngle + segment.percentage * 3.6
-                            const x1 = 100 + 80 * Math.cos(((startAngle - 90) * Math.PI) / 180)
-                            const y1 = 100 + 80 * Math.sin(((startAngle - 90) * Math.PI) / 180)
-                            const x2 = 100 + 80 * Math.cos(((endAngle - 90) * Math.PI) / 180)
-                            const y2 = 100 + 80 * Math.sin(((endAngle - 90) * Math.PI) / 180)
-                            const largeArc = segment.percentage > 50 ? 1 : 0
-                            return (
-                              <path
-                                key={index}
-                                d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                                fill={segment.color}
-                                stroke="#1d2834"
-                                strokeWidth="2"
-                              />
-                            )
-                          })
-                        )}
-                      </svg>
-                    </div>
+                              return (
+                                <path
+                                  key={index}
+                                  d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                                  fill={segment.color}
+                                  stroke="#1d2834"
+                                  strokeWidth="2"
+                                />
+                              )
+                            })
+                          )}
+                        </svg>
+                      </div>
 
-                    {/* Leyenda */}
-                    <div className="space-y-2">
-                      {pieData.map((segment, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
+                      {/* Leyenda */}
+                      <div className="space-y-2">
+                        {pieData.map((segment, index) => (
+                          <div key={index} className="flex items-center justify-between">
                             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: segment.color }}></div>
                             <span className="text-white text-sm">{segment.category}</span>
+                            <div className="text-right">
+                              <p className="text-white font-bold">{segment.percentage}%</p>
+                              <p className="text-gray-400 text-xs">{segment.duration}min</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-white font-bold">{segment.percentage}%</p>
-                            <p className="text-gray-400 text-xs">{segment.duration}min</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
 
-                    <div className="pt-2 border-t border-[#305176]">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Duración Total:</span>
-                        <span className="text-[#aff606] font-bold">
-                          {selectedExercises.reduce((sum, ex) => sum + ex.duration, 0)}min
-                        </span>
+                      <div className="pt-2 border-t border-[#305176]">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Duración Total:</span>
+                          <span className="text-[#aff606] font-bold">
+                            {selectedExercises.reduce((sum, ex) => sum + ex.duration, 0)}min
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <PieChart className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-400">Agrega ejercicios para ver la distribución</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <div className="text-center py-8">
+                      <PieChart className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-400">Agrega ejercicios para ver la distribución</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       )}
@@ -1296,6 +923,81 @@ export function TrainingPlannerSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* NUEVO: Dialog para Añadir Nota/Descanso */}
+      <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              Añadir Nota o Descanso
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Inserta un descanso, hidratación o instrucción especial.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="note-name" className="text-white">
+                Título de la Nota
+              </Label>
+              <Input
+                id="note-name"
+                placeholder="Ej: Pausa para hidratación"
+                value={newNote.name}
+                onChange={(e) => setNewNote({ ...newNote, name: e.target.value })}
+                className="bg-[#1d2834] border-[#305176] text-white"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="note-duration" className="text-white">
+                Duración (minutos) (Opcional)
+              </Label>
+              <Input
+                id="note-duration"
+                type="number"
+                placeholder="5"
+                value={newNote.duration === 0 ? '' : newNote.duration} // Muestra vacío si es 0
+                onChange={(e) => setNewNote({ ...newNote, duration: parseInt(e.target.value) || 0 })}
+                className="bg-[#1d2834] border-[#305176] text-white"
+                // required ELIMINADO
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="note-description" className="text-white">
+                Descripción / Instrucción (Opcional)
+              </Label>
+              <Textarea
+                id="note-description"
+                placeholder="Recordatorio: Reponer líquidos y estiramiento activo."
+                value={newNote.description}
+                onChange={(e) => setNewNote({ ...newNote, description: e.target.value })}
+                className="bg-[#1d2834] border-[#305176] text-white min-h-[80px]"
+                // required ELIMINADO
+              />
+            </div>
+          </div>
+          <div className="flex justify-between space-x-4">
+            <Button
+              variant="outline"
+              className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={() => {
+                setShowNoteDialog(false);
+                setNewNote({ type: 'note', name: '', description: '', duration: 0, id: 0 }); // Limpiar al cancelar
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={handleSaveNote}
+            >
+              Añadir a la Planificación
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* FIN NUEVO DIALOG */}
 
       {/* Exercise Detail Dialog (READ-ONLY) */}
       <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
@@ -1370,7 +1072,31 @@ export function TrainingPlannerSection() {
               />
             </div>
           </div>
-          {/* Se eliminan los botones de edición/eliminación para que sea read-only */}
+          <div className="flex justify-between space-x-4">
+            <Button
+              variant="default"
+              className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={() => {
+                setShowExerciseDetail(null);
+                setNewExercise(showExerciseDetail);
+                setShowCreateForm(true);
+              }}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Ejercicio
+            </Button>
+            <Button
+              variant="outline"
+              className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={() => {
+                setShowExerciseDetail(null);
+                setExerciseToDelete(showExerciseDetail?.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar Ejercicio
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

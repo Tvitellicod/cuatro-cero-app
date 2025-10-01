@@ -22,27 +22,33 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 
+// NUEVA CONSTANTE PARA REINICIAR EL FORMULARIO (MÁS ROBUSTO)
+const INITIAL_EXERCISE_STATE = {
+  name: "",
+  category: "",
+  duration: 0,
+  players: 0,
+  goalkeepers: 0,
+  difficulty: "",
+  materials: "",
+  description: "",
+  objective: "",
+};
+
+
 export function ExerciseManagement() {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
-  const [newExercise, setNewExercise] = useState({
-    name: "",
-    category: "",
-    duration: 0,
-    players: 0,
-    goalkeepers: 0,
-    difficulty: "",
-    materials: "",
-    description: "",
-    objective: "",
-  })
+  // USANDO LA CONSTANTE DEFINIDA ARRIBA
+  const [newExercise, setNewExercise] = useState(INITIAL_EXERCISE_STATE)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
   const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null)
   const [showValidationAlert, setShowValidationAlert] = useState(false)
+  // Nota: setEditingPlayer se eliminó previamente en una corrección para ClubManagement
 
 
   // Filtros
@@ -175,17 +181,7 @@ export function ExerciseManagement() {
       createdAt: new Date().toISOString().split('T')[0],
     }
     setExercises([...exercises, exerciseToAdd])
-    setNewExercise({
-      name: "",
-      category: "",
-      duration: 0,
-      players: 0,
-      goalkeepers: 0,
-      difficulty: "",
-      materials: "",
-      description: "",
-      objective: "",
-    })
+    setNewExercise(INITIAL_EXERCISE_STATE) // <--- USA LA CONSTANTE PARA RESETEAR
     setShowCreateForm(false)
   }
 
@@ -231,11 +227,19 @@ export function ExerciseManagement() {
     }
   }
 
-  // Generar opciones dinámicas para los filtros
-  const uniquePlayers = [...new Set(exercises.map(ex => ex.players))].sort((a, b) => a - b)
-  const uniqueGoalkeepers = [...new Set(exercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b)
-  const uniqueDurations = [...new Set(exercises.map(ex => ex.duration))].sort((a, b) => a - b)
+  // --- LÓGICA DE FILTROS DINÁMICOS CORREGIDA AQUÍ ---
+  
+  // 1. Determinar la fuente de datos para las opciones del filtro.
+  const exercisesForFilterOptions = selectedCategory === ""
+    ? exercises
+    : exercises.filter(ex => ex.category === selectedCategory);
 
+  // 2. Generar opciones dinámicas usando solo los ejercicios de la categoría seleccionada
+  const uniquePlayers = [...new Set(exercisesForFilterOptions.map(ex => ex.players))].sort((a, b) => a - b)
+  const uniqueGoalkeepers = [...new Set(exercisesForFilterOptions.map(ex => ex.goalkeepers))].sort((a, b) => a - b)
+  const uniqueDurations = [...new Set(exercisesForFilterOptions.map(ex => ex.duration))].sort((a, b) => a - b)
+
+  // ----------------------------------------------------
 
   // Función para resetear todos los filtros
   const handleClearFilters = () => {
@@ -246,11 +250,13 @@ export function ExerciseManagement() {
     setSearchQuery("")
   }
 
-  // Filtrar ejercicios
+  // Filtrar ejercicios (Esta lógica ya filtra por selectedCategory internamente)
   const filteredExercises = exercises
     .filter((exercise) => {
       const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "" || exercise.category === selectedCategory
+      
+      // Aplicar filtros secundarios a la lista ya filtrada por categoría
       const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
       const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
       const matchesDifficulty = filterDifficulty === "all" || exercise.difficulty === filterDifficulty
@@ -279,11 +285,21 @@ export function ExerciseManagement() {
             <CardContent className="space-y-3">
               {exerciseCategories.map((category, index) => (
                 <div
-                  key={index}
+                  key={category.name}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                     selectedCategory === category.name ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
                   }`}
-                  onClick={() => setSelectedCategory(selectedCategory === category.name ? "" : category.name)}
+                  onClick={() => {
+                    // Si se selecciona la misma categoría, se deselecciona.
+                    const newCategory = selectedCategory === category.name ? "" : category.name;
+                    setSelectedCategory(newCategory);
+                    
+                    // Resetear filtros secundarios al cambiar la categoría principal
+                    setFilterPlayers("all");
+                    setFilterGoalkeepers("all");
+                    setFilterDifficulty("all");
+                    setFilterTime("all");
+                  }}
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>
@@ -420,9 +436,7 @@ export function ExerciseManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="players" className="text-white">
-                      Jugadores
-                    </Label>
+                    <Label className="text-white">Jugadores</Label>
                     <Input
                       id="players"
                       type="number"
@@ -433,9 +447,7 @@ export function ExerciseManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="goalkeepers" className="text-white">
-                      Arqueros
-                    </Label>
+                    <Label className="text-white">Arqueros</Label>
                     <Input
                       id="goalkeepers"
                       type="number"
@@ -540,7 +552,7 @@ export function ExerciseManagement() {
                     size="default"
                     className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
                     onClick={() => {
-                      setEditingPlayer(null);
+                      setNewExercise(INITIAL_EXERCISE_STATE);
                       setShowCreateForm(true);
                     }}
                   >
@@ -567,7 +579,7 @@ export function ExerciseManagement() {
                         <SelectItem value="all" className="text-white text-xs">
                           Jugadores
                         </SelectItem>
-                        {[...new Set(exercises.map(ex => ex.players))].sort((a, b) => a - b).map((num) => (
+                        {uniquePlayers.map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
                             {num}
                           </SelectItem>
@@ -584,7 +596,7 @@ export function ExerciseManagement() {
                         <SelectItem value="all" className="text-white text-xs">
                           Arqueros
                         </SelectItem>
-                        {[...new Set(exercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b).map((num) => (
+                        {uniqueGoalkeepers.map((num) => (
                           <SelectItem key={num} value={num.toString()} className="text-white text-xs">
                             {num}
                           </SelectItem>
@@ -622,7 +634,7 @@ export function ExerciseManagement() {
                         <SelectItem value="all" className="text-white text-xs">
                           Tiempo
                         </SelectItem>
-                        {[...new Set(exercises.map(ex => ex.duration))].sort((a, b) => a - b).map((time) => (
+                        {uniqueDurations.map((time) => (
                           <SelectItem key={time} value={time.toString()} className="text-white text-xs">
                             {time}min
                           </SelectItem>

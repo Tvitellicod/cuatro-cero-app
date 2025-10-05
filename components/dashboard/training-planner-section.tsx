@@ -149,6 +149,12 @@ export function TrainingPlannerSection() {
       for (let i = 0; i < categoryMap[categoryId].count; i++) {
         const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
         const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+        const randomNickname = nicknames[Math.floor(Math.random() * nicknames.length)]
+        const randomPosition = ["Arquero", "Defensor", "Mediocampista", "Delantero"][Math.floor(Math.random() * 4)]
+        const randomFoot = ["Derecho", "Izquierdo", "Ambidiestro"][Math.floor(Math.random() * 3)]
+        const randomYear = 1990 + Math.floor(Math.random() * 15)
+        const randomMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")
+        const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0")
         const isInjured = Math.random() < 0.3
         const randomPhone = `+54 9 11 ${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 10000)}`
 
@@ -156,11 +162,11 @@ export function TrainingPlannerSection() {
           id: playerId++,
           firstName: randomFirstName,
           lastName: randomLastName,
-          nickname: nicknames[Math.floor(Math.random() * nicknames.length)],
-          birthDate: "1990-01-01",
+          nickname: randomNickname,
+          birthDate: `${randomYear}-${randomMonth}-${randomDay}`,
           phoneNumber: randomPhone,
-          position: ["Arquero", "Defensor", "Mediocampista", "Delantero"][Math.floor(Math.random() * 4)],
-          foot: ["Derecho", "Izquierdo", "Ambidiestro"][Math.floor(Math.random() * 3)],
+          position: randomPosition,
+          foot: randomFoot,
           status: isInjured ? "LESIONADO" : "DISPONIBLE",
           category: categoryId,
           photo: "/placeholder-user.jpg",
@@ -207,6 +213,26 @@ export function TrainingPlannerSection() {
       category: "Primera División",
       focus: "Presión Alta",
       attendance: "20/22"
+    },
+    {
+      id: 5,
+      name: "Sesión 3",
+      date: "2024-01-07",
+      duration: 40,
+      exercises: [],
+      category: "Infantiles",
+      focus: "Básico",
+      attendance: "15/15"
+    },
+    {
+      id: 6,
+      name: "Sesión 4 (No debe verse)",
+      date: "2024-01-06",
+      duration: 50,
+      exercises: [],
+      category: "Infantiles",
+      focus: "Básico",
+      attendance: "14/15"
     },
   ]
   const exercisesFromManagement = [
@@ -773,10 +799,8 @@ export function TrainingPlannerSection() {
                 <div className="w-full space-y-1">
                   {calculatePieData().map((segment, index) => (
                     <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
-                        <span className="text-white text-sm">{segment.category}</span>
-                      </div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                      <span className="text-white text-sm">{segment.category}</span>
                       <div className="text-right">
                         <p className="text-white font-bold">{segment.percentage}%</p>
                         <p className="text-gray-400 text-xs">{segment.duration}min</p>
@@ -812,7 +836,7 @@ export function TrainingPlannerSection() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {trainingSessions.map((session) => (
+                {trainingSessions.slice(0, 3).map((session) => (
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
@@ -846,12 +870,14 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
+                      {/* MODIFICACIÓN: Botón de Programados con Eye icon y estilo outline */}
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
                         onClick={() => setShowTrainingDetail(session)}
                       >
+                        <Eye className="h-4 w-4 mr-2" />
                         Ver Entrenamiento
                       </Button>
                       <Button
@@ -871,11 +897,15 @@ export function TrainingPlannerSection() {
 
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
-              <CardTitle className="text-white">Entrenamientos Recientes</CardTitle>
+              {/* MODIFICACIÓN: Título con ícono de Calendar */}
+              <CardTitle className="text-white flex items-center">
+                <Calendar className="h-5 w-5 mr-2" />
+                Entrenamientos Recientes
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {previousSessions.map((session) => (
+                {previousSessions.slice(0, 3).map((session) => (
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
@@ -908,9 +938,11 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
+                      {/* MODIFICACIÓN: Botón de Recientes UNIFICADO (outline green/black hover) */}
                       <Button
                         size="sm"
-                        className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
+                        variant="outline"
+                        className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
                         onClick={() => setShowTrainingDetail(session)}
                       >
                         <Eye className="h-4 w-4 mr-2" />

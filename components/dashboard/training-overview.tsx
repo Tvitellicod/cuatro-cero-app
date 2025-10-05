@@ -123,6 +123,29 @@ export function TrainingOverview() {
             attendance: "21/22",
             path: "/dashboard/entrenamiento/planificar"
           },
+          // Ejemplos adicionales para demostrar el límite de 3
+          {
+            id: 3,
+            name: "Recuperación Post-Partido",
+            date: tomorrow.toISOString().split('T')[0],
+            duration: 45,
+            exercises: [],
+            category: "Primera División",
+            focus: "Regenerativo",
+            attendance: "22/22",
+            path: "/dashboard/entrenamiento/planificar"
+          },
+          {
+            id: 4,
+            name: "Sesión 4 (No debe verse)",
+            date: tomorrow.toISOString().split("T")[0],
+            duration: 60,
+            exercises: [],
+            category: "Juveniles",
+            focus: "Técnico",
+            attendance: "18/20",
+            path: "/dashboard/entrenamiento/planificar"
+          },
         ]
         setUpcomingTrainingSessions(demoSessions)
         setLoading(false)
@@ -279,6 +302,26 @@ export function TrainingOverview() {
       focus: "Presión Alta",
       attendance: "20/22"
     },
+     {
+      id: 5,
+      name: "Sesión 3",
+      date: "2024-01-07",
+      duration: 40,
+      exercises: [],
+      category: "Infantiles",
+      focus: "Básico",
+      attendance: "15/15"
+    },
+    {
+      id: 6,
+      name: "Sesión 4 (No debe verse)",
+      date: "2024-01-06",
+      duration: 50,
+      exercises: [],
+      category: "Infantiles",
+      focus: "Básico",
+      attendance: "14/15"
+    },
   ]
 
   const getCategoriesInTraining = (exercises: any[]) => {
@@ -375,7 +418,8 @@ export function TrainingOverview() {
               {loading ? (
                 <p className="text-gray-400 text-center">Cargando entrenamientos...</p>
               ) : upcomingTrainingSessions.length > 0 ? (
-                upcomingTrainingSessions.map((session, index) => (
+                // LÍMITE A LOS PRÓXIMOS 3 ELEMENTOS
+                upcomingTrainingSessions.slice(0, 3).map((session, index) => (
                   <Link key={session.id} href={session.path}>
                     <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg hover:bg-[#305176] transition-colors cursor-pointer">
                       <div className="flex items-center space-x-4">
@@ -512,11 +556,16 @@ export function TrainingOverview() {
       {/* Entrenamientos recientes */}
       <Card className="bg-[#213041] border-[#305176]">
         <CardHeader>
-          <CardTitle className="text-white">Entrenamientos Recientes</CardTitle>
+          {/* MODIFICACIÓN: Agregado de ícono Calendar y ajuste de CardTitle */}
+          <CardTitle className="text-white flex items-center">
+            <Calendar className="h-5 w-5 mr-2" />
+            Entrenamientos Recientes
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            {previousSessions.map((session, index) => (
+            {/* LÍMITE A LOS ÚLTIMOS 3 ENTRENAMIENTOS RECIENTES */}
+            {previousSessions.slice(0, 3).map((session, index) => (
               <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="text-center">
@@ -682,10 +731,8 @@ export function TrainingOverview() {
                 <div className="w-full space-y-1">
                   {calculatePieDataForSession(showTrainingDetail?.exercises || []).map((segment, index) => (
                     <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
-                        <span className="text-white text-sm">{segment.category}</span>
-                      </div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                      <span className="text-white text-sm">{segment.category}</span>
                       <div className="text-right">
                         <p className="text-white font-bold">{segment.percentage}%</p>
                         <p className="text-gray-400 text-xs">{segment.duration}min</p>

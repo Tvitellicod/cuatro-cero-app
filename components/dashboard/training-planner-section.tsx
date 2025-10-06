@@ -21,7 +21,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" // <-- CORREGIDO: DialogTrigger añadido
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" 
 
 // Función de ayuda para obtener la fecha y hora actual predeterminada
 const getInitialDateTime = () => {
@@ -77,7 +77,6 @@ export function TrainingPlannerSection() {
         { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico", players:4, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar distribución del arquero", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
       ],
       category: "Primera División",
-      focus: "Ataque Posicional",
       attendance: "20/22",
       path: "/dashboard/entrenamiento/planificar"
     },
@@ -93,7 +92,6 @@ export function TrainingPlannerSection() {
         { id:103, name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
       ],
       category: "Primera División",
-      focus: "Resistencia Aeróbica",
       attendance: "21/22",
       path: "/dashboard/entrenamiento/planificar"
     },
@@ -197,7 +195,6 @@ export function TrainingPlannerSection() {
         { id:3, name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
       ],
       category: "Juveniles",
-      focus: "Técnica Individual",
       attendance: "19/22"
     },
     {
@@ -211,7 +208,6 @@ export function TrainingPlannerSection() {
         { id:3, name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
       ],
       category: "Primera División",
-      focus: "Presión Alta",
       attendance: "20/22"
     },
     {
@@ -221,7 +217,6 @@ export function TrainingPlannerSection() {
       duration: 40,
       exercises: [],
       category: "Infantiles",
-      focus: "Básico",
       attendance: "15/15"
     },
     {
@@ -231,7 +226,6 @@ export function TrainingPlannerSection() {
       duration: 50,
       exercises: [],
       category: "Infantiles",
-      focus: "Básico",
       attendance: "14/15"
     },
   ]
@@ -454,7 +448,7 @@ export function TrainingPlannerSection() {
         acc[category] = (acc[category] || 0) + exercise.duration;
         return acc;
       },
-      {},
+      {} as Record<string, number>,
     )
 
     const total = Object.values(categoryCount).reduce((sum, duration) => sum + duration, 0)
@@ -554,7 +548,7 @@ export function TrainingPlannerSection() {
       exercises: selectedExercises,
       category: playersInTraining.find(cat => cat.id === newTraining.category)?.name || "N/A",
       categoryId: newTraining.category,
-      focus: "Custom",
+      // Focus eliminado
       attendance: "0/0",
       path: "/dashboard/entrenamiento/planificar"
     };
@@ -625,12 +619,7 @@ export function TrainingPlannerSection() {
                   <span className="text-gray-400">Categoría:</span>
                   <p className="text-white">{showTrainingDetail?.category}</p>
                 </div>
-                {showTrainingDetail?.focus && (
-                  <div>
-                    <span className="text-gray-400">Enfoque:</span>
-                    <p className="text-white">{showTrainingDetail?.focus}</p>
-                  </div>
-                )}
+                {/* ENFOQUE ELIMINADO */}
               </div>
               
               {/* Botón de Asistencia para alternar la vista */}
@@ -655,44 +644,27 @@ export function TrainingPlannerSection() {
                     <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises?.length || 0})</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {showTrainingDetail?.exercises?.map((exercise: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                        <div 
+                          key={index} 
+                          className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176] transition-colors"
+                          onClick={() => setShowExerciseDetail(exercise)} // Abre el modal de detalle del ejercicio
+                        >
                           <div className="flex items-center space-x-3">
                             <span className="text-[#aff606] font-bold">{index + 1}.</span>
                             <div>
+                              {/* Título y tiempo */}
                               <p className="text-white font-medium">{exercise.name}</p>
                               <p className="text-gray-400 text-sm">{exercise.duration} min</p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge
-                              className="text-white"
-                              style={{ backgroundColor: getCategoryColors(exercise.category) }}
-                            >
-                              {exercise.category}
-                            </Badge>
-                            <DialogTrigger asChild> 
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                                onClick={() => setShowExerciseDetail(exercise)}
-                              >
-                                Ver Ejercicio
-                              </Button>
-                            </DialogTrigger>
-                          </div>
+                          {/* Solo el círculo de color */}
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: exercise.color || getCategoryColors(exercise.category) }}
+                            title={exercise.category} // Añadir título para accesibilidad
+                          ></div>
+                          {/* Botón Ver Ejercicio ELIMINADO */}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-white font-medium mb-3">Categorías Trabajadas</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {getCategoriesInTraining(showTrainingDetail?.exercises || []).map((cat, index) => (
-                        <Badge key={index} className="text-white" style={{ backgroundColor: cat.color }}>
-                          {cat.name}
-                        </Badge>
                       ))}
                     </div>
                   </div>
@@ -870,7 +842,7 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      {/* MODIFICACIÓN: Botón de Programados con Eye icon y estilo outline */}
+                      {/* Botón de Programados con Eye icon y estilo outline */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -897,7 +869,7 @@ export function TrainingPlannerSection() {
 
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
-              {/* MODIFICACIÓN: Título con ícono de Calendar */}
+              {/* Título con ícono de Calendar */}
               <CardTitle className="text-white flex items-center">
                 <Calendar className="h-5 w-5 mr-2" />
                 Entrenamientos Recientes
@@ -938,7 +910,7 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      {/* MODIFICACIÓN: Botón de Recientes UNIFICADO (outline green/black hover) */}
+                      {/* Botón de Recientes UNIFICADO (outline green/black hover) */}
                       <Button
                         size="sm"
                         variant="outline"
@@ -1015,7 +987,7 @@ export function TrainingPlannerSection() {
                     value={newTraining.category}
                     onValueChange={(value) => setNewTraining({ ...newTraining, category: value })}
                   >
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
+                    <SelectTrigger className="w-full bg-[#1d2834] border-[#305176] text-white">
                       <SelectValue placeholder="Seleccionar categoría" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#213041] border-[#305176]">

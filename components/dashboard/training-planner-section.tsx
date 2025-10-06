@@ -23,6 +23,12 @@ import {
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" 
 
+// --- CONSTANTES GLOBALES DE NOTA ---
+const NOTE_TYPE = "Note"; 
+const NOTE_NEUTRAL_COLOR = "#7c7c7c"; // Color gris oscuro neutro
+const NOTE_CATEGORY_NAME = "Nota de Sesión";
+// ---------------------------------
+
 // Función de ayuda para obtener la fecha y hora actual predeterminada
 const getInitialDateTime = () => {
   const now = new Date();
@@ -50,6 +56,15 @@ export function TrainingPlannerSection() {
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [trainingToDelete, setTrainingToDelete] = useState<number | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
+
+  // --- ESTADOS AÑADIDOS PARA LA NOTA ---
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [newNote, setNewNote] = useState({
+    title: "",
+    duration: "", // Kept as string for input
+    description: "",
+  })
+  // ------------------------------------
 
 
   const [newTraining, setNewTraining] = useState(() => {
@@ -414,11 +429,42 @@ export function TrainingPlannerSection() {
     })
     .sort((a, b) => a.id - b.id)
 
+  // Helper para generar ID de nota
+  const generateNoteId = () => `note-${Date.now()}`;
+
   const addExercise = (exercise: any) => {
     if (!selectedExercises.find((e) => e.id === exercise.id)) {
       setSelectedExercises([...selectedExercises, exercise])
     }
   }
+
+  // --- LÓGICA PARA AÑADIR NOTA ---
+  const handleAddNote = () => {
+    if (!newNote.title.trim()) {
+      alert("El Título de la nota es obligatorio.");
+      return;
+    }
+
+    const duration = parseInt(newNote.duration) || 0;
+
+    const note = {
+      id: generateNoteId(),
+      name: newNote.title.trim(),
+      category: NOTE_CATEGORY_NAME, 
+      duration: duration,
+      players: 0,
+      goalkeepers: 0,
+      difficulty: "N/A",
+      materials: "N/A",
+      objective: newNote.description,
+      type: NOTE_TYPE, // Flag para exclusión del gráfico
+    };
+
+    setSelectedExercises(prev => [...prev, note]);
+    setNewNote({ title: "", duration: "", description: "" });
+    setShowNoteModal(false);
+  };
+  // ------------------------------
 
   const removeExercise = (exerciseId: number) => {
     setSelectedExercises(selectedExercises.filter((e) => e.id !== exerciseId))
@@ -435,6 +481,7 @@ export function TrainingPlannerSection() {
         case 'Rehabilitación': return '#4ecdc4';
         case 'Prevención': return '#45b7d1';
         case 'Técnico': return '#aff606';
+        case NOTE_CATEGORY_NAME: return NOTE_NEUTRAL_COLOR; // Color neutral para notas
         default: return '#aff606';
     }
   };
@@ -442,28 +489,34 @@ export function TrainingPlannerSection() {
   const calculatePieData = () => {
     const sessionToDisplay = showTrainingDetail || { exercises: selectedExercises };
 
-    const categoryCount = sessionToDisplay.exercises.reduce(
+    // MODIFICACIÓN CLAVE: Filtramos explícitamente las notas (`exercise.type === NOTE_TYPE`)
+    const graphExercises = sessionToDisplay.exercises
+      .filter((exercise: any) => exercise.type !== NOTE_TYPE);
+
+    const categoryCount = graphExercises.reduce(
       (acc: Record<string, number>, exercise: any) => {
         const category = exercise.category;
         acc[category] = (acc[category] || 0) + exercise.duration;
         return acc;
       },
       {} as Record<string, number>,
-    )
+    );
 
-    const total = Object.values(categoryCount).reduce((sum, duration) => sum + duration, 0)
+    const totalGraphDuration = Object.values(categoryCount).reduce((sum, duration) => sum + duration, 0);
 
     return Object.entries(categoryCount).map(([category, duration]) => ({
       category,
       duration,
-      percentage: total > 0 ? Math.round((duration / total) * 100) : 0,
+      // Usamos la duración total de los ejercicios que SÍ están en el gráfico
+      percentage: totalGraphDuration > 0 ? Math.round((duration / totalGraphDuration) * 100) : 0, 
       color: getCategoryColors(category),
-    }))
+    }));
   }
 
   const pieData = calculatePieData()
 
   const getCategoriesInTraining = (exercises: any[]) => {
+    // Esta función se utiliza para los puntos de color en el resumen de la sesión
     const categories = [...new Set(exercises.map((ex) => ex.category))]
     const colors = {
       Ataque: "#ea3498",
@@ -483,6 +536,7 @@ export function TrainingPlannerSection() {
       Fortalecimiento: "#96ceb4",
       Movilidad: "#f1a85f",
       Recuperación: "#c9d99d",
+      [NOTE_CATEGORY_NAME]: NOTE_NEUTRAL_COLOR,
     }
 
     return categories.map((cat) => ({
@@ -544,7 +598,8 @@ export function TrainingPlannerSection() {
       name: newTraining.name,
       date: newTraining.date,
       time: newTraining.time,
-      duration: selectedExercises.reduce((sum, ex) => sum + ex.duration, 0),
+      // Se suman los minutos de ejercicios y notas
+      duration: selectedExercises.reduce((sum, ex) => sum + ex.duration, 0), 
       exercises: selectedExercises,
       category: playersInTraining.find(cat => cat.id === newTraining.category)?.name || "N/A",
       categoryId: newTraining.category,
@@ -642,25 +697,30 @@ export function TrainingPlannerSection() {
                   {/* Lista de Ejercicios */}
                   <div>
                     <h4 className="text-white font-medium mb-3">Ejercicios ({showTrainingDetail?.exercises?.length || 0})</h4>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
                       {showTrainingDetail?.exercises?.map((exercise: any, index: number) => (
                         <div 
                           key={index} 
                           className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176] transition-colors"
-                          onClick={() => setShowExerciseDetail(exercise)} // Abre el modal de detalle del ejercicio
+                          // Permite abrir el detalle solo si no es una nota
+                          onClick={() => exercise.type !== NOTE_TYPE && setShowExerciseDetail(exercise)} 
                         >
                           <div className="flex items-center space-x-3">
                             <span className="text-[#aff606] font-bold">{index + 1}.</span>
                             <div>
                               {/* Título y tiempo */}
                               <p className="text-white font-medium">{exercise.name}</p>
-                              <p className="text-gray-400 text-sm">{exercise.duration} min</p>
+                              {/* Muestra duración si es un ejercicio o una nota con tiempo */}
+                              {exercise.duration > 0 && <p className="text-gray-400 text-sm">{exercise.duration} min</p>} 
+                              {/* Muestra descripción si es una nota sin duración */}
+                              {exercise.type === NOTE_TYPE && exercise.objective && <p className="text-gray-500 text-xs italic">{exercise.objective}</p>}
                             </div>
                           </div>
                           {/* Solo el círculo de color */}
                           <div
                             className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: exercise.color || getCategoryColors(exercise.category) }}
+                            // Usa el color de categoría, que es neutro para las notas
+                            style={{ backgroundColor: getCategoryColors(exercise.category) }}
                             title={exercise.category} // Añadir título para accesibilidad
                           ></div>
                           {/* Botón Ver Ejercicio ELIMINADO */}
@@ -731,14 +791,16 @@ export function TrainingPlannerSection() {
             
             {/* Columna Derecha: Gráfico de Distribución (Pie Chart) */}
             <div className={`space-y-4 ${showAttendance ? 'hidden lg:block' : ''}`}> 
-              <h3 className="text-white font-medium mb-3 flex items-center">
-                <PieChart className="h-5 w-5 mr-2" />
-                Distribución por Categoría
-              </h3>
+              <CardHeader className="p-0 flex flex-row items-center justify-between">
+                <CardTitle className="text-white flex items-center">
+                  <PieChart className="h-5 w-5 mr-2" />
+                  Distribución por Categoría
+                </CardTitle>
+              </CardHeader>
               <div className="flex flex-col items-center">
                 <div className="relative w-48 h-48 mx-auto mb-4">
                   {/* Renderizado del gráfico de pizza */}
-                  {showTrainingDetail?.exercises?.length > 0 ? (
+                  {showTrainingDetail?.exercises?.filter((ex: any) => ex.type !== NOTE_TYPE).length > 0 ? (
                     <svg viewBox="0 0 200 200" className="w-full h-full">
                       {calculatePieData().map((segment, segIndex) => {
                         const pieData = calculatePieData();
@@ -1004,21 +1066,21 @@ export function TrainingPlannerSection() {
                 {/* Filtros para Ejercicios Disponibles */}
                 <div className="space-y-3">
                   <Label className="text-white">Ejercicios Disponibles</Label>
-                  <div className="flex items-center gap-2 flex-nowrap">
-                    <div className="w-90 min-w-[128px]">
+                  <div className="flex flex-wrap items-center gap-2"> 
+                    <div className="min-w-[140px] max-w-full flex-1">
                       <div className="relative">
                         <Input
                           placeholder="Buscar ejercicio..."
-                          className="pl-8 h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-full" // Alto igual a los filtros
+                          className="pl-8 h-9 bg-[#1d2834] border-[#305176] text-white text-xs w-full"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
                         <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-[120px]">
                       <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-full h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Categoría" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
@@ -1029,9 +1091,9 @@ export function TrainingPlannerSection() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
+                    <div className="min-w-[120px]">
                       <Select value={filterPlayers} onValueChange={setFilterPlayers}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-full h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Jugadores" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
@@ -1042,9 +1104,9 @@ export function TrainingPlannerSection() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
+                    <div className="min-w-[120px]">
                       <Select value={filterGoalkeepers} onValueChange={setFilterGoalkeepers}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-full h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Arqueros" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
@@ -1055,9 +1117,9 @@ export function TrainingPlannerSection() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
+                    <div className="min-w-[120px]">
                       <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-full h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Dificultad" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
@@ -1068,9 +1130,9 @@ export function TrainingPlannerSection() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
+                    <div className="min-w-[120px]">
                       <Select value={filterTime} onValueChange={setFilterTime}>
-                        <SelectTrigger className="w-32 h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
+                        <SelectTrigger className="w-full h-8 bg-[#1d2834] border-[#305176] text-white text-xs">
                           <SelectValue placeholder="Tiempo" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
@@ -1137,7 +1199,8 @@ export function TrainingPlannerSection() {
                             <span className="text-[#aff606] font-bold">{index + 1}.</span>
                             <div>
                               <p className="text-white text-sm font-medium">{exercise.name}</p>
-                              <p className="text-gray-300 text-xs">{exercise.duration}min</p>
+                              {exercise.duration > 0 && <p className="text-gray-300 text-xs">{exercise.duration}min</p>}
+                              {exercise.type === NOTE_TYPE && exercise.objective && <p className="text-gray-500 text-xs italic">{exercise.objective}</p>}
                             </div>
                           </div>
                           <Button
@@ -1177,14 +1240,22 @@ export function TrainingPlannerSection() {
           {/* Gráfico Pizza */}
           <div className="lg:col-span-1">
             <Card className="bg-[#213041] border-[#305176]">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white flex items-center">
                   <PieChart className="h-5 w-5 mr-2" />
                   Distribución del Entrenamiento
                 </CardTitle>
+                <Button
+                  size="sm"
+                  className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] font-semibold"
+                  onClick={() => setShowNoteModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar Nota
+                </Button>
               </CardHeader>
               <CardContent>
-                {selectedExercises.length > 0 ? (
+                {selectedExercises.filter((ex: any) => ex.type !== NOTE_TYPE).length > 0 ? (
                   <div className="space-y-4">
                     {/* Gráfico Pizza Simple */}
                     <div className="relative w-48 h-48 mx-auto">
@@ -1239,8 +1310,14 @@ export function TrainingPlannerSection() {
 
                     <div className="pt-2 border-t border-[#305176]">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Duración Total:</span>
+                        <span className="text-gray-400">Duración Total (Solo ejercicios):</span>
                         <span className="text-[#aff606] font-bold">
+                          {selectedExercises.filter((ex: any) => ex.type !== NOTE_TYPE).reduce((sum, ex) => sum + ex.duration, 0)}min
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Duración Total (Incl. Notas):</span>
+                        <span className="text-white font-bold">
                           {selectedExercises.reduce((sum, ex) => sum + ex.duration, 0)}min
                         </span>
                       </div>
@@ -1375,6 +1452,79 @@ export function TrainingPlannerSection() {
             </div>
           </div>
           {/* Se eliminan los botones de edición/eliminación para que sea read-only */}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogo para Agregar Nota (NUEVA INTERFAZ) */}
+      <Dialog open={showNoteModal} onOpenChange={setShowNoteModal}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              Agregar Nota/Pausa
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Añade una nota o un tiempo de pausa a la sesión.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="note-title" className="text-white">
+                Título de la Nota *
+              </Label>
+              <Input
+                id="note-title"
+                placeholder="Ej: Charla Técnica"
+                value={newNote.title}
+                onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                className="bg-[#1d2834] border-[#305176] text-white"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="note-duration" className="text-white">
+                Tiempo/Duración (min, opcional)
+              </Label>
+              <Input
+                id="note-duration"
+                type="number"
+                placeholder="10"
+                min="0"
+                value={newNote.duration}
+                onChange={(e) => setNewNote({ ...newNote, duration: e.target.value })}
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="note-description" className="text-white">
+                Descripción (opcional)
+              </Label>
+              <Textarea
+                id="note-description"
+                placeholder="Detalles sobre esta pausa o nota..."
+                value={newNote.description}
+                onChange={(e) => setNewNote({ ...newNote, description: e.target.value })}
+                className="bg-[#1d2834] border-[#305176] text-white min-h-[80px]"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-4">
+            <Button
+              variant="outline"
+              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={() => {
+                setShowNoteModal(false);
+                setNewNote({ title: "", duration: "", description: "" });
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={handleAddNote}
+            >
+              Guardar Nota
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -274,7 +274,7 @@ export function MatchesManagement() {
         </CardContent>
       </Card>
 
-      {/* Modal de Estadísticas del Partido */}
+      {/* Modal de Estadísticas del Partido - MODIFICADO */}
       <Dialog open={showStatsModal} onOpenChange={setShowStatsModal}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -285,25 +285,29 @@ export function MatchesManagement() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
+              {/* Resultado */}
               <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
                 <span className="text-gray-400">Resultado</span>
                 <Badge className={getResultColor(selectedMatchStats?.status)}>{selectedMatchStats?.result}</Badge>
               </div>
+              
+              {/* Tiempo Total Jugado */}
               <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                <span className="text-gray-400">Goles</span>
-                <span className="text-white font-bold">{selectedMatchStats?.stats.goals}</span>
+                <span className="text-gray-400">Tiempo Total Jugado</span>
+                {/* Nota: Se utiliza 90 min como valor estándar para un partido completo. */}
+                <span className="text-white font-bold">90 min</span> 
               </div>
-              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                <span className="text-gray-400">Asistencias</span>
-                <span className="text-white font-bold">{selectedMatchStats?.stats.assists}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                <span className="text-gray-400">Posesión</span>
-                <span className="text-white font-bold">{selectedMatchStats?.stats.possession}</span>
-              </div>
+
+              {/* Tiros al Arco */}
               <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
                 <span className="text-gray-400">Tiros al Arco</span>
-                <span className="text-white font-bold">{selectedMatchStats?.stats.shots}</span>
+                <span className="text-white font-bold">{selectedMatchStats?.stats?.shots || 0}</span>
+              </div>
+              
+              {/* Tarjetas Amarillas */}
+              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                <span className="text-gray-400">Tarjetas Amarillas</span>
+                <span className="text-white font-bold">{selectedMatchStats?.stats?.yellowCards || 0}</span>
               </div>
             </div>
           </div>

@@ -69,14 +69,18 @@ export function StatisticsSection() {
         possession: "60%",
         shotsOnTarget: 5,
         totalShots: 8,
-        fouls: 10,
+        foulsCommitted: 10,
+        foulsReceived: 8,
         yellowCards: 3,
         redCards: 0,
+        recuperoPelota: 50,
+        perdioPelota: 30,
       },
+      duration: 90, // Agregado para el tiempo jugado total
       playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 2, assists: 1, yellowCards: 1, redCards: 0, minutes: 90 },
-        { id: 2, name: "Miguel A. González", goals: 0, assists: 1, yellowCards: 1, redCards: 0, minutes: 90 },
-        { id: 3, name: "Roberto Silva", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 75 },
+        { id: 1, name: "Juan C. Pérez", goals: 2, assists: 1, yellowCards: 1, redCards: 0, minutes: 90, shots: 5, foulsReceived: 3 },
+        { id: 2, name: "Miguel A. González", goals: 0, assists: 1, yellowCards: 1, redCards: 0, minutes: 90, shots: 2, foulsReceived: 5 },
+        { id: 3, name: "Roberto Silva", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 75, shots: 0, foulsReceived: 2 },
       ],
     },
     {
@@ -94,14 +98,18 @@ export function StatisticsSection() {
         possession: "55%",
         shotsOnTarget: 3,
         totalShots: 5,
-        fouls: 15,
+        foulsCommitted: 15,
+        foulsReceived: 12,
         yellowCards: 2,
         redCards: 0,
+        recuperoPelota: 45,
+        perdioPelota: 40,
       },
+      duration: 90, // Agregado para el tiempo jugado total
       playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 1, assists: 0, yellowCards: 0, redCards: 0, minutes: 90 },
-        { id: 2, name: "Miguel A. González", goals: 0, assists: 1, yellowCards: 0, redCards: 0, minutes: 90 },
-        { id: 3, name: "Roberto Silva", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 90 },
+        { id: 1, name: "Juan C. Pérez", goals: 1, assists: 0, yellowCards: 0, redCards: 0, minutes: 90, shots: 3, foulsReceived: 4 },
+        { id: 2, name: "Miguel A. González", goals: 0, assists: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 1, foulsReceived: 2 },
+        { id: 3, name: "Roberto Silva", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 0, foulsReceived: 1 },
       ],
     },
     {
@@ -119,14 +127,18 @@ export function StatisticsSection() {
         possession: "70%",
         shotsOnTarget: 8,
         totalShots: 12,
-        fouls: 8,
+        foulsCommitted: 8,
+        foulsReceived: 5,
         yellowCards: 1,
         redCards: 0,
+        recuperoPelota: 60,
+        perdioPelota: 25,
       },
+      duration: 90, // Agregado para el tiempo jugado total
       playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 1, assists: 1, yellowCards: 0, redCards: 0, minutes: 90 },
-        { id: 2, name: "Miguel A. González", goals: 1, assists: 1, yellowCards: 0, redCards: 0, minutes: 90 },
-        { id: 3, name: "Roberto Silva", goals: 1, assists: 0, yellowCards: 0, redCards: 0, minutes: 90 },
+        { id: 1, name: "Juan C. Pérez", goals: 1, assists: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 4, foulsReceived: 1 },
+        { id: 2, name: "Miguel A. González", goals: 1, assists: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 3, foulsReceived: 2 },
+        { id: 3, name: "Roberto Silva", goals: 1, assists: 0, yellowCards: 0, redCards: 0, minutes: 90, shots: 1, foulsReceived: 1 },
       ],
     },
     {
@@ -144,14 +156,18 @@ export function StatisticsSection() {
         possession: "40%",
         shotsOnTarget: 2,
         totalShots: 6,
-        fouls: 12,
+        foulsCommitted: 12,
+        foulsReceived: 18,
         yellowCards: 4,
         redCards: 1,
+        recuperoPelota: 35,
+        perdioPelota: 50,
       },
+      duration: 90, // Agregado para el tiempo jugado total
       playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 90 },
-        { id: 2, name: "Miguel A. González", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 90 },
-        { id: 3, name: "Roberto Silva", goals: 0, assists: 0, yellowCards: 1, redCards: 1, minutes: 60 },
+        { id: 1, name: "Juan C. Pérez", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 2, foulsReceived: 8 },
+        { id: 2, name: "Miguel A. González", goals: 0, assists: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 1, foulsReceived: 5 },
+        { id: 3, name: "Roberto Silva", goals: 0, assists: 0, yellowCards: 1, redCards: 1, minutes: 60, shots: 0, foulsReceived: 3 },
       ],
     },
   ]
@@ -176,14 +192,11 @@ export function StatisticsSection() {
         faltaCometida: 15,
         faltaRecibida: 25,
       },
-      trainingAttendance: [
-        { date: "10/01/2024", status: "Presente" },
-        { date: "09/01/2024", status: "Ausente" },
-        { date: "08/01/2024", status: "Presente" },
-      ],
-      matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", goals: 2, assists: 1 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", goals: 1, assists: 0 },
+      matchHistory: [ // Datos de prueba para el historial del modal
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 2, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 1, recupero: 4, perdida: 5, remate: 3, tiroAlArco: 1, faltaRecibida: 4, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 6, perdida: 2, remate: 4, tiroAlArco: 2, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 3, perdida: 6, remate: 2, tiroAlArco: 0, faltaRecibida: 8, faltaCometida: 1, tAmarilla: 1, tRoja: 0 },
       ],
     },
     {
@@ -205,14 +218,11 @@ export function StatisticsSection() {
         faltaCometida: 25,
         faltaRecibida: 35,
       },
-      trainingAttendance: [
-        { date: "10/01/2024", status: "Presente" },
-        { date: "09/01/2024", status: "Presente" },
-        { date: "08/01/2024", status: "Presente" },
-      ],
       matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", goals: 0, assists: 1 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", goals: 0, assists: 1 },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 8, perdida: 6, remate: 2, tiroAlArco: 1, faltaRecibida: 5, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 6, perdida: 7, remate: 1, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 3, tAmarilla: 0, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 7, perdida: 4, remate: 3, tiroAlArco: 1, faltaRecibida: 2, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 5, perdida: 8, remate: 1, tiroAlArco: 0, faltaRecibida: 5, faltaCometida: 3, tAmarilla: 1, tRoja: 0 },
       ],
     },
     {
@@ -234,14 +244,11 @@ export function StatisticsSection() {
         faltaCometida: 30,
         faltaRecibida: 10,
       },
-      trainingAttendance: [
-        { date: "10/01/2024", status: "Presente" },
-        { date: "09/01/2024", status: "Presente" },
-        { date: "08/01/2024", status: "Presente" },
-      ],
       matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", goals: 0, assists: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", goals: 0, assists: 0 },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 75, goles: 0, recupero: 10, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 5, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 12, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 15, perdida: 4, remate: 1, tiroAlArco: 1, faltaRecibida: 1, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 60, goles: 0, recupero: 8, perdida: 6, remate: 0, tiroAlArco: 0, faltaRecibida: 3, faltaCometida: 3, tAmarilla: 1, tRoja: 1 },
       ],
     },
   ]
@@ -325,6 +332,7 @@ export function StatisticsSection() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {/* Se muestran solo los 3 últimos partidos */}
             {matches.slice(0, 3).map((match) => (
               <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
                 <div className="flex items-center justify-between mb-3">
@@ -341,7 +349,7 @@ export function StatisticsSection() {
                       onClick={() => setShowMatchDetailModal(match)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      Ver
+                      Ver Estadísticas de Partido
                     </Button>
                   </div>
                 </div>
@@ -351,13 +359,23 @@ export function StatisticsSection() {
         </CardContent>
       </Card>
 
-      {/* Estadísticas por Jugador */}
+      {/* Estadísticas por Jugador (MODIFICADO: Botón Ver Demas Jugadores) */}
       <Card className="bg-[#213041] border-[#305176]">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white flex items-center">
             <Users className="h-5 w-5 mr-2" />
             Estadísticas por Jugador
           </CardTitle>
+          {/* Nuevo botón para Ver Demas Jugadores (Abre la página de gestión de club) */}
+          <Link href="/dashboard/club">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#305176] text-white hover:bg-[#305176]/50 bg-transparent"
+            >
+              Ver Demas Jugadores
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -376,6 +394,7 @@ export function StatisticsSection() {
                       <p className="text-gray-400 text-sm">{player.position}</p>
                     </div>
                   </div>
+                  {/* BOTÓN MODIFICADO */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -383,7 +402,7 @@ export function StatisticsSection() {
                     onClick={() => setShowPlayerDetailModal(player)}
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    Ver
+                    Ver Estadísticas de Jugador
                   </Button>
                 </div>
               </div>
@@ -454,7 +473,7 @@ export function StatisticsSection() {
         </Card>
       </div>
 
-      {/* Modal para ver todos los partidos */}
+      {/* Modal para ver todos los partidos (Sin cambios) */}
       <Dialog open={showAllMatchesModal} onOpenChange={setShowAllMatchesModal}>
         <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6">
@@ -538,7 +557,7 @@ export function StatisticsSection() {
       </Dialog>
 
 
-      {/* Modal de Estadísticas de Partidos */}
+      {/* Modal de Estadísticas de Partidos (UNIFICADO Y ACTUALIZADO) */}
       <Dialog open={!!showMatchDetailModal} onOpenChange={setShowMatchDetailModal}>
         <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -551,90 +570,86 @@ export function StatisticsSection() {
           </DialogHeader>
           <ScrollArea className="h-[400px] pr-6">
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-[#1d2834] border-[#305176]">
-                  <CardHeader>
-                    <CardTitle className="text-white text-lg">Resumen</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Resultado</span>
-                      <Badge className={getResultColor(showMatchDetailModal?.status)}>
-                        {showMatchDetailModal?.result}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Goles a favor</span>
-                      <span className="text-[#25d03f] font-bold">{showMatchDetailModal?.stats?.goalsFor}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Goles en contra</span>
-                      <span className="text-red-400 font-bold">{showMatchDetailModal?.stats?.goalsAgainst}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Posesión</span>
-                      <span className="text-white font-bold">{showMatchDetailModal?.stats?.possession}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-[#1d2834] border-[#305176]">
-                  <CardHeader>
-                    <CardTitle className="text-white text-lg">Detalle</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Tiros al arco</span>
-                      <span className="text-white font-bold">{showMatchDetailModal?.stats?.shotsOnTarget}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Tiros totales</span>
-                      <span className="text-white font-bold">{showMatchDetailModal?.stats?.totalShots}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Faltas</span>
-                      <span className="text-white font-bold">{showMatchDetailModal?.stats?.fouls}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Tarjetas amarillas</span>
-                      <span className="text-white font-bold">{showMatchDetailModal?.stats?.yellowCards}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Tarjetas rojas</span>
-                      <span className="text-white font-bold">{showMatchDetailModal?.stats?.redCards}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              
+              {/* CUADRANTE DETALLE UNIFICADO */}
+              <Card className="bg-[#1d2834] border-[#305176]">
+                <CardHeader>
+                  <CardTitle className="text-white text-lg">Detalle</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  
+                  {/* RESUMEN: Resultado */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Resultado</span>
+                    <Badge className={getResultColor(showMatchDetailModal?.status)}>
+                      {showMatchDetailModal?.result}
+                    </Badge>
+                  </div>
+                  {/* RESUMEN: Tiempo jugado */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Tiempo jugado</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.duration} min</span>
+                  </div>
+                  
+                  {/* Separador visual para las métricas de detalle */}
+                  <div className="h-px bg-[#305176] my-4"></div>
 
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold text-white mb-2">Estadísticas por Jugador</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-[#305176]">
-                        <TableHead className="text-white">Jugador</TableHead>
-                        <TableHead className="text-white text-center">Goles</TableHead>
-                        <TableHead className="text-white text-center">Asist.</TableHead>
-                        <TableHead className="text-white text-center">T. Amarillas</TableHead>
-                        <TableHead className="text-white text-center">T. Rojas</TableHead>
-                        <TableHead className="text-white text-center">Minutos</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {showMatchDetailModal?.playerStats?.map((pStat: any) => (
-                        <TableRow key={pStat.id} className="hover:bg-[#1d2834] border-[#305176]">
-                          <TableCell className="py-2">{pStat.name}</TableCell>
-                          <TableCell className="py-2 text-center text-[#25d03f] font-bold">{pStat.goals}</TableCell>
-                          <TableCell className="py-2 text-center text-[#aff606] font-bold">{pStat.assists}</TableCell>
-                          <TableCell className="py-2 text-center text-[#f4c11a] font-bold">{pStat.yellowCards}</TableCell>
-                          <TableCell className="py-2 text-center text-[#ea3498] font-bold">{pStat.redCards}</TableCell>
-                          <TableCell className="py-2 text-center text-gray-300">{pStat.minutes} min</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+                  {/* DETALLE: Goles a favor */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Goles a favor</span>
+                    <span className="text-[#25d03f] font-bold">{showMatchDetailModal?.stats?.goalsFor}</span>
+                  </div>
+                  {/* DETALLE: Goles en contra */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Goles en contra</span>
+                    <span className="text-red-400 font-bold">{showMatchDetailModal?.stats?.goalsAgainst}</span>
+                  </div>
+                  {/* DETALLE: Recuperación de Pelota */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Recuperación de Pelota</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.recuperoPelota}</span>
+                  </div>
+                  {/* DETALLE: Pérdida de Pelota */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Pérdida de Pelota</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.perdioPelota}</span>
+                  </div>
+                  {/* DETALLE: Faltas recibidas */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Faltas recibidas</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.foulsReceived}</span>
+                  </div>
+                  {/* DETALLE: Faltas cometidas */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Faltas cometidas</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.foulsCommitted}</span>
+                  </div>
+                   {/* DETALLE: Tiros totales */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Tiros totales</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.totalShots}</span>
+                  </div>
+                  {/* DETALLE: Tiros al arco */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Tiros al arco</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.shotsOnTarget}</span>
+                  </div>
+                  {/* DETALLE: Tarjetas amarillas */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Tarjetas amarillas</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.yellowCards}</span>
+                  </div>
+                  {/* DETALLE: Tarjetas rojas */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Tarjetas rojas</span>
+                    <span className="text-white font-bold">{showMatchDetailModal?.stats?.redCards}</span>
+                  </div>
+                  
+                </CardContent>
+              </Card>
+
+              {/* Nota: La tabla de jugadores ha sido eliminada de este modal según tu solicitud anterior. */}
+              
             </div>
             <div className="mt-4">
               <Button
@@ -651,7 +666,148 @@ export function StatisticsSection() {
         </DialogContent>
       </Dialog>
       
-      {/* Nuevo Modal para todas las estadísticas de jugadores */}
+      {/* Modal de Estadísticas por Jugador (REDISENADO PARA LEGIBILIDAD) */}
+      <Dialog open={!!showPlayerDetailModal} onOpenChange={setShowPlayerDetailModal}>
+        <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">
+              Estadísticas de {showPlayerDetailModal?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Análisis de rendimiento a lo largo de los partidos.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[500px] pr-6 space-y-6">
+            
+            {/* CUADRANTE 1: ESTADÍSTICAS TOTALES (Diseño simplificado) */}
+            <Card className="bg-[#1d2834] border-[#305176]">
+              <CardHeader>
+                <CardTitle className="text-white text-lg">Historial Acumulado</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                
+                {/* Métricas Ofensivas y Clave */}
+                <div className="space-y-2">
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Tiempo Jugado</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Goles</span>
+                        <span className="text-[#25d03f] font-bold">{showPlayerDetailModal?.generalStats?.goals}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Remate</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remate}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Tiro al Arco</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remateAlArco}</span>
+                    </div>
+                </div>
+
+                {/* Métricas Defensivas y Disciplina */}
+                <div className="space-y-2">
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Pelota Recuperada</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Pelota Perdida</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.perdioPelota}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Falta Recibida</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaRecibida}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Falta Cometida</span>
+                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaCometida}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">T. Amarilla</span>
+                        <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.yellowCards}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">T. Roja</span>
+                        <span className="text-[#ea3498] font-bold">{showPlayerDetailModal?.generalStats?.redCards}</span>
+                    </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CUADRANTE 2: DETALLE POR PARTIDO (Diseño simplificado y vertical) */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white mb-2">Historial Partido a Partido</h3>
+                {showPlayerDetailModal?.matchHistory?.map((match: any) => (
+                    <Card key={match.matchId} className="bg-[#1d2834] border-[#305176] p-0">
+                        <CardHeader className="py-2 px-4 bg-[#305176]/50 rounded-t-lg">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-white text-sm font-bold">VS {match.opponent} ({match.date})</CardTitle>
+                                <Badge className={getResultColor(match.status)}>{match.result}</Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-1 text-sm">
+                            
+                            {/* Línea 1: Minutos y Goles */}
+                            <div className="flex justify-between border-b border-white/10 pb-1">
+                                <span className="text-gray-400 w-1/2">Minutos Jugados</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.minutes} min</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-1">
+                                <span className="text-gray-400 w-1/2">Goles</span>
+                                <span className="text-[#25d03f] font-bold w-1/2 text-right">{match.goles}</span>
+                            </div>
+                            
+                            {/* Línea 2: Recuperación y Pérdida */}
+                            <div className="flex justify-between border-b border-white/10 pb-1 pt-2">
+                                <span className="text-gray-400 w-1/2">Pelota Recuperada</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.recupero}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-1">
+                                <span className="text-gray-400 w-1/2">Pelota Perdida</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.perdida}</span>
+                            </div>
+
+                            {/* Línea 3: Remates */}
+                            <div className="flex justify-between border-b border-white/10 pb-1 pt-2">
+                                <span className="text-gray-400 w-1/2">Remate</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.remate}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-1">
+                                <span className="text-gray-400 w-1/2">Tiro al Arco</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.tiroAlArco}</span>
+                            </div>
+
+                            {/* Línea 4: Faltas */}
+                            <div className="flex justify-between border-b border-white/10 pb-1 pt-2">
+                                <span className="text-gray-400 w-1/2">Falta Recibida</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.faltaRecibida}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-1">
+                                <span className="text-gray-400 w-1/2">Falta Cometida</span>
+                                <span className="text-white font-bold w-1/2 text-right">{match.faltaCometida}</span>
+                            </div>
+                            
+                            {/* Línea 5: Tarjetas */}
+                            <div className="flex justify-between pt-2">
+                                <span className="text-gray-400 w-1/2">T. Amarilla</span>
+                                <span className="text-[#f4c11a] font-bold w-1/2 text-right">{match.tAmarilla}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400 w-1/2">T. Roja</span>
+                                <span className="text-[#ea3498] font-bold w-1/2 text-right">{match.tRoja}</span>
+                            </div>
+                            
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal global de todos los jugadores (Sin cambios) */}
       <Dialog open={showAllPlayersModal} onOpenChange={setShowAllPlayersModal}>
         <DialogContent className="sm:max-w-[1200px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader>
@@ -669,16 +825,15 @@ export function StatisticsSection() {
                   <TableRow className="border-[#305176]">
                     <TableHead className="text-white">Jugador</TableHead>
                     <TableHead className="text-white text-center">Minutos</TableHead>
-                    <TableHead className="text-white text-center">Goles</TableHead>
-                    <TableHead className="text-white text-center">Asist.</TableHead>
-                    <TableHead className="text-white text-center">Remates</TableHead>
-                    <TableHead className="text-white text-center">R. al arco</TableHead>
-                    <TableHead className="text-white text-center">Recup.</TableHead>
-                    <TableHead className="text-white text-center">Pérdidas</TableHead>
-                    <TableHead className="text-white text-center">Faltas C.</TableHead>
-                    <TableHead className="text-white text-center">Faltas R.</TableHead>
-                    <TableHead className="text-white text-center">T. Amarillas</TableHead>
-                    <TableHead className="text-white text-center">T. Rojas</TableHead>
+                    <TableHead className="text-white text-center">Gol</TableHead>
+                    <TableHead className="text-white text-center">Pelota Recuperada</TableHead>
+                    <TableHead className="text-white text-center">Pelota Perdida</TableHead>
+                    <TableHead className="text-white text-center">Remate</TableHead>
+                    <TableHead className="text-white text-center">R. al Arco</TableHead>
+                    <TableHead className="text-white text-center">Falta Recibida</TableHead>
+                    <TableHead className="text-white text-center">Falta Cometida</TableHead>
+                    <TableHead className="text-white text-center">T. Amarilla</TableHead>
+                    <TableHead className="text-white text-center">T. Roja</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -695,13 +850,12 @@ export function StatisticsSection() {
                       </TableCell>
                       <TableCell className="py-2 text-center text-gray-300">{player.generalStats.minutesPlayed} min</TableCell>
                       <TableCell className="py-2 text-center text-[#25d03f] font-bold">{player.generalStats.goals}</TableCell>
-                      <TableCell className="py-2 text-center text-[#aff606] font-bold">{player.generalStats.assists}</TableCell>
-                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.remate}</TableCell>
-                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.remateAlArco}</TableCell>
                       <TableCell className="py-2 text-center text-gray-300">{player.generalStats.recuperoPelota}</TableCell>
                       <TableCell className="py-2 text-center text-gray-300">{player.generalStats.perdioPelota}</TableCell>
-                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.faltaCometida}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.remate}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.remateAlArco}</TableCell>
                       <TableCell className="py-2 text-center text-gray-300">{player.generalStats.faltaRecibida}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.faltaCometida}</TableCell>
                       <TableCell className="py-2 text-center text-[#f4c11a] font-bold">{player.generalStats.yellowCards}</TableCell>
                       <TableCell className="py-2 text-center text-[#ea3498] font-bold">{player.generalStats.redCards}</TableCell>
                     </TableRow>

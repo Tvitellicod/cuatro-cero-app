@@ -171,13 +171,17 @@ export function StatisticsSection() {
       ],
     },
   ]
-
+  
+  // Lista de posiciones de ClubManagement.tsx: ["Arquero", "Ultimo", "Ala", "Pivot"]
+  // Actualización del mock para ser consistente con ClubManagement
   const players = [
     {
       id: 1,
       name: "Juan Carlos Pérez",
-      position: "Delantero",
+      position: "Pivot", // Corregido a Pivot
       photo: "/placeholder-user.jpg",
+      nickname: "Pipa", 
+      foot: "Derecho", 
       generalStats: {
         matches: 18,
         goals: 12,
@@ -202,8 +206,10 @@ export function StatisticsSection() {
     {
       id: 2,
       name: "Miguel Ángel González",
-      position: "Mediocampista",
+      position: "Ala", // Corregido a Ala
       photo: "/placeholder-user.jpg",
+      nickname: "Chino", 
+      foot: "Ambidiestro",
       generalStats: {
         matches: 20,
         goals: 3,
@@ -228,8 +234,10 @@ export function StatisticsSection() {
     {
       id: 3,
       name: "Roberto Silva",
-      position: "Defensor",
+      position: "Ultimo", // Corregido a Ultimo
       photo: "/placeholder-user.jpg",
+      nickname: "Robi",
+      foot: "Izquierdo",
       generalStats: {
         matches: 15,
         goals: 1,
@@ -666,9 +674,10 @@ export function StatisticsSection() {
         </DialogContent>
       </Dialog>
       
-      {/* Modal de Estadísticas por Jugador (REDISENADO PARA LEGIBILIDAD) */}
+      {/* Modal de Estadísticas por Jugador (REDISENADO PARA LEGIBILIDAD y con Información de Jugador) */}
       <Dialog open={!!showPlayerDetailModal} onOpenChange={setShowPlayerDetailModal}>
-        <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white">
+        {/* Aumentamos el ancho del modal para la nueva disposición */}
+        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">
               Estadísticas de {showPlayerDetailModal?.name}
@@ -677,133 +686,183 @@ export function StatisticsSection() {
               Análisis de rendimiento a lo largo de los partidos.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-[500px] pr-6 space-y-6">
-            
-            {/* CUADRANTE 1: ESTADÍSTICAS TOTALES (Diseño simplificado) */}
-            <Card className="bg-[#1d2834] border-[#305176]">
-              <CardHeader>
-                <CardTitle className="text-white text-lg">Historial Acumulado</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                
-                {/* Métricas Ofensivas y Clave */}
-                <div className="space-y-2">
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Tiempo Jugado</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Goles</span>
-                        <span className="text-[#25d03f] font-bold">{showPlayerDetailModal?.generalStats?.goals}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Remate</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remate}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Tiro al Arco</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remateAlArco}</span>
-                    </div>
-                </div>
+          
+          {/* Nuevo Layout Grid: 1 columna para información, 2 para estadísticas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Métricas Defensivas y Disciplina */}
-                <div className="space-y-2">
+            {/* COLUMNA 1: Información del Jugador (NUEVA ADICIÓN) */}
+            <Card className="bg-[#1d2834] border-[#305176] lg:col-span-1 h-fit">
+              <CardHeader>
+                <CardTitle className="text-white text-lg flex items-center"> 
+                   <Users className="h-5 w-5 mr-2 text-[#33d9f6]" /> Información de Jugador
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 flex flex-col items-center p-6">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={showPlayerDetailModal?.photo} alt={showPlayerDetailModal?.name} />
+                  <AvatarFallback className="bg-[#305176] text-white text-2xl">
+                    {showPlayerDetailModal?.name?.split(" ").map((n: string) => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-center">
+                  <h3 className="text-white font-bold text-xl">{showPlayerDetailModal?.name}</h3>
+                </div>
+                
+                {/* Detalles del Jugador */}
+                <div className="w-full space-y-2 text-sm pt-4 border-t border-[#305176]">
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Pelota Recuperada</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
+                        <span className="text-gray-400">Apodo</span>
+                        <span className="text-white font-medium">"{showPlayerDetailModal?.nickname || 'N/A'}"</span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Pelota Perdida</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.perdioPelota}</span>
+                        <span className="text-gray-400">Posición</span>
+                        <span className="text-white font-medium">{showPlayerDetailModal?.position}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Falta Recibida</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaRecibida}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Falta Cometida</span>
-                        <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaCometida}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">T. Amarilla</span>
-                        <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.yellowCards}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">T. Roja</span>
-                        <span className="text-[#ea3498] font-bold">{showPlayerDetailModal?.generalStats?.redCards}</span>
+                        <span className="text-gray-400">Pierna Hábil</span>
+                        <span className="text-white font-medium">{showPlayerDetailModal?.foot}</span>
                     </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* CUADRANTE 2: DETALLE POR PARTIDO (Diseño simplificado y vertical) */}
-            <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white mb-2">Historial Partido a Partido</h3>
-                {showPlayerDetailModal?.matchHistory?.map((match: any) => (
-                    <Card key={match.matchId} className="bg-[#1d2834] border-[#305176] p-0">
-                        <CardHeader className="py-2 px-4 bg-[#305176]/50 rounded-t-lg">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-white text-sm font-bold">VS {match.opponent} ({match.date})</CardTitle>
-                                <Badge className={getResultColor(match.status)}>{match.result}</Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-1 text-sm">
-                            
-                            {/* Línea 1: Minutos y Goles */}
-                            <div className="flex justify-between border-b border-white/10 pb-1">
-                                <span className="text-gray-400 w-1/2">Minutos Jugados</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.minutes} min</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/10 pb-1">
-                                <span className="text-gray-400 w-1/2">Goles</span>
-                                <span className="text-[#25d03f] font-bold w-1/2 text-right">{match.goles}</span>
-                            </div>
-                            
-                            {/* Línea 2: Recuperación y Pérdida */}
-                            <div className="flex justify-between border-b border-white/10 pb-1 pt-2">
-                                <span className="text-gray-400 w-1/2">Pelota Recuperada</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.recupero}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/10 pb-1">
-                                <span className="text-gray-400 w-1/2">Pelota Perdida</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.perdida}</span>
-                            </div>
+            {/* COLUMNAS 2 & 3: Estadísticas */}
+            <div className="lg:col-span-2">
+              <ScrollArea className="h-[500px] pr-6 space-y-6">
+                
+                {/* CUADRANTE 1: ESTADÍSTICAS TOTALES (Diseño optimizado) */}
+                <Card className="bg-[#1d2834] border-[#305176]">
+                  <CardHeader>
+                    <CardTitle className="text-white text-lg">Historial Acumulado</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                    
+                    {/* Bloque Ofensivo */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Tiempo Jugado</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Goles</span>
+                            <span className="text-[#25d03f] font-bold">{showPlayerDetailModal?.generalStats?.goals}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Asistencias</span>
+                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.assists}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Remate</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remate}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">Tiro al Arco</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remateAlArco}</span>
+                        </div>
+                    </div>
 
-                            {/* Línea 3: Remates */}
-                            <div className="flex justify-between border-b border-white/10 pb-1 pt-2">
-                                <span className="text-gray-400 w-1/2">Remate</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.remate}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/10 pb-1">
-                                <span className="text-gray-400 w-1/2">Tiro al Arco</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.tiroAlArco}</span>
-                            </div>
+                    {/* Bloque Defensivo y Disciplina */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Pelota Recuperada</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Pelota Perdida</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.perdioPelota}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Falta Recibida</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaRecibida}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Falta Cometida</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaCometida}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">T. Amarilla</span>
+                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.yellowCards}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">T. Roja</span>
+                            <span className="text-[#ea3498] font-bold">{showPlayerDetailModal?.generalStats?.redCards}</span>
+                        </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                            {/* Línea 4: Faltas */}
-                            <div className="flex justify-between border-b border-white/10 pb-1 pt-2">
-                                <span className="text-gray-400 w-1/2">Falta Recibida</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.faltaRecibida}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/10 pb-1">
-                                <span className="text-gray-400 w-1/2">Falta Cometida</span>
-                                <span className="text-white font-bold w-1/2 text-right">{match.faltaCometida}</span>
-                            </div>
-                            
-                            {/* Línea 5: Tarjetas */}
-                            <div className="flex justify-between pt-2">
-                                <span className="text-gray-400 w-1/2">T. Amarilla</span>
-                                <span className="text-[#f4c11a] font-bold w-1/2 text-right">{match.tAmarilla}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400 w-1/2">T. Roja</span>
-                                <span className="text-[#ea3498] font-bold w-1/2 text-right">{match.tRoja}</span>
-                            </div>
-                            
-                        </CardContent>
-                    </Card>
-                ))}
+                {/* CUADRANTE 2: DETALLE POR PARTIDO (Diseño optimizado y vertical) */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white mb-2">Historial Partido a Partido</h3>
+                    {showPlayerDetailModal?.matchHistory?.map((match: any) => (
+                        <Card key={match.matchId} className="bg-[#1d2834] border-[#305176] p-0">
+                            <CardHeader className="py-2 px-4 bg-[#305176]/50 rounded-t-lg">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-white text-sm font-bold">VS {match.opponent} ({match.date})</CardTitle>
+                                    <Badge className={getResultColor(match.status)}>{match.result}</Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-y-1 gap-x-4 p-4 text-sm">
+                                
+                                {/* Fila 1 */}
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Minutos</span>
+                                    <span className="text-white font-bold">{match.minutes} min</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Goles</span>
+                                    <span className="text-[#25d03f] font-bold">{match.goles}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Asistencias</span>
+                                    <span className="text-[#f4c11a] font-bold">{match.asistencias || 0}</span>
+                                </div>
+                                
+                                {/* Fila 2 (Separador implícito) */}
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">Recuperada</span>
+                                    <span className="text-white font-bold">{match.recupero}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">Perdida</span>
+                                    <span className="text-white font-bold">{match.perdida}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">Remates</span>
+                                    <span className="text-white font-bold">{match.remate}</span>
+                                </div>
+                                
+                                {/* Fila 3 (Separador implícito) */}
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">R. al Arco</span>
+                                    <span className="text-white font-bold">{match.tiroAlArco}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">F. Recibida</span>
+                                    <span className="text-white font-bold">{match.faltaRecibida}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">F. Cometida</span>
+                                    <span className="text-white font-bold">{match.faltaCometida}</span>
+                                </div>
+
+                                {/* Fila 4 (Disciplina) */}
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">T. Amarilla</span>
+                                    <span className="text-[#f4c11a] font-bold">{match.tAmarilla}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">T. Roja</span>
+                                    <span className="text-[#ea3498] font-bold">{match.tRoja}</span>
+                                </div>
+                                
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+              </ScrollArea>
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
       

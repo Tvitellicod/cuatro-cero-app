@@ -31,6 +31,9 @@ const GOAL_ACTIONS = [
   { id: "golEnContra", name: "Gol en Contra", icon: Goal, color: "bg-red-500" },
 ];
 
+// Consolidación de todas las acciones para la búsqueda de nombres
+const ALL_ACTIONS = [...GAME_ACTIONS, ...GOAL_ACTIONS];
+
 type PlayerStats = {
   goles: number;
   asistencias: number;
@@ -146,14 +149,31 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     };
   }, [gameState]); 
 
-  const constaddActionToHistory = (action: MatchAction) => {
+  // --- FUNCIÓN AUXILIAR: Obtener Nombre de la Acción ---
+  const getActionNameById = (id: string): string => {
+    const action = ALL_ACTIONS.find(a => a.id === id);
+    if (action) return action.name;
+
+    if (id === 'substitution') return "Sustitución"; 
+    if (id === 'golAFavor') return "Gol a Favor";
+    if (id === 'golEnContra') return "Gol en Contra";
+    
+    return id; 
+  };
+
+  // --- FUNCIÓN AUXILIAR: Obtener Jugador por ID ---
+  const getPlayerById = (id: number) => allPlayers.find(p => p.id === id);
+
+
+  // --- FUNCIÓN PARA REGISTRAR ACCIONES ---
+  const addActionToHistory = (action: MatchAction) => {
     actionHistoryRef.current.push({ 
         ...action, 
         minutes: timer 
     });
   };
 
-  // --- FUNCIÓN UNDO (Declarada como const para el JSX) ---
+  // --- FUNCIÓN UNDO (CORREGIDA PARA EL MENSAJE) ---
   const undoLastAction = () => {
     const lastAction = actionHistoryRef.current.pop();
     if (!lastAction) return;
@@ -215,7 +235,9 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                     } 
                     
                     // Revert the specific stat value
-                    (newStats as any)[type] = oldValue;
+                    if (type in newStats) {
+                        newStats[type as keyof PlayerStats] = oldValue;
+                    }
                     
                     return { ...newPlayer, stats: newStats };
                 }
@@ -246,12 +268,35 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         });
     }
 
+    // --- GENERACIÓN DEL MENSAJE DE CONFIRMACIÓN ---
+    let toastActionName: string;
+    let toastPlayerName: string;
+    
+    if (type === 'substitution') {
+        const exited = getPlayerById(exitingPlayerId!);
+        const entered = getPlayerById(enteringPlayerId!);
+        toastActionName = `Sustitución`;
+        toastPlayerName = `(Sale: ${exited?.name || 'N/A'}, Entra: ${entered?.name || 'N/A'})`;
+    } else if (type === 'golEnContra') {
+        toastActionName = getActionNameById(type); // "Gol en Contra"
+        toastPlayerName = 'Rival';
+    } else if (playerId && type !== 'substitution') {
+        const player = getPlayerById(playerId);
+        toastActionName = getActionNameById(type);
+        toastPlayerName = player?.name || 'Jugador Desconocido';
+    } else {
+        toastActionName = 'Acción de Sistema';
+        toastPlayerName = 'N/A';
+    }
+    
+    // Aplicamos el formato final (sin los **)
     toast({
-      title: "Acción Deshecha",
-      description: "La última acción ha sido cancelada.",
-      variant: "default"
+        title: "Confirmado",
+        description: `La acción ${toastActionName} del jugador ${toastPlayerName}, fue cancelada.`,
+        variant: "default",
     });
     
+    // 4. Resetear flags
     setSelectedPlayerForAction(null);
     setSelectedSubstitute(null);
     setIsSubbing(false);
@@ -388,8 +433,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
     // Case 1: Perform a substitution.
     if (isSubbing && selectedSubstitute) {
-        if (player.isExpelled) return; 
-
+        if (player.isExpelled && !player.isStarter) return; // Suplente expulsado no puede entrar
+        
         const exitingPlayer = player;
         const enteringPlayer = selectedSubstitute;
         
@@ -399,7 +444,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         const totalMinutesPlayedInHalf = activePlayerTimers[exitingPlayer.id] || 0; // Tiempo a congelar
         
         // 2. Registrar la acción
-        constaddActionToHistory({ 
+        addActionToHistory({ 
             type: 'substitution', 
             playerId: enteringPlayer.id, 
             oldValue: null,
@@ -489,8 +534,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 
                 let newAmarillas = oldStats.tarjetaAmarilla;
                 let newRedCards = oldStats.tarjetaRoja;
-                let isExpelled = false;
-                let isStarter = p.isStarter;
+                let isExpelled = p.isExpelled; 
                 let timeUpdate = p.stats[timeField];
 
                 // 1. Acumulación de tarjetas
@@ -499,19 +543,19 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 }
                 
                 // 2. Lógica de Expulsión
-                if (newAmarillas >= 2 || actionId === "tarjetaRoja") {
+                if ((newAmarillas >= 2 && !p.isExpelled) || actionId === "tarjetaRoja") {
                     if (newAmarillas >= 2) {
                         newRedCards += 1;
                     } else if (actionId === "tarjetaRoja") {
                         newRedCards += 1;
                     }
                     isExpelled = true;
-                    isStarter = false; 
+                    // Mantenemos isStarter = p.isStarter (TRUE) HASTA EL CAMBIO MANUAL
                     timeUpdate = totalMinutesPlayedInHalf; // Congelar el tiempo
                 }
 
                 // 3. Registro de Acción
-                constaddActionToHistory({ 
+                addActionToHistory({ 
                     type: actionId, 
                     playerId, 
                     oldValue: (actionId === "tarjetaAmarilla") ? oldStats.tarjetaAmarilla : oldStats.tarjetaRoja,
@@ -520,8 +564,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 
                 return { 
                     ...p, 
-                    isExpelled,
-                    isStarter,
+                    isExpelled: isExpelled,
+                    isStarter: p.isStarter, // Mantenemos el estado de titular para que aparezca en el campo.
                     stats: {
                         ...p.stats,
                         tarjetaAmarilla: newAmarillas,
@@ -560,7 +604,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
           )
         );
         
-        constaddActionToHistory({ 
+        addActionToHistory({ 
             type: actionId, 
             playerId, 
             oldValue: oldStats[statKey],
@@ -581,7 +625,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     
     setHomeScore(s => s + 1);
     
-    constaddActionToHistory({ 
+    addActionToHistory({ 
         type: 'golAFavor', 
         playerId, 
         oldValue: oldStats.goles,
@@ -600,7 +644,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
   const handleOpponentGoal = () => {
     setAwayScore(s => s + 1);
-    constaddActionToHistory({ 
+    addActionToHistory({ 
         type: 'golEnContra', 
         playerId: null, 
         oldValue: null,
@@ -650,8 +694,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     
     // ESTADOS ESPECIALES (Expulsado, Doble Amarilla, Sustitución, Acción)
     if (isExpulsado) {
-        // Tarjeta Roja o Doble Amarilla que ya resultaron en expulsión
-        cardClasses = "bg-red-500/20 border-2 border-red-500 opacity-70 cursor-not-allowed";
+        // El jugador es expulsado pero permanece en el campo (isStarter=true) hasta el cambio.
+        cardClasses = "bg-red-500/20 border-2 border-red-500 cursor-default";
     }
     else if (isSubbing) {
         if (isStarter) {
@@ -671,14 +715,28 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
     }
 
-    const isDisabledClick = isExpulsado && isStarter; 
+    // LÓGICA DE BLOQUEO DE CLICKS:
+    // Si el jugador está expulsado Y es titular (aún en la lista de campo),
+    // solo se le puede hacer clic si estamos en modo sustitución (isSubbing).
+    const isClickBlockedForExpelled = isExpulsado && isStarter && !isSubbing; 
 
     return (
         <div
             key={player.id}
             className={`p-3 rounded-lg cursor-pointer transition-colors space-y-2 aspect-square flex flex-col items-center justify-center ${cardClasses}`}
             onClick={() => {
-                if (isDisabledClick) return; 
+                
+                if (isClickBlockedForExpelled) {
+                    // Si está expulsado y NO estamos en modo sustitución, bloqueamos la acción y mostramos mensaje.
+                    toast({
+                        title: "Acción Bloqueada",
+                        description: `El jugador ${player.name} fue expulsado. Selecciona un suplente (verde) para retirarlo del campo.`,
+                        variant: "default",
+                    });
+                    return;
+                }
+                
+                // Si llegamos aquí, el click es válido: o no está expulsado, O estamos en modo sustitución y el usuario lo está sacando.
                 if (isStarter) {
                     handleStarterClick(player);
                 } else {
@@ -708,7 +766,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 )}
 
                 {/* Reloj para Titulares (Activo) o Suplentes (Congelado) */}
-                {(!isExpulsado || !isStarter) && (
+                {(!isExpulsado || isStarter) && (
                   <Badge 
                     className={
                         isStarter 

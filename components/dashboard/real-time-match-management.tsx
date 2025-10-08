@@ -12,7 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "@/hooks/use-toast"; // Importamos toast para las notificaciones
+import { toast } from "@/hooks/use-toast";
 
 // Acciones de juego disponibles para jugadores individuales
 const GAME_ACTIONS = [
@@ -69,7 +69,7 @@ interface MatchAction {
   minutes: number; 
   exitingPlayerId?: number;
   enteringPlayerId?: number;
-  timeOnFieldBeforeSub?: number;
+  timeOnFieldBeforeSub?: number; // Tiempo del jugador que sale ANTES de este stint.
 }
 
 interface RealTimeMatchManagementProps {
@@ -84,7 +84,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   const [awayScore, setAwayScore] = useState(0);
   const [currentHalf, setCurrentHalf] = useState(1);
   
-  // activePlayerTimers ahora es el tiempo total acumulado para el jugador en la mitad actual.
+  // activePlayerTimers almacena el tiempo TOTAL ACUMULADO para el jugador en la mitad actual.
   const [activePlayerTimers, setActivePlayerTimers] = useState<Record<number, number>>({});
   
   const [selectedPlayerForAction, setSelectedPlayerForAction] = useState<Player | null>(null);
@@ -110,11 +110,9 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     }))
   );
 
-  // NOTA: No ordenamos los useMemo, usamos el orden natural de allPlayers
   const starters = useMemo(() => allPlayers.filter(p => p.isStarter && !p.isExpelled), [allPlayers]);
   const substitutes = useMemo(() => allPlayers.filter(p => !p.isStarter && !p.isExpelled), [allPlayers]);
 
-  // Información de partido (no modificada)
   const [matchInfo] = useState({
     id: "1",
     opponent: "Club Atlético River",
@@ -134,12 +132,10 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         
         setActivePlayerTimers((timers) => {
           const newTimers = { ...timers };
-          // Solo incrementa los jugadores que están en starters (y no expulsados)
-          starters.forEach((player) => {
-            newTimers[player.id] = (newTimers[player.id] || 0) + 1;
-          });
-          // Se eliminan los jugadores que ya no son starters del activePlayerTimers para que no sigan contando.
-          // Su tiempo total para la mitad ya ha sido guardado en p.stats[timeField] al salir.
+          // Itera sobre las claves de los jugadores activos y suma 1 segundo.
+          for (const id in newTimers) {
+              newTimers[Number(id)] = newTimers[Number(id)] + 1;
+          }
           return newTimers;
         });
       }, 1000);
@@ -148,15 +144,16 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [gameState, starters.length]); 
+  }, [gameState]); 
 
-  const addActionToHistory = (action: MatchAction) => {
+  const constaddActionToHistory = (action: MatchAction) => {
     actionHistoryRef.current.push({ 
         ...action, 
         minutes: timer 
     });
   };
 
+  // --- FUNCIÓN UNDO (Declarada como const para el JSX) ---
   const undoLastAction = () => {
     const lastAction = actionHistoryRef.current.pop();
     if (!lastAction) return;
@@ -167,51 +164,68 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     setHomeScore(s => s - scoreChange.home);
     setAwayScore(s => s - scoreChange.away);
 
-    // 2. Revert Player Stats/Expulsion
-    setAllPlayers(prevPlayers => prevPlayers.map(p => {
+    // 2. Revert Player Stats/Expulsion & Position Swap
+    setAllPlayers(prevPlayers => {
         const timeField = currentHalf === 1 ? 'minutosPrimerTiempo' : 'minutosSegundoTiempo';
-
-        // Revertimos acciones de jugador (Goles, faltas, tarjetas individuales)
-        if (p.id === playerId && playerId !== null && type !== 'substitution') {
-            const newStats = { ...p.stats };
-            const newPlayer = { ...p };
-            
-            // Revert Cards & Expulsion
-            if (type === 'tarjetaRoja' || (type === 'tarjetaAmarilla' && oldValue === 1)) {
-                newPlayer.isExpelled = false;
-                newStats.tarjetaRoja = Math.max(0, newStats.tarjetaRoja - 1);
-            } 
-            
-            // Revert the specific stat value
-            (newStats as any)[type] = oldValue;
-            
-            return { ...newPlayer, stats: newStats };
-        }
+        let newPlayers = [...prevPlayers];
         
-        // 3. Revert Substitution
-        if (type === 'substitution' && exitingPlayerId && enteringPlayerId && timeOnFieldBeforeSub !== undefined) {
+        // Encontrar los jugadores originales (sin el cambio de posición)
+        const exitingPlayer = prevPlayers.find(p => p.id === exitingPlayerId);
+        const enteringPlayer = prevPlayers.find(p => p.id === enteringPlayerId);
+        
+        // --- Lógica de Sustitución Revertida (Intercambio de posiciones y status) ---
+        if (type === 'substitution' && exitingPlayerId && enteringPlayerId && timeOnFieldBeforeSub !== undefined && exitingPlayer && enteringPlayer) {
             
-            // Revertir el estado de starter para el que salió y el que entró
-            if (p.id === exitingPlayerId) {
-                // El jugador que salió vuelve a ser titular
-                return { 
-                    ...p, 
-                    isStarter: true,
-                    // Revertir la adición de tiempo que se hizo al salir
-                    stats: { 
-                        ...p.stats, 
-                        [timeField]: timeOnFieldBeforeSub, // El tiempo vuelve al valor que tenía antes del stint
-                    }
-                };
-            } else if (p.id === enteringPlayerId) {
-                // El jugador que entró vuelve a ser suplente
-                return { ...p, isStarter: false };
+            // 2.1. Buscar la posición final de cada jugador en el array modificado por el cambio.
+            const currentEnterIndex = newPlayers.findIndex(p => p.id === enteringPlayerId);
+            const currentExitIndex = newPlayers.findIndex(p => p.id === exitingPlayerId);
+
+            // 2.2. Revertir las propiedades de los jugadores:
+            // El jugador que salió vuelve a ser titular con su tiempo ANTES del stint de salida
+            const revertedExitingPlayer = { 
+                ...exitingPlayer, 
+                isStarter: true,
+                stats: { ...exitingPlayer.stats, [timeField]: timeOnFieldBeforeSub } 
+            };
+            // El jugador que entró vuelve a ser suplente con el tiempo que tenía antes de entrar (que ya estaba en sus stats)
+            const revertedEnteringPlayer = { 
+                ...enteringPlayer, 
+                isStarter: false
+            };
+            
+            // 2.3. Deshacer el intercambio:
+            if (currentEnterIndex !== -1 && currentExitIndex !== -1) {
+                // El ex-titular (revertedExitingPlayer) vuelve a su puesto (currentEnterIndex)
+                newPlayers[currentEnterIndex] = revertedExitingPlayer; 
+                // El ex-suplente (revertedEnteringPlayer) vuelve a su puesto (currentExitIndex)
+                newPlayers[currentExitIndex] = revertedEnteringPlayer; 
             }
+
+        } else if (playerId !== null) {
+             // --- Lógica de Acción Revertida ---
+            newPlayers = newPlayers.map(p => {
+                if (p.id === playerId) {
+                    const newStats = { ...p.stats };
+                    const newPlayer = { ...p };
+                    
+                    // Revert Cards & Expulsion
+                    if (type === 'tarjetaRoja' || (type === 'tarjetaAmarilla' && oldValue === 1)) {
+                        newPlayer.isExpelled = false;
+                        newStats.tarjetaRoja = Math.max(0, newStats.tarjetaRoja - 1);
+                    } 
+                    
+                    // Revert the specific stat value
+                    (newStats as any)[type] = oldValue;
+                    
+                    return { ...newPlayer, stats: newStats };
+                }
+                return p;
+            });
         }
-        return p;
-    }));
+        return newPlayers;
+    });
     
-    // 4. Revert Timers (en activePlayerTimers)
+    // 3. Revert Timers (en activePlayerTimers)
     if (lastAction.type !== 'substitution') {
         const player = allPlayers.find(p => p.id === playerId)!;
         if (player.isExpelled) {
@@ -225,8 +239,9 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             const newTimers = { ...prevTimers };
             // El jugador que entró (ex-sub) se le quita el timer
             delete newTimers[enteringPlayerId];
-            // El jugador que salió (ex-starter) se le pone el timer que tenía antes del cambio
-            newTimers[exitingPlayerId] = lastAction.minutes; // Se usa lastAction.minutes, que era el tiempo de juego del stint
+            // El jugador que salió (ex-starter) se le pone el tiempo que tenía antes del cambio
+            newTimers[exitingPlayerId] = timeOnFieldBeforeSub; // Usamos el valor guardado antes del stint
+
             return newTimers;
         });
     }
@@ -243,21 +258,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   };
   
   const startGame = () => {
-    if (starters.length !== 5) return;
+    // Usado para reanudar el juego desde estado 'paused'
     setGameState("in_game");
-    
-    if (currentHalf === 1 && timer === 0 || gameState === "second_half_roster") {
-      const initialTimers: Record<number, number> = {};
-      const timeField = currentHalf === 1 ? 'minutosPrimerTiempo' : 'minutosSegundoTiempo';
-      
-      // Inicializa los timers con el tiempo que tienen acumulado en esta mitad (ya sea 0 o un tiempo congelado)
-      allPlayers.forEach(player => {
-        if (player.isStarter && !player.isExpelled) {
-          initialTimers[player.id] = player.stats[timeField] || 0;
-        }
-      });
-      setActivePlayerTimers(initialTimers);
-    }
   }
   
   const pauseGame = () => setGameState("paused");
@@ -266,13 +268,17 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     pauseGame(); 
     const timeField = 'minutosPrimerTiempo';
     
-    // 1. Guardar el tiempo jugado de la 1T para todos los jugadores
+    // 1. Guardar el tiempo jugado del 1T para todos los jugadores
     setAllPlayers(prevPlayers => prevPlayers.map(p => {
-      const timeInHalfStint = activePlayerTimers[p.id] || 0;
+      // Si el jugador es titular al final (p.isStarter), su tiempo total es el valor del timer.
+      const totalTimePlayedThisHalf = activePlayerTimers[p.id] || 0;
       
+      // Solo actualizamos p.stats[timeField] si el jugador estaba EN EL CAMPO al finalizar.
+      const finalTimeForHalf = p.isStarter ? totalTimePlayedThisHalf : p.stats[timeField];
+
       const updatedStats = {
           ...p.stats,
-          [timeField]: p.stats[timeField] + timeInHalfStint, // Suma el tiempo del último "stint" si estaba en campo
+          [timeField]: finalTimeForHalf, 
       };
 
       return {
@@ -295,11 +301,15 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
     // 1. Guardar el tiempo jugado de la 2T para los que estaban en juego
     setAllPlayers(prevPlayers => prevPlayers.map(p => {
-      const timeInHalfStint = activePlayerTimers[p.id] || 0;
+      // Si el jugador es titular al final, su tiempo total es el valor del timer.
+      const totalTimePlayedThisHalf = activePlayerTimers[p.id] || 0;
       
+      // Solo actualizamos p.stats[timeField] si el jugador estaba EN EL CAMPO.
+      const finalTimeForHalf = p.isStarter ? totalTimePlayedThisHalf : p.stats[timeField];
+
       const updatedStats = {
           ...p.stats,
-          [timeField]: p.stats[timeField] + timeInHalfStint,
+          [timeField]: finalTimeForHalf,
       };
 
       return {
@@ -344,6 +354,19 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
   const confirmRoster = () => {
     if (starters.length !== 5) return;
+    
+    // --- LÓGICA DE INICIALIZACIÓN DE TIEMPO ---
+    const timeField = currentHalf === 1 ? 'minutosPrimerTiempo' : 'minutosSegundoTiempo';
+    const initialTimers: Record<number, number> = {};
+    
+    // Inicializa los timers con el tiempo que tienen acumulado en esta mitad (tiempo congelado).
+    allPlayers.forEach(player => {
+      if (player.isStarter && !player.isExpelled) {
+        initialTimers[player.id] = player.stats[timeField] || 0;
+      }
+    });
+    
+    setActivePlayerTimers(initialTimers);
     setGameState("in_game");
   };
 
@@ -373,46 +396,56 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         const timeField = currentHalf === 1 ? 'minutosPrimerTiempo' : 'minutosSegundoTiempo';
 
         // 1. Obtener el tiempo jugado (activePlayerTimers) que es el tiempo total acumulado para el jugador.
-        const minutesPlayedInThisStint = activePlayerTimers[exitingPlayer.id] || 0;
+        const totalMinutesPlayedInHalf = activePlayerTimers[exitingPlayer.id] || 0; // Tiempo a congelar
         
         // 2. Registrar la acción
-        addActionToHistory({ 
+        constaddActionToHistory({ 
             type: 'substitution', 
             playerId: enteringPlayer.id, 
             oldValue: null,
             scoreChange: { home: 0, away: 0 },
             exitingPlayerId: exitingPlayer.id, 
             enteringPlayerId: enteringPlayer.id,
-            timeOnFieldBeforeSub: exitingPlayer.stats[timeField] // Tiempo acumulado antes del último stint
+            timeOnFieldBeforeSub: exitingPlayer.stats[timeField] 
         });
 
-        // 3. Actualizar el estado de los jugadores
-        setAllPlayers(prevPlayers => prevPlayers.map(p => {
-            if (p.id === exitingPlayer.id) {
-                return {
-                    ...p,
-                    isStarter: false, // Ahora es suplente
-                    stats: {
-                        ...p.stats,
-                        [timeField]: minutesPlayedInThisStint, // El tiempo jugado se congela y se guarda aquí
-                    }
-                };
-            } else if (p.id === enteringPlayer.id) {
-                return { ...p, isStarter: true }; // Ahora es titular
-            }
-            return p;
-        }));
+        // 3. Actualizar el estado de los jugadores y realizar el intercambio posicional en el array 'allPlayers'.
+        setAllPlayers(prevPlayers => {
+            const exitIndex = prevPlayers.findIndex(p => p.id === exitingPlayer.id);
+            const enterIndex = prevPlayers.findIndex(p => p.id === enteringPlayer.id);
 
-        // 4. Actualizar los timers activos
+            if (exitIndex === -1 || enterIndex === -1) return prevPlayers;
+
+            const newPlayers = [...prevPlayers];
+            
+            // --- Cargar datos y cambiar el isStarter de forma lógica ---
+            // Jugador que sale: isStarter: false, congela su tiempo
+            const dataExiting = { ...exitingPlayer, isStarter: false, stats: { ...exitingPlayer.stats, [timeField]: totalMinutesPlayedInHalf } };
+            // Jugador que entra: isStarter: true 
+            const dataEntering = { ...enteringPlayer, isStarter: true };
+
+            // --- Intercambio de Posición: El que entra toma el lugar del que salió, y viceversa ---
+            
+            // El jugador que entra (dataEntering) toma el lugar del que salió (exitIndex)
+            newPlayers[exitIndex] = dataEntering;
+            
+            // El jugador que sale (dataExiting) toma el lugar del que entró (enterIndex)
+            newPlayers[enterIndex] = dataExiting;
+
+            return newPlayers;
+        });
+
+
+        // 4. Actualizar los timers activos (LÓGICA CLAVE DE INICIO/PAUSA)
         setActivePlayerTimers(prevTimers => {
             const newTimers = { ...prevTimers };
             
-            // Pausar el tiempo del jugador que salió (removiéndolo del timer activo)
+            // Pausar el tiempo del jugador que salió (removiéndolo del mapa de timers activos)
             delete newTimers[exitingPlayer.id]; 
             
-            // Reanudar/Iniciar el tiempo del jugador que entró (usando el tiempo que ya traía, que es el que se leyó de enteringPlayer.stats[timeField])
+            // Reanudar/Iniciar el tiempo del jugador que entró (usando el tiempo previamente guardado en sus stats)
             const enteringPlayerTime = enteringPlayer.stats[timeField]; 
-            newTimers[enteringPlayer.id] = enteringPlayerTime;
+            newTimers[enteringPlayer.id] = enteringPlayerTime; 
             
             return newTimers;
         });
@@ -451,7 +484,8 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         setAllPlayers((prevPlayers) =>
             prevPlayers.map((p) => {
               if (p.id === playerId) {
-                const minutesPlayedInStint = activePlayerTimers[playerId] || 0;
+                // El tiempo total es el que tiene en su cronómetro activo
+                const totalMinutesPlayedInHalf = activePlayerTimers[playerId] || 0;
                 
                 let newAmarillas = oldStats.tarjetaAmarilla;
                 let newRedCards = oldStats.tarjetaRoja;
@@ -459,10 +493,12 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                 let isStarter = p.isStarter;
                 let timeUpdate = p.stats[timeField];
 
+                // 1. Acumulación de tarjetas
                 if (actionId === "tarjetaAmarilla") {
                     newAmarillas += 1;
                 }
                 
+                // 2. Lógica de Expulsión
                 if (newAmarillas >= 2 || actionId === "tarjetaRoja") {
                     if (newAmarillas >= 2) {
                         newRedCards += 1;
@@ -471,10 +507,11 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
                     }
                     isExpelled = true;
                     isStarter = false; 
-                    timeUpdate += minutesPlayedInStint; // Guarda el tiempo final del jugador
+                    timeUpdate = totalMinutesPlayedInHalf; // Congelar el tiempo
                 }
 
-                addActionToHistory({ 
+                // 3. Registro de Acción
+                constaddActionToHistory({ 
                     type: actionId, 
                     playerId, 
                     oldValue: (actionId === "tarjetaAmarilla") ? oldStats.tarjetaAmarilla : oldStats.tarjetaRoja,
@@ -497,7 +534,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             })
         );
         
-        // Si es expulsión, detener el timer
+        // 4. Si es expulsión, detener el timer
         if ((actionId === "tarjetaAmarilla" && (oldStats.tarjetaAmarilla + 1) >= 2) || actionId === "tarjetaRoja") {
           setActivePlayerTimers(prevTimers => {
             const newTimers = { ...prevTimers };
@@ -523,7 +560,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
           )
         );
         
-        addActionToHistory({ 
+        constaddActionToHistory({ 
             type: actionId, 
             playerId, 
             oldValue: oldStats[statKey],
@@ -544,7 +581,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     
     setHomeScore(s => s + 1);
     
-    addActionToHistory({ 
+    constaddActionToHistory({ 
         type: 'golAFavor', 
         playerId, 
         oldValue: oldStats.goles,
@@ -563,7 +600,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
 
   const handleOpponentGoal = () => {
     setAwayScore(s => s + 1);
-    addActionToHistory({ 
+    constaddActionToHistory({ 
         type: 'golEnContra', 
         playerId: null, 
         oldValue: null,
@@ -585,21 +622,15 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     return `${minutes < 10 ? "0" : ""}${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
   
-  // FUNCIÓN CLAVE MODIFICADA PARA MOSTRAR TIEMPO CONGELADO EN SUPLENTES
   const getPlayerTimeForDisplay = (player: Player): string => {
     const timeField = currentHalf === 1 ? 'minutosPrimerTiempo' : 'minutosSegundoTiempo';
     
-    if (player.isExpelled) {
-        // Expulsado: muestra el tiempo final
-        return formatTime(player.stats[timeField]);
-    }
-
-    if (player.isStarter) {
-        // Titular: tiempo activo (viene de activePlayerTimers)
-        return formatTime(activePlayerTimers[player.id] || 0);
-    } else {
-        // Suplente: tiempo congelado (viene de stats[timeField])
+    if (player.isExpelled || !player.isStarter) {
+        // Expulsado o Suplente: Muestra el tiempo congelado (guardado en stats[timeField])
         return formatTime(player.stats[timeField] || 0);
+    } else {
+        // Titular: Muestra el tiempo activo (viene de activePlayerTimers)
+        return formatTime(activePlayerTimers[player.id] || 0);
     }
   };
 
@@ -613,18 +644,21 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     const isSelectedSubstitute = selectedSubstitute?.id === player.id;
     const isExpulsado = player.isExpelled;
     const amarillas = player.stats.tarjetaAmarilla || 0;
+    const isDoubleYellow = amarillas >= 2 && !isExpulsado; 
 
     let cardClasses = "bg-[#1d2834] hover:bg-[#305176] border border-[#305176]";
     
+    // ESTADOS ESPECIALES (Expulsado, Doble Amarilla, Sustitución, Acción)
     if (isExpulsado) {
+        // Tarjeta Roja o Doble Amarilla que ya resultaron en expulsión
         cardClasses = "bg-red-500/20 border-2 border-red-500 opacity-70 cursor-not-allowed";
-    } 
+    }
     else if (isSubbing) {
         if (isStarter) {
-            // Jugador de campo a salir (se pone rojo)
+            // Jugador de campo a salir (ROJO para indicar que está siendo sacado)
             cardClasses = "bg-red-500/20 border-2 border-red-500 hover:bg-red-500/40";
         } else if (isSelectedSubstitute) {
-            // Jugador suplente a entrar (se pone verde)
+            // Jugador suplente a entrar (VERDE para indicar que está entrando)
             cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
         }
     } 
@@ -633,7 +667,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         cardClasses = "bg-[#aff606]/20 border-2 border-[#aff606]";
     } 
     else if (amarillas === 1) {
-        // Jugador con una amarilla
+        // Jugador con una amarilla (Precaución)
         cardClasses = "bg-yellow-500/20 border-2 border-yellow-500";
     }
 
@@ -663,18 +697,18 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
               
               <div className="flex items-center space-x-1">
                 
+                {/* Icono de Tarjeta Roja/Expulsado */}
+                {isExpulsado && (
+                  <ShieldOff className="h-4 w-4 text-red-500" title="EXPULSADO" />
+                )}
+                
                 {/* Icono de Tarjeta Amarilla (una sola) */}
                 {amarillas === 1 && !isExpulsado && (
                     <AlertTriangle className="h-4 w-4 text-[#f4c11a]" title="Tarjeta Amarilla" />
                 )}
-                
-                {/* Icono de Expulsado (Roja o Doble Amarilla) */}
-                {isExpulsado && (
-                  <ShieldOff className="h-4 w-4 text-red-500" title="Tarjeta Roja/Expulsado" />
-                )}
-                
+
                 {/* Reloj para Titulares (Activo) o Suplentes (Congelado) */}
-                {!isExpulsado && (
+                {(!isExpulsado || !isStarter) && (
                   <Badge 
                     className={
                         isStarter 
@@ -692,7 +726,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     );
   };
   
-  // DEFINICIÓN DE starterSelectionUI (Soluciona el error)
+  // DEFINICIÓN DE starterSelectionUI 
   const starterSelectionUI = (
     <div className="space-y-4 text-center">
       <p className="text-gray-400">

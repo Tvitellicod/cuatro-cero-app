@@ -1003,7 +1003,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
           <div className="flex justify-center space-x-4">
             <Button
               variant="outline"
-              className="border-[#305176] text-white hover:bg-[#305176]"
+              className="border-blue-500 text-blue-500 hover:bg-blue-500/20 hover:text-blue-300" // ESTILO CORREGIDO
               onClick={() => setIsFinalizing(false)}
             >
               Cancelar

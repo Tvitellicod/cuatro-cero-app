@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Calendar, Clock, Eye, Plus, Users, X, Check, Trash2, Play } from "lucide-react"
+import { Calendar, Clock, Eye, Plus, Users, X, Check, Trash2, Play, Calendar as CalendarIcon } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +26,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+// --- Importaciones del Calendario ---
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as DatePickerCalendar } from "@/components/ui/calendar" // Renombrado para evitar conflicto
+import { format } from "date-fns"
+import { es } from 'date-fns/locale/es';
+// ------------------------------------
+
 export function UpcomingMatches() {
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [showPlayerSelection, setShowPlayerSelection] = useState(false)
@@ -37,6 +44,9 @@ export function UpcomingMatches() {
   const [showRosterModal, setShowRosterModal] = useState(false)
   const [rosterToEdit, setRosterToEdit] = useState<any>(null)
   const [rosterEditPlayers, setRosterEditPlayers] = useState<number[]>([])
+  
+  // --- ESTADO PARA EL FILTRO DENTRO DEL MODAL ---
+  const [selectedModalCategory, setSelectedModalCategory] = useState<string>("all");
 
 
   // Lista de partidos próximos con datos de ejemplo
@@ -68,13 +78,20 @@ export function UpcomingMatches() {
   ]);
 
   // Estado para el formulario de nuevo partido
-  const [newMatch, setNewMatch] = useState({
+  const [newMatch, setNewMatch] = useState<{
+    opponent: string;
+    tournament: string;
+    location: string;
+    category: string;
+    date: Date | undefined; // Usamos Date object
+    time: string;
+  }>({
     opponent: "",
     tournament: "",
     location: "",
     category: "",
-    date: "",
-    time: "",
+    date: new Date(), // Inicializado con la fecha actual
+    time: "10:00", // Inicializado con una hora por defecto
   });
 
   // Hardcoded categories and players for demo purposes
@@ -120,6 +137,25 @@ export function UpcomingMatches() {
     { name: "Supercopa", matches: 2 },
   ]
   
+  // Opciones de Hora y Minuto para los Selects
+  const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const minuteOptions = ["00", "15", "30", "45"];
+  
+  const getCurrentHour = () => newMatch.time ? newMatch.time.split(':')[0] : "10";
+  const getCurrentMinute = () => newMatch.time ? newMatch.time.split(':')[1] : "00";
+  
+  // Handlers para actualizar HH y MM en el estado newMatch.time
+  const setTimePart = (part: 'hour' | 'minute', value: string) => {
+    const currentHour = getCurrentHour();
+    const currentMinute = getCurrentMinute();
+    
+    let newHour = part === 'hour' ? value : currentHour;
+    let newMinute = part === 'minute' ? value : currentMinute;
+    
+    setNewMatch(prev => ({ ...prev, time: `${newHour}:${newMinute}` }));
+  };
+
+  
   const handlePlayerToggle = (playerId: number) => {
     setSelectedPlayers((prev) => (prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]))
   }
@@ -129,15 +165,34 @@ export function UpcomingMatches() {
   }
 
   const handleSaveMatch = () => {
-    if (!newMatch.opponent || !newMatch.tournament || !newMatch.location || !newMatch.category || !newMatch.date || !newMatch.time) {
+    // 1. Validación de campos
+    if (!newMatch.opponent || !newMatch.tournament || !newMatch.location || !newMatch.category || !newMatch.date || !newMatch.time || selectedPlayers.length === 0) {
+      alert("Por favor, completa todos los campos del formulario y selecciona al menos un jugador.");
       setShowValidationAlert(true);
       return;
     }
     
+    // 2. VALIDACIÓN DE FECHA Y HORA FUTURA
+    const [hours, minutes] = newMatch.time.split(':').map(Number);
+    const plannedDateTime = new Date(newMatch.date);
+    // Aseguramos que la hora del plannedDateTime sea la del formulario
+    plannedDateTime.setHours(hours, minutes, 0, 0); 
+
+    const currentDateTime = new Date();
+
+    if (plannedDateTime.getTime() <= currentDateTime.getTime()) {
+      alert("Error: El partido debe ser agendado para una fecha y hora futuras.");
+      return;
+    }
+    
+    // 3. Formatear la fecha para guardar en el array de strings DD-MM-YYYY
+    const dateString = format(newMatch.date, 'dd-MM-yyyy');
+
+
     const newMatchData = {
         id: upcomingMatches.length + 1,
         opponent: newMatch.opponent,
-        date: newMatch.date,
+        date: dateString, // Usamos DD-MM-YYYY
         time: newMatch.time,
         location: newMatch.location,
         tournament: newMatch.tournament,
@@ -155,8 +210,8 @@ export function UpcomingMatches() {
       tournament: "",
       location: "",
       category: "",
-      date: "",
-      time: "",
+      date: new Date(),
+      time: "10:00",
     });
     setSelectedPlayers([]);
     setShowScheduleForm(false);
@@ -203,8 +258,8 @@ export function UpcomingMatches() {
 
       {/* Player Selection Modal */}
       {showPlayerSelection && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <Card className="bg-[#213041] border-[#305176] w-full max-w-2xl max-h-[90vh] overflow-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4"> {/* FONDO OPACO */}
+          <Card className="bg-[#213041] border-[#305176] w-full max-w-4xl max-h-[90vh] overflow-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-white">Seleccionar Jugadores</CardTitle>
               <Button
@@ -217,41 +272,93 @@ export function UpcomingMatches() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="text-sm text-gray-400">Seleccionados: {selectedPlayers.length}/{availablePlayers.length} jugadores</div>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {availablePlayers.length > 0 ? (
-                    availablePlayers.map((player) => (
-                      <div
-                        key={player.id}
-                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                          selectedPlayers.includes(player.id)
-                            ? "bg-[#aff606]/20 border border-[#aff606]"
-                            : "bg-[#1d2834] hover:bg-[#305176]"
-                        }`}
-                        onClick={() => handlePlayerToggle(player.id)}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                              selectedPlayers.includes(player.id) ? "border-[#aff606] bg-[#aff606]" : "border-gray-400"
+                
+              {/* Contenedor principal de selección: Categoría (1/4) y Jugadores (3/4) */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4"> 
+              
+                {/* COLUMNA 1: Panel de Categorías */}
+                <div className="md:col-span-1 space-y-3 p-2 bg-[#1d2834] rounded-lg h-full">
+                    <h4 className="text-white font-semibold mb-3 border-b border-[#305176] pb-2">
+                        Filtrar por Categoría
+                    </h4>
+                    
+                    {/* Listado de Categorías */}
+                    {categories.map((cat) => (
+                        <div
+                            key={cat.id}
+                            className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                                selectedModalCategory === cat.id
+                                    ? "bg-[#aff606] text-black font-bold"
+                                    : "text-white hover:bg-[#305176]"
                             }`}
-                          >
-                            {selectedPlayers.includes(player.id) && <Check className="h-3 w-3 text-black" />}
-                          </div>
-                          <div>
-                            <span className="text-white font-medium">{player.name}</span>
-                            <p className="text-gray-400 text-sm">{player.position}</p>
-                          </div>
+                            onClick={() => setSelectedModalCategory(cat.id)}
+                        >
+                            {cat.name}
                         </div>
-                        <Badge className="bg-[#25d03f] text-black">{player.status}</Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-gray-400">No hay jugadores disponibles en esta categoría.</p>
-                  )}
+                    ))}
+                    <div
+                        className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                            selectedModalCategory === "all"
+                                ? "bg-[#33d9f6] text-black font-bold"
+                                : "text-white hover:bg-[#305176]"
+                        }`}
+                        onClick={() => setSelectedModalCategory("all")}
+                    >
+                        Mostrar Todas
+                    </div>
                 </div>
-                <div className="flex justify-end space-x-4">
+
+                {/* COLUMNA 2: Lista de Jugadores */}
+                <div className="md:col-span-3 space-y-4">
+                    <div className="text-sm text-gray-400">
+                        Lista de Jugadores ({selectedModalCategory === "all" ? "Todas" : categories.find(c => c.id === selectedModalCategory)?.name || ""})
+                    </div>
+                    
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        {/* Lógica de Filtrado por Categoría del Modal */}
+                        {allPlayers
+                            .filter(player => 
+                                selectedModalCategory === "all" || player.category === selectedModalCategory
+                            )
+                            .map((player) => (
+                                <div
+                                    key={player.id}
+                                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                                        selectedPlayers.includes(player.id)
+                                            ? "bg-[#aff606]/20 border border-[#aff606]"
+                                            : "bg-[#1d2834] hover:bg-[#305176]"
+                                    } ${player.status === "LESIONADO" ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={() => player.status !== "LESIONADO" && handlePlayerToggle(player.id)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <div
+                                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                                selectedPlayers.includes(player.id) ? "border-[#aff606] bg-[#aff606]" : "border-gray-400"
+                                            }`}
+                                        >
+                                            {selectedPlayers.includes(player.id) && <Check className="h-3 w-3 text-black" />}
+                                        </div>
+                                        <div>
+                                            <span className="text-white font-medium">{player.name}</span>
+                                            <p className="text-gray-400 text-sm">{player.position}</p>
+                                        </div>
+                                    </div>
+                                    <Badge 
+                                        className={player.status === "LESIONADO" ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}
+                                    >
+                                        {player.status}
+                                    </Badge>
+                                </div>
+                            ))
+                        }
+                    </div>
+                    <div className="text-sm text-gray-400 pt-2 border-t border-[#305176]">
+                        Jugadores Seleccionados: {selectedPlayers.length}
+                    </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
                   <Button
                     variant="outline"
                     className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
@@ -265,7 +372,6 @@ export function UpcomingMatches() {
                   >
                     Confirmar Selección
                   </Button>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -278,25 +384,29 @@ export function UpcomingMatches() {
           <CardHeader>
             <CardTitle className="text-white">Agendar Nuevo Partido</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-white text-sm">Rival</label>
+          <CardContent className="space-y-6"> 
+            
+            {/* PRIMER RENGLÓN: Rival - Torneo - Condición - Categoría - Botón Jugadores (5 elementos) */}
+            <div className="grid grid-cols-2 md:grid-cols-12 gap-4 items-center"> {/* items-center para asegurar alineación vertical */}
+              
+              {/* Rival (Ocupa 2/12 en desktop) */}
+              <div className="col-span-2 w-full"> 
                 <Input
-                  placeholder="Nombre del equipo rival"
-                  className="bg-[#1d2834] border-[#305176] text-white"
+                  placeholder="Rival" 
+                  className="bg-[#1d2834] border-[#305176] text-white h-11" // h-11 para uniformar
                   value={newMatch.opponent}
                   onChange={(e) => setNewMatch({ ...newMatch, opponent: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-white text-sm">Torneo</label>
+
+              {/* Torneo (Ocupa 3/12 en desktop) */}
+              <div className="col-span-2 md:col-span-3 w-full">
                 <Select
                   value={newMatch.tournament}
                   onValueChange={(value) => setNewMatch({ ...newMatch, tournament: value })}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                    <SelectValue placeholder="Seleccionar torneo" />
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> {/* h-11 para uniformar */}
+                    <SelectValue placeholder="Torneo" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
                     {tournaments.map((tournament) => (
@@ -307,14 +417,15 @@ export function UpcomingMatches() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-white text-sm">Condición</label>
+
+              {/* Condición (Ocupa 2/12 en desktop) */}
+              <div className="col-span-2 md:col-span-2 w-full">
                 <Select
                   value={newMatch.location}
                   onValueChange={(value) => setNewMatch({ ...newMatch, location: value })}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                    <SelectValue placeholder="Seleccionar" />
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> {/* h-11 para uniformar */}
+                    <SelectValue placeholder="Condición" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
                     <SelectItem value="Local" className="text-white">
@@ -326,31 +437,9 @@ export function UpcomingMatches() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="flex flex-col md:flex-row items-end justify-between gap-4">
-              <div className="grid grid-cols-2 gap-4 w-full md:w-auto">
-                <div className="space-y-2">
-                  <label className="text-white text-sm">Fecha</label>
-                  <Input
-                    type="date"
-                    className="bg-[#1d2834] border-[#305176] text-white w-full h-11"
-                    value={newMatch.date}
-                    onChange={(e) => setNewMatch({ ...newMatch, date: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-white text-sm">Hora</label>
-                  <Input
-                    type="time"
-                    className="bg-[#1d2834] border-[#305176] text-white w-full h-11"
-                    value={newMatch.time}
-                    onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 w-full md:w-auto">
-                <label className="text-white text-sm">Categoría</label>
+              {/* Categoría (Ocupa 3/12 en desktop) */}
+              <div className="col-span-2 md:col-span-3 w-full">
                 <Select
                   value={newMatch.category}
                   onValueChange={(value) => {
@@ -359,8 +448,8 @@ export function UpcomingMatches() {
                     setSelectedPlayers([])
                   }}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                    <SelectValue placeholder="Seleccionar categoría" />
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> {/* h-11 para uniformar */}
+                    <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
                     {categories.map((cat) => (
@@ -371,13 +460,97 @@ export function UpcomingMatches() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11 w-full md:w-auto mt-auto"
-                onClick={() => setShowPlayerSelection(true)}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Seleccionar Jugadores ({selectedPlayers.length})
-              </Button>
+              
+              {/* Botón de Selección de Jugadores (Ocupa 2/12 en desktop) */}
+              <div className="col-span-2 md:col-span-2 w-full">
+                  <Button
+                      className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11 w-full"
+                      onClick={() => {
+                        // Al abrir, preseleccionar la categoría del partido
+                        setSelectedModalCategory(newMatch.category);
+                        setShowPlayerSelection(true);
+                      }}
+                  >
+                      <Users className="h-4 w-4 mr-2" />
+                      Jugadores ({selectedPlayers.length})
+                  </Button>
+              </div>
+            </div>
+
+            {/* SEGUNDO RENGLÓN: Fecha - Hora (Compactado y unido) */}
+            <div className="flex flex-col md:flex-row gap-4 pt-4 border-t border-[#305176] items-center">
+              
+              {/* Fecha (Ocupa la mitad del espacio) */}
+              <div className="space-y-1 w-full md:w-1/2">
+                <label className="text-white text-sm">Fecha</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className="w-full justify-start text-left font-normal bg-[#1d2834] border-[#305176] text-white hover:bg-[#305176] hover:text-white h-11"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+                      {newMatch.date ? (
+                        format(newMatch.date, "PPP", { locale: es })
+                      ) : (
+                        <span className="text-gray-400">Seleccionar fecha</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-[#213041] border-[#305176]">
+                    <DatePickerCalendar
+                      mode="single"
+                      selected={newMatch.date}
+                      onSelect={(date) => setNewMatch({ ...newMatch, date })}
+                      initialFocus
+                      locale={es} // Usar el locale español
+                      classNames={{
+                          caption_label: "text-white font-semibold", 
+                          head_cell: "text-white rounded-md w-9 font-medium text-[0.8rem]", 
+                          day: "text-white", 
+                          day_outside: "text-gray-500 opacity-80", 
+                          day_today: "bg-[#aff606] text-black hover:bg-[#25d03f] hover:text-black font-bold", 
+                          day_selected: "bg-[#aff606] text-black hover:bg-[#aff606] hover:text-black focus:bg-[#aff606] focus:text-black",
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {/* CAMPOS DE HORA Y MINUTO (Unificado - Ocupa la otra mitad) */}
+              <div className="space-y-1 w-full md:w-1/2">
+                <label className="text-white text-sm">Hora</label>
+                <div className="flex items-center space-x-1">
+                  <Select
+                    value={getCurrentHour()}
+                    onValueChange={(value) => setTimePart('hour', value)}
+                  >
+                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11">
+                      <SelectValue placeholder="HH" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#213041] border-[#305176] max-h-[15rem]">
+                      {hourOptions.map(hour => (
+                        <SelectItem key={hour} value={hour} className="text-white">{hour}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-white text-lg h-11 flex items-center">:</span>
+                  <Select
+                    value={getCurrentMinute()}
+                    onValueChange={(value) => setTimePart('minute', value)}
+                  >
+                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11">
+                      <SelectValue placeholder="MM" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#213041] border-[#305176] max-h-[15rem]">
+                      {minuteOptions.map(minute => (
+                        <SelectItem key={minute} value={minute} className="text-white">{minute}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
             </div>
 
             <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">

@@ -23,6 +23,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+// Opcional: Define un tipo para Player (Mantenido al final del archivo para coherencia)
+
 export function ClubManagement() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -141,8 +143,54 @@ export function ClubManagement() {
     return matchesSearch && matchesCategory
   })
 
+  // --- NUEVA FUNCIÓN PARA MASCARA DD/MM/YYYY ---
+  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // 1. Remover todos los caracteres que no sean dígitos
+    let cleaned = value.replace(/[^0-9]/g, '');
+    let formattedValue = '';
+    let storedDate = ''; // YYYY-MM-DD for consistency
+
+    // 2. Aplicar la máscara DD/MM/AAAA
+    if (cleaned.length > 0) {
+      formattedValue = cleaned.slice(0, 2);
+    }
+    if (cleaned.length >= 3) {
+      formattedValue += '/' + cleaned.slice(2, 4);
+    }
+    if (cleaned.length >= 5) {
+      formattedValue += '/' + cleaned.slice(4, 8);
+    }
+
+    // 3. Limitar a 10 caracteres (DD/MM/YYYY)
+    formattedValue = formattedValue.slice(0, 10);
+    
+    // 4. Si la cadena está completa (8 dígitos), se convierte a YYYY-MM-DD
+    if (cleaned.length === 8) {
+        const day = cleaned.slice(0, 2);
+        const month = cleaned.slice(2, 4);
+        const year = cleaned.slice(4, 8);
+        
+        // Simple validación de estructura para guardar en formato de fecha estándar
+        if (day.length === 2 && month.length === 2 && year.length === 4) {
+            storedDate = `${year}-${month}-${day}`;
+        }
+    }
+
+    // 5. Actualizar el estado: guardamos la fecha en YYYY-MM-DD si está completa, sino guardamos el texto con máscara para mostrar
+    setNewPlayer({ 
+        ...newPlayer, 
+        // Si hay una fecha válida para almacenar, la guardamos. Si no, guardamos el texto formateado.
+        birthDate: storedDate || formattedValue 
+    });
+  };
+
   const handleCreatePlayer = () => {
-    if (newPlayer.firstName && newPlayer.lastName && newPlayer.position) {
+    // Validación adicional: si la birthDate no es YYYY-MM-DD, significa que está incompleta o mal formateada
+    const isDateValid = /^(\d{4})-(\d{2})-(\d{2})$/.test(newPlayer.birthDate);
+
+    if (newPlayer.firstName && newPlayer.lastName && newPlayer.position && isDateValid) {
       const player: Player = {
         ...newPlayer,
         id: players.length + 1,
@@ -150,6 +198,8 @@ export function ClubManagement() {
       }
       setPlayers([...players, player])
       handleCancelForm()
+    } else if (!isDateValid) {
+        alert("Por favor, introduce la Fecha de Nacimiento completa en formato DD/MM/AAAA.");
     }
   }
 
@@ -163,9 +213,13 @@ export function ClubManagement() {
   }
 
   const handleUpdatePlayer = () => {
-    if (editingPlayer) {
+    const isDateValid = /^(\d{4})-(\d{2})-(\d{2})$/.test(newPlayer.birthDate);
+
+    if (editingPlayer && isDateValid) {
       setPlayers(players.map((p) => (p.id === editingPlayer.id ? { ...p, ...newPlayer } : p)))
       handleCancelForm()
+    } else if (!isDateValid) {
+        alert("Por favor, introduce la Fecha de Nacimiento completa en formato DD/MM/AAAA.");
     }
   }
 
@@ -269,6 +323,11 @@ export function ClubManagement() {
     
     return `${day}-${month}-${year}`;
   };
+
+  // Helper para mostrar la fecha de nacimiento en el input DD/MM/AAAA
+  const displayBirthDate = newPlayer.birthDate?.length === 10 && newPlayer.birthDate.includes('-')
+    ? newPlayer.birthDate.split('-').reverse().join('/')
+    : newPlayer.birthDate;
 
 
   return (
@@ -575,19 +634,24 @@ export function ClubManagement() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* CAMPO DE FECHA DE NACIMIENTO CON MÁSCARA DD/MM/AAAA */}
                   <div className="space-y-2">
-                    <Label className="text-white">Fecha de Nacimiento</Label>
+                    <Label className="text-white">Fecha de Nacimiento (DD/MM/AAAA)</Label>
                     <Input
-                      type="date"
-                      value={newPlayer.birthDate}
-                      onChange={(e) => setNewPlayer({ ...newPlayer, birthDate: e.target.value })}
+                      value={displayBirthDate}
+                      onChange={handleBirthDateChange}
+                      placeholder="DD/MM/AAAA"
+                      maxLength={10}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
+                    <p className="text-gray-500 text-xs mt-1">El formato requerido es DD/MM/AAAA.</p>
                   </div>
+                  
+                  {/* CAMPO DE CELULAR (Texto flexible) */}
                   <div className="space-y-2">
                     <Label className="text-white">Número de celular</Label>
                     <Input
-                      type="tel"
+                      type="text"
                       value={newPlayer.phoneNumber}
                       onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
                       placeholder="Ej: +54 9 11 1234-5678"
@@ -843,8 +907,11 @@ export function ClubManagement() {
               </div>
               <div className="space-y-2">
                 <Label className="text-white">Fecha Nacimiento</Label>
+                {/* Mostrar la fecha en formato DD/MM/AAAA */}
                 <Input
-                  value={showPlayerDetail?.birthDate}
+                  value={showPlayerDetail?.birthDate?.length === 10 && showPlayerDetail.birthDate.includes('-')
+                    ? showPlayerDetail.birthDate.split('-').reverse().join('/') 
+                    : showPlayerDetail?.birthDate || 'N/A'}
                   readOnly
                   className="bg-[#1d2834] border-[#305176] text-white"
                 />

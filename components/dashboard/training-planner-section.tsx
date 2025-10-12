@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Calendar, Clock, Target, PieChart, Users, X, Check, Search, Trash2, Edit, Eye } from "lucide-react"
+import { Plus, Calendar as CalendarIcon, Clock, Target, PieChart, Users, X, Check, Search, Trash2, Edit, Eye } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
+import { format } from "date-fns" // Importación necesaria para el formato de fecha
+import { es } from 'date-fns/locale/es'; // Importar locale español
 
 import {
   AlertDialog,
@@ -22,6 +24,8 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" 
+import { Calendar } from "@/components/ui/calendar" 
 
 // --- CONSTANTES GLOBALES DE NOTA ---
 const NOTE_TYPE = "Note"; 
@@ -33,19 +37,36 @@ const NOTE_CATEGORY_NAME = "Nota de Sesión";
 const getInitialDateTime = () => {
   const now = new Date();
   
-  // Formato YYYY-MM-DD para input type="date"
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const dateString = `${year}-${month}-${day}`;
+  // Usamos el objeto Date para almacenar la fecha completa
+  const dateObject = now;
   
   // Formato HH:MM para input type="time"
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const timeString = `${hours}:${minutes}`;
 
-  return { date: dateString, time: timeString };
+  return { date: dateObject, time: timeString };
 };
+
+// --- FUNCIÓN AUXILIAR PARA OBTENER LA CATEGORÍA POR DEFECTO DEL PERFIL ---
+const getInitialCategory = (): string => {
+  if (typeof window !== "undefined") {
+    const profileJson = localStorage.getItem("userProfile");
+    if (profileJson) {
+      try {
+        const profile = JSON.parse(profileJson);
+        // Retorna el 'id' de la categoría guardada (ej: "primera")
+        return profile.category || "";
+      } catch (e) {
+        console.error("Error parsing user profile from localStorage", e);
+        return "";
+      }
+    }
+  }
+  return "";
+};
+// ---------------------------------------------------------------------------------
+
 
 export function TrainingPlannerSection() {
   const [showPlannerForm, setShowPlannerForm] = useState(false)
@@ -56,6 +77,10 @@ export function TrainingPlannerSection() {
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [trainingToDelete, setTrainingToDelete] = useState<number | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
+  
+  // --- ESTADO AÑADIDO PARA MENSAJES DE VALIDACIÓN DINÁMICOS ---
+  const [validationMessage, setValidationMessage] = useState("Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.");
+  // -----------------------------------------------------------
 
   // --- ESTADOS AÑADIDOS PARA LA NOTA ---
   const [showNoteModal, setShowNoteModal] = useState(false)
@@ -66,14 +91,14 @@ export function TrainingPlannerSection() {
   })
   // ------------------------------------
 
-
+  // --- INICIALIZACIÓN DE NEWTRAINING CON LA CATEGORÍA POR DEFECTO ---
   const [newTraining, setNewTraining] = useState(() => {
     const initialDateTime = getInitialDateTime();
     return {
       name: "",
-      date: initialDateTime.date,
+      date: initialDateTime.date as Date, // Cambiamos a objeto Date
       time: initialDateTime.time,
-      category: "",
+      category: getInitialCategory(), // <-- Se establece la categoría predeterminada aquí
     }
   });
 
@@ -135,6 +160,13 @@ export function TrainingPlannerSection() {
       return `${day} - ${month} - ${year}`;
     }
     return dateString;
+  };
+  
+  // Helper function to format Date object for display
+  const formatDisplayDate = (date: Date | undefined) => {
+    if (!date) return "Seleccionar fecha";
+    // Formato legible: DD/MM/YYYY
+    return format(date, "PPP", { locale: es }); // Usamos el locale español para el display
   };
 
 
@@ -580,23 +612,42 @@ export function TrainingPlannerSection() {
     setShowPlannerForm(false);
     setNewTraining({ 
       name: "", 
-      date: initialDateTime.date,
+      date: initialDateTime.date as Date,
       time: initialDateTime.time,
-      category: "" 
+      category: getInitialCategory() // Restablecer a la categoría por defecto
     });
     setSelectedExercises([]);
   };
 
   const handleSaveTraining = () => {
+    // 0. Preliminary validation (Fields)
     if (!newTraining.name || !newTraining.date || !newTraining.time || !newTraining.category || selectedExercises.length === 0) {
+      setValidationMessage("Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.");
       setShowValidationAlert(true);
       return;
     }
 
+    // 1. Time Validation
+    const [hours, minutes] = newTraining.time.split(':').map(Number);
+    const plannedDateTime = new Date(newTraining.date);
+    // Establecemos la hora, minutos, y segundos a cero para la comparación
+    plannedDateTime.setHours(hours, minutes, 0, 0); 
+
+    const currentDateTime = new Date();
+
+    if (plannedDateTime.getTime() <= currentDateTime.getTime()) {
+      setValidationMessage("La fecha y hora del entrenamiento deben ser futuras a la hora actual.");
+      setShowValidationAlert(true);
+      return;
+    }
+    
+    // Convertir el objeto Date a string en formato YYYY-MM-DD para la sesión
+    const dateString = format(newTraining.date, 'yyyy-MM-dd');
+
     const newSession = {
       id: trainingSessions.length + previousSessions.length + 1,
       name: newTraining.name,
-      date: newTraining.date,
+      date: dateString,
       time: newTraining.time,
       // Se suman los minutos de ejercicios y notas
       duration: selectedExercises.reduce((sum, ex) => sum + ex.duration, 0), 
@@ -856,7 +907,7 @@ export function TrainingPlannerSection() {
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-white flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
+                <CalendarIcon className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
               </CardTitle>
               <Button 
@@ -874,7 +925,7 @@ export function TrainingPlannerSection() {
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
-                        <Calendar className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
+                        <CalendarIcon className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
                         <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
                         <p className="text-xs text-gray-400">{session.time}</p>
                       </div>
@@ -933,7 +984,7 @@ export function TrainingPlannerSection() {
             <CardHeader>
               {/* Título con ícono de Calendar */}
               <CardTitle className="text-white flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
+                <CalendarIcon className="h-5 w-5 mr-2" />
                 Entrenamientos Recientes
               </CardTitle>
             </CardHeader>
@@ -943,7 +994,7 @@ export function TrainingPlannerSection() {
                   <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
-                        <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-1" />
+                        <CalendarIcon className="h-8 w-8 text-gray-500 mx-auto mb-1" />
                         <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
                       </div>
                       <div>
@@ -972,11 +1023,10 @@ export function TrainingPlannerSection() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      {/* Botón de Recientes UNIFICADO (outline green/black hover) */}
+                      {/* Badge de session.focus eliminado */}
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                        className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
                         onClick={() => setShowTrainingDetail(session)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
@@ -1016,18 +1066,49 @@ export function TrainingPlannerSection() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* CAMPO DE SELECCIÓN DE FECHA (CON POPOVER/CALENDARIO) */}
                     <div className="space-y-2">
                       <Label htmlFor="training-date" className="text-white">
                         Fecha
                       </Label>
-                      <Input
-                        id="training-date"
-                        type="date"
-                        className="bg-[#1d2834] border-[#305176] text-white"
-                        value={newTraining.date}
-                        onChange={(e) => setNewTraining({ ...newTraining, date: e.target.value })}
-                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className="w-full justify-start text-left font-normal bg-[#1d2834] border-[#305176] text-white hover:bg-[#305176] hover:text-white"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+                            {newTraining.date ? (
+                              format(newTraining.date, "PPP", { locale: es }) // Usamos el locale español
+                            ) : (
+                              <span className="text-gray-400">Seleccionar fecha</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-[#213041] border-[#305176]">
+                          <Calendar
+                            mode="single"
+                            selected={newTraining.date}
+                            onSelect={(date) => setNewTraining({ ...newTraining, date: date as Date })}
+                            initialFocus
+                            locale={es} // Usar el locale español
+                            classNames={{
+                                caption_label: "text-white font-semibold", // Mes y Año en blanco
+                                head_cell: "text-white rounded-md w-9 font-medium text-[0.8rem]", // Abreviaturas de días en blanco
+                                day: "text-white", // Días del mes actual en blanco
+                                day_outside: "text-gray-500 opacity-80", // Días fuera del mes en gris
+                                // ESTILO PARA EL DÍA ACTUAL (Fondo verde, texto negro/negrita)
+                                day_today: "bg-[#aff606] text-black hover:bg-[#25d03f] hover:text-black font-bold", 
+                                // ESTILO para el día seleccionado (importante para mantener el contraste si se selecciona hoy)
+                                day_selected: "bg-[#aff606] text-black hover:bg-[#aff606] hover:text-black focus:bg-[#aff606] focus:text-black",
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
+                    
+                    {/* CAMPO DE HORA (Input simple) */}
                     <div className="space-y-2">
                       <Label htmlFor="training-time" className="text-white">
                         Hora
@@ -1245,14 +1326,86 @@ export function TrainingPlannerSection() {
                   <PieChart className="h-5 w-5 mr-2" />
                   Distribución del Entrenamiento
                 </CardTitle>
-                <Button
-                  size="sm"
-                  className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] font-semibold"
-                  onClick={() => setShowNoteModal(true)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Agregar Nota
-                </Button>
+                <Dialog open={showNoteModal} onOpenChange={setShowNoteModal}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] font-semibold"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar Nota
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+                    <DialogHeader className="text-center">
+                      <DialogTitle className="text-white text-2xl font-bold">
+                        Agregar Nota/Pausa
+                      </DialogTitle>
+                      <DialogDescription className="text-gray-400">
+                        Añade una nota o un tiempo de pausa a la sesión.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="note-title" className="text-white">
+                          Título de la Nota *
+                        </Label>
+                        <Input
+                          id="note-title"
+                          placeholder="Ej: Charla Técnica"
+                          value={newNote.title}
+                          onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                          className="bg-[#1d2834] border-[#305176] text-white"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="note-duration" className="text-white">
+                          Tiempo/Duración (min, opcional)
+                        </Label>
+                        <Input
+                          id="note-duration"
+                          type="number"
+                          placeholder="10"
+                          min="0"
+                          value={newNote.duration}
+                          onChange={(e) => setNewNote({ ...newNote, duration: e.target.value })}
+                          className="bg-[#1d2834] border-[#305176] text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="note-description" className="text-white">
+                          Descripción (opcional)
+                        </Label>
+                        <Textarea
+                          id="note-description"
+                          placeholder="Detalles sobre esta pausa o nota..."
+                          value={newNote.description}
+                          onChange={(e) => setNewNote({ ...newNote, description: e.target.value })}
+                          className="bg-[#1d2834] border-[#305176] text-white min-h-[80px]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end space-x-4">
+                      <Button
+                        variant="outline"
+                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                        onClick={() => {
+                          setShowNoteModal(false);
+                          setNewNote({ title: "", duration: "", description: "" });
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+                        onClick={handleAddNote}
+                      >
+                        Guardar Nota
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent>
                 {selectedExercises.filter((ex: any) => ex.type !== NOTE_TYPE).length > 0 ? (
@@ -1296,10 +1449,8 @@ export function TrainingPlannerSection() {
                     <div className="space-y-2">
                       {pieData.map((segment, index) => (
                         <div key={index} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: segment.color }}></div>
-                            <span className="text-white text-sm">{segment.category}</span>
-                          </div>
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                          <span className="text-white text-sm">{segment.category}</span>
                           <div className="text-right">
                             <p className="text-white font-bold">{segment.percentage}%</p>
                             <p className="text-gray-400 text-xs">{segment.duration}min</p>
@@ -1339,9 +1490,9 @@ export function TrainingPlannerSection() {
       <AlertDialog open={showValidationAlert} onOpenChange={setShowValidationAlert}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Campos Incompletos</AlertDialogTitle>
+            <AlertDialogTitle className="text-white">Error de Validación</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.
+              {validationMessage}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1529,4 +1680,4 @@ export function TrainingPlannerSection() {
       </Dialog>
     </div>
   )
-}
+} 

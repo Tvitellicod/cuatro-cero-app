@@ -35,7 +35,7 @@ import { es } from 'date-fns/locale/es';
 
 export function UpcomingMatches() {
   const [showScheduleForm, setShowScheduleForm] = useState(false)
-  const [showPlayerSelection, setShowPlayerSelection] = useState(false)
+  const [showPlayerSelection, setShowPlayerSelection] = useState(false) 
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([])
   const [selectedCategory, setSelectedCategory] = useState("primera")
   const [showValidationAlert, setShowValidationAlert] = useState(false)
@@ -256,128 +256,127 @@ export function UpcomingMatches() {
         </div>
       </div>
 
-      {/* Player Selection Modal */}
-      {showPlayerSelection && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4"> {/* FONDO OPACO */}
-          <Card className="bg-[#213041] border-[#305176] w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white">Seleccionar Jugadores</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:text-red-400"
-                onClick={() => setShowPlayerSelection(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-                
-              {/* Contenedor principal de selección: Categoría (1/4) y Jugadores (3/4) */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4"> 
-              
-                {/* COLUMNA 1: Panel de Categorías */}
-                <div className="md:col-span-1 space-y-3 p-2 bg-[#1d2834] rounded-lg h-full">
-                    <h4 className="text-white font-semibold mb-3 border-b border-[#305176] pb-2">
-                        Filtrar por Categoría
-                    </h4>
-                    
-                    {/* Listado de Categorías */}
-                    {categories.map((cat) => (
-                        <div
-                            key={cat.id}
-                            className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                                selectedModalCategory === cat.id
-                                    ? "bg-[#aff606] text-black font-bold"
-                                    : "text-white hover:bg-[#305176]"
-                            }`}
-                            onClick={() => setSelectedModalCategory(cat.id)}
-                        >
-                            {cat.name}
-                        </div>
-                    ))}
-                    <div
-                        className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                            selectedModalCategory === "all"
-                                ? "bg-[#33d9f6] text-black font-bold"
-                                : "text-white hover:bg-[#305176]"
-                        }`}
-                        onClick={() => setSelectedModalCategory("all")}
-                    >
-                        Mostrar Todas
-                    </div>
-                </div>
-
-                {/* COLUMNA 2: Lista de Jugadores */}
-                <div className="md:col-span-3 space-y-4">
-                    <div className="text-sm text-gray-400">
-                        Lista de Jugadores ({selectedModalCategory === "all" ? "Todas" : categories.find(c => c.id === selectedModalCategory)?.name || ""})
-                    </div>
-                    
-                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                        {/* Lógica de Filtrado por Categoría del Modal */}
-                        {allPlayers
-                            .filter(player => 
-                                selectedModalCategory === "all" || player.category === selectedModalCategory
-                            )
-                            .map((player) => (
-                                <div
-                                    key={player.id}
-                                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                                        selectedPlayers.includes(player.id)
-                                            ? "bg-[#aff606]/20 border border-[#aff606]"
-                                            : "bg-[#1d2834] hover:bg-[#305176]"
-                                    } ${player.status === "LESIONADO" ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    onClick={() => player.status !== "LESIONADO" && handlePlayerToggle(player.id)}
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <div
-                                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                                                selectedPlayers.includes(player.id) ? "border-[#aff606] bg-[#aff606]" : "border-gray-400"
-                                            }`}
-                                        >
-                                            {selectedPlayers.includes(player.id) && <Check className="h-3 w-3 text-black" />}
-                                        </div>
-                                        <div>
-                                            <span className="text-white font-medium">{player.name}</span>
-                                            <p className="text-gray-400 text-sm">{player.position}</p>
-                                        </div>
-                                    </div>
-                                    <Badge 
-                                        className={player.status === "LESIONADO" ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}
-                                    >
-                                        {player.status}
-                                    </Badge>
-                                </div>
-                            ))
-                        }
-                    </div>
-                    <div className="text-sm text-gray-400 pt-2 border-t border-[#305176]">
-                        Jugadores Seleccionados: {selectedPlayers.length}
-                    </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
-                  <Button
-                    variant="outline"
-                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-                    onClick={() => setShowPlayerSelection(false)}
+      {/* Player Selection Modal - CORREGIDO PARA EL FONDO OPACO */}
+      <Dialog open={showPlayerSelection} onOpenChange={setShowPlayerSelection}>
+        <DialogContent 
+            className="sm:max-w-4xl bg-[#213041] border-[#305176] text-white p-6" 
+            style={{ maxWidth: '900px' }}
+        >
+            <div className="flex items-center justify-between mb-4">
+                <DialogTitle className="text-white text-2xl font-bold">Seleccionar Jugadores</DialogTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:text-red-400"
+                  onClick={() => setShowPlayerSelection(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+            </div>
+            
+            {/* Contenedor principal de selección: Categoría (1/4) y Jugadores (3/4) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4"> 
+            
+              {/* COLUMNA 1: Panel de Categorías */}
+              <div className="md:col-span-1 space-y-3 p-3 bg-[#1d2834] rounded-lg h-full"> 
+                  <h4 className="text-white font-semibold mb-3 border-b border-[#305176] pb-2">
+                      Filtrar por Categoría
+                  </h4>
+                  
+                  {/* Listado de Categorías */}
+                  {categories.map((cat) => (
+                      <div
+                          key={cat.id}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                              selectedModalCategory === cat.id
+                                  ? "bg-[#aff606] text-black font-bold"
+                                  : "text-white hover:bg-[#305176]"
+                          }`}
+                          onClick={() => setSelectedModalCategory(cat.id)}
+                      >
+                          {cat.name}
+                      </div>
+                  ))}
+                  <div
+                      className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                          selectedModalCategory === "all"
+                              ? "bg-[#33d9f6] text-black font-bold"
+                              : "text-white hover:bg-[#305176]"
+                      }`}
+                      onClick={() => setSelectedModalCategory("all")}
                   >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="bg-[#aff606] text-black hover:bg-[#25d03f]"
-                    onClick={() => setShowPlayerSelection(false)}
-                  >
-                    Confirmar Selección
-                  </Button>
+                      Mostrar Todas
+                  </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
+              {/* COLUMNA 2: Lista de Jugadores */}
+              <div className="md:col-span-3 space-y-4">
+                  <div className="text-sm text-gray-400">
+                      Lista de Jugadores ({selectedModalCategory === "all" ? "Todas" : categories.find(c => c.id === selectedModalCategory)?.name || ""})
+                  </div>
+                  
+                  <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                      {/* Lógica de Filtrado por Categoría del Modal */}
+                      {allPlayers
+                          .filter(player => 
+                              selectedModalCategory === "all" || player.category === selectedModalCategory
+                          )
+                          .map((player) => (
+                              <div
+                                  key={player.id}
+                                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                                      selectedPlayers.includes(player.id)
+                                          ? "bg-[#aff606]/20 border border-[#aff606]"
+                                          : "bg-[#1d2834] hover:bg-[#305176]"
+                                  } ${player.status === "LESIONADO" ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  onClick={() => player.status !== "LESIONADO" && handlePlayerToggle(player.id)}
+                              >
+                                  <div className="flex items-center space-x-3">
+                                      <div
+                                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                              selectedPlayers.includes(player.id) ? "border-[#aff606] bg-[#aff606]" : "border-gray-400"
+                                          }`}
+                                      >
+                                          {selectedPlayers.includes(player.id) && <Check className="h-3 w-3 text-black" />}
+                                      </div>
+                                      <div>
+                                          <span className="text-white font-medium">{player.name}</span>
+                                          <p className="text-gray-400 text-sm">{player.position}</p>
+                                      </div>
+                                  </div>
+                                  <Badge 
+                                      className={player.status === "LESIONADO" ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}
+                                  >
+                                      {player.status}
+                                  </Badge>
+                              </div>
+                          ))
+                      }
+                  </div>
+                  <div className="text-sm text-gray-400 pt-2 border-t border-[#305176]">
+                      Jugadores Seleccionados: {selectedPlayers.length}
+                  </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
+                <Button
+                  variant="outline"
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                  onClick={() => setShowPlayerSelection(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+                  onClick={() => setShowPlayerSelection(false)}
+                >
+                  Confirmar Selección
+                </Button>
+            </div>
+        </DialogContent>
+      </Dialog>
+      
       {/* Schedule Form */}
       {showScheduleForm && (
         <Card className="bg-[#213041] border-[#305176]">
@@ -387,25 +386,25 @@ export function UpcomingMatches() {
           <CardContent className="space-y-6"> 
             
             {/* PRIMER RENGLÓN: Rival - Torneo - Condición - Categoría - Botón Jugadores (5 elementos) */}
-            <div className="grid grid-cols-2 md:grid-cols-12 gap-4 items-center"> {/* items-center para asegurar alineación vertical */}
+            <div className="grid grid-cols-2 md:grid-cols-12 gap-4 items-center"> 
               
               {/* Rival (Ocupa 2/12 en desktop) */}
               <div className="col-span-2 w-full"> 
                 <Input
                   placeholder="Rival" 
-                  className="bg-[#1d2834] border-[#305176] text-white h-11" // h-11 para uniformar
+                  className="bg-[#1d2834] border-[#305176] text-white h-11" 
                   value={newMatch.opponent}
                   onChange={(e) => setNewMatch({ ...newMatch, opponent: e.target.value })}
                 />
               </div>
 
-              {/* Torneo (Ocupa 3/12 en desktop) */}
+              {/* Torneo (Ocupa 3/12 en desktop) - MÁS ANCHO */}
               <div className="col-span-2 md:col-span-3 w-full">
                 <Select
                   value={newMatch.tournament}
                   onValueChange={(value) => setNewMatch({ ...newMatch, tournament: value })}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> {/* h-11 para uniformar */}
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> 
                     <SelectValue placeholder="Torneo" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
@@ -424,7 +423,7 @@ export function UpcomingMatches() {
                   value={newMatch.location}
                   onValueChange={(value) => setNewMatch({ ...newMatch, location: value })}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> {/* h-11 para uniformar */}
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> 
                     <SelectValue placeholder="Condición" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
@@ -438,7 +437,7 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Categoría (Ocupa 3/12 en desktop) */}
+              {/* Categoría (Ocupa 3/12 en desktop) - MÁS ANCHO */}
               <div className="col-span-2 md:col-span-3 w-full">
                 <Select
                   value={newMatch.category}
@@ -448,7 +447,7 @@ export function UpcomingMatches() {
                     setSelectedPlayers([])
                   }}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> {/* h-11 para uniformar */}
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> 
                     <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">

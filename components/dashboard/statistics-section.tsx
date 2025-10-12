@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, TrendingUp, Users, Target, Eye, Calendar, Clock, Trophy, Dumbbell, Filter, X } from "lucide-react"
+import { BarChart3, TrendingUp, Users, Target, Eye, Calendar, Clock, Trophy, Dumbbell, Filter } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table"
@@ -12,48 +12,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-
-// Define el tipo de jugador para el módulo de estadísticas
-type PlayerStat = {
-    id: number;
-    name: string;
-    position: string;
-    photo: string;
-    nickname: string;
-    foot: string;
-    category: string; 
-    generalStats: {
-        matches: number;
-        goals: number;
-        assists: number;
-        yellowCards: number;
-        redCards: number;
-        minutesPlayed: number;
-        recuperoPelota: number;
-        perdioPelota: number;
-        remate: number;
-        remateAlArco: number;
-        faltaCometida: number;
-        faltaRecibida: number;
-    };
-    matchHistory: any[];
-}
 
 export function StatisticsSection() {
   const [showMatchDetailModal, setShowMatchDetailModal] = useState<any>(null)
-  const [showPlayerDetailModal, setShowPlayerDetailModal] = useState<PlayerStat | null>(null)
+  const [showPlayerDetailModal, setShowPlayerDetailModal] = useState<any>(null)
   const [showAllMatchesModal, setShowAllMatchesModal] = useState(false);
-  const [showAllPlayersModal, setShowAllPlayersModal] = useState(false); // Modal de lista de jugadores
+  const [showAllPlayersModal, setShowAllPlayersModal] = useState(false);
   const [filterResult, setFilterResult] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
   const [filterTournament, setFilterTournament] = useState("all");
-  
-  // ESTADOS AÑADIDOS PARA EL FILTRO DEL MODAL LISTA
-  const [playerListSearchTerm, setPlayerListSearchTerm] = useState("");
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all"); 
-  // ---------------------------------------------
-
 
   const generalStats = [
     {
@@ -205,15 +172,16 @@ export function StatisticsSection() {
     },
   ]
   
-  const players: PlayerStat[] = [
+  // Lista de posiciones de ClubManagement.tsx: ["Arquero", "Ultimo", "Ala", "Pivot"]
+  // Actualización del mock para ser consistente con ClubManagement
+  const players = [
     {
       id: 1,
       name: "Juan Carlos Pérez",
-      position: "Pivot", 
+      position: "Pivot", // Corregido a Pivot
       photo: "/placeholder-user.jpg",
       nickname: "Pipa", 
       foot: "Derecho", 
-      category: "primera", // Categoría añadida
       generalStats: {
         matches: 18,
         goals: 12,
@@ -228,21 +196,20 @@ export function StatisticsSection() {
         faltaCometida: 15,
         faltaRecibida: 25,
       },
-      matchHistory: [ 
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 2, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 1, tRoja: 0, category: "primera" },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 1, recupero: 4, perdida: 5, remate: 3, tiroAlArco: 1, faltaRecibida: 4, faltaCometida: 2, tAmarilla: 0, tRoja: 0, category: "primera" },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 6, perdida: 2, remate: 4, tiroAlArco: 2, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0, category: "primera" },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 3, perdida: 6, remate: 2, tiroAlArco: 0, faltaRecibida: 8, faltaCometida: 1, tAmarilla: 1, tRoja: 0, category: "primera" },
+      matchHistory: [ // Datos de prueba para el historial del modal
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 2, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 1, recupero: 4, perdida: 5, remate: 3, tiroAlArco: 1, faltaRecibida: 4, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 6, perdida: 2, remate: 4, tiroAlArco: 2, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 3, perdida: 6, remate: 2, tiroAlArco: 0, faltaRecibida: 8, faltaCometida: 1, tAmarilla: 1, tRoja: 0 },
       ],
     },
     {
       id: 2,
       name: "Miguel Ángel González",
-      position: "Ala", 
+      position: "Ala", // Corregido a Ala
       photo: "/placeholder-user.jpg",
       nickname: "Chino", 
       foot: "Ambidiestro",
-      category: "primera", // Categoría añadida
       generalStats: {
         matches: 20,
         goals: 3,
@@ -258,20 +225,19 @@ export function StatisticsSection() {
         faltaRecibida: 35,
       },
       matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 8, perdida: 6, remate: 2, tiroAlArco: 1, faltaRecibida: 5, faltaCometida: 4, tAmarilla: 1, tRoja: 0, category: "primera" },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 6, perdida: 7, remate: 1, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 3, tAmarilla: 0, tRoja: 0, category: "primera" },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 7, perdida: 4, remate: 3, tiroAlArco: 1, faltaRecibida: 2, faltaCometida: 2, tAmarilla: 0, tRoja: 0, category: "primera" },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 5, perdida: 8, remate: 1, tiroAlArco: 0, faltaRecibida: 5, faltaCometida: 3, tAmarilla: 1, tRoja: 0, category: "primera" },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 8, perdida: 6, remate: 2, tiroAlArco: 1, faltaRecibida: 5, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 6, perdida: 7, remate: 1, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 3, tAmarilla: 0, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 7, perdida: 4, remate: 3, tiroAlArco: 1, faltaRecibida: 2, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 5, perdida: 8, remate: 1, tiroAlArco: 0, faltaRecibida: 5, faltaCometida: 3, tAmarilla: 1, tRoja: 0 },
       ],
     },
     {
       id: 3,
       name: "Roberto Silva",
-      position: "Ultimo", 
+      position: "Ultimo", // Corregido a Ultimo
       photo: "/placeholder-user.jpg",
       nickname: "Robi",
       foot: "Izquierdo",
-      category: "tercera", // Categoría añadida
       generalStats: {
         matches: 15,
         goals: 1,
@@ -287,25 +253,10 @@ export function StatisticsSection() {
         faltaRecibida: 10,
       },
       matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 75, goles: 0, recupero: 10, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 5, tAmarilla: 1, tRoja: 0, category: "primera" },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 12, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 4, tAmarilla: 1, tRoja: 0, category: "primera" },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 15, perdida: 4, remate: 1, tiroAlArco: 1, faltaRecibida: 1, faltaCometida: 2, tAmarilla: 0, tRoja: 0, category: "primera" },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 60, goles: 0, recupero: 8, perdida: 6, remate: 0, tiroAlArco: 0, faltaRecibida: 3, faltaCometida: 3, tAmarilla: 1, tRoja: 1, category: "primera" },
-      ],
-    },
-     {
-      id: 4,
-      name: "Juan Perez (Juveniles)",
-      position: "Ala", 
-      photo: "/placeholder-user.jpg",
-      nickname: "Junior", 
-      foot: "Derecho",
-      category: "juveniles", // Categoría añadida
-      generalStats: {
-        matches: 10, goals: 5, assists: 3, yellowCards: 1, redCards: 0, minutesPlayed: 800, recuperoPelota: 50, perdioPelota: 40, remate: 30, remateAlArco: 10, faltaCometida: 8, faltaRecibida: 15,
-      },
-      matchHistory: [
-        { matchId: 5, opponent: "Vélez", date: "10/01/2024", result: "3-1", status: "Victoria", minutes: 90, goles: 1, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 0, tRoja: 0, category: "juveniles" },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 75, goles: 0, recupero: 10, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 5, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 12, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 15, perdida: 4, remate: 1, tiroAlArco: 1, faltaRecibida: 1, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 60, goles: 0, recupero: 8, perdida: 6, remate: 0, tiroAlArco: 0, faltaRecibida: 3, faltaCometida: 3, tAmarilla: 1, tRoja: 1 },
       ],
     },
   ]
@@ -343,17 +294,6 @@ export function StatisticsSection() {
   });
 
   const uniqueTournaments = [...new Set(matches.map(m => m.tournament))];
-
-  // Filtra los jugadores según el estado del modal (search y categoría)
-  const filteredPlayers = useMemo(() => {
-    return players.filter(player => {
-        const matchesCategory = selectedCategoryFilter === "all" || player.category === selectedCategoryFilter;
-        const matchesSearch = player.name.toLowerCase().includes(playerListSearchTerm.toLowerCase()) || 
-                              player.nickname.toLowerCase().includes(playerListSearchTerm.toLowerCase());
-        return matchesCategory && matchesSearch;
-    }).sort((a, b) => b.generalStats.matches - a.generalStats.matches);
-  }, [selectedCategoryFilter, playerListSearchTerm, players]);
-
 
   return (
     <div className="space-y-6">
@@ -434,23 +374,20 @@ export function StatisticsSection() {
             <Users className="h-5 w-5 mr-2" />
             Estadísticas por Jugador
           </CardTitle>
-          {/* BOTÓN CORREGIDO AL ESTILO DE "VER DEMÁS PARTIDOS" y abre el nuevo modal */}
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-            onClick={() => {
-                setPlayerListSearchTerm("");
-                setSelectedCategoryFilter("all");
-                setShowAllPlayersModal(true);
-            }}
-          >
-            Ver Demas Jugadores
-          </Button>
+          {/* BOTÓN CORREGIDO AL ESTILO DE "VER DEMÁS PARTIDOS" */}
+          <Link href="/dashboard/club">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+            >
+              Ver Demas Jugadores
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {players.slice(0, 3).map((player) => (
+            {players.map((player) => (
               <div key={player.id} className="p-4 bg-[#1d2834] rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-4">
@@ -647,7 +584,7 @@ export function StatisticsSection() {
                 <CardHeader>
                   <CardTitle className="text-white text-lg">Detalle</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
                   
                   {/* RESUMEN: Resultado */}
                   <div className="flex justify-between">
@@ -737,102 +674,255 @@ export function StatisticsSection() {
         </DialogContent>
       </Dialog>
       
-      {/* Modal global de jugadores (NUEVA IMPLEMENTACIÓN) */}
-      <Dialog open={showAllPlayersModal} onOpenChange={setShowAllPlayersModal}>
-        {/* Usamos un max-w más grande para el layout de categorías/jugadores */}
+      {/* Modal de Estadísticas por Jugador (REDISENADO PARA LEGIBILIDAD y con Información de Jugador) */}
+      <Dialog open={!!showPlayerDetailModal} onOpenChange={setShowPlayerDetailModal}>
+        {/* Aumentamos el ancho del modal para la nueva disposición */}
         <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader>
+          <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">
-              Estadísticas Detalladas de Jugadores
+              Estadísticas de {showPlayerDetailModal?.name}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Selecciona un jugador para ver su historial completo por partido.
+              Análisis de rendimiento a lo largo de los partidos.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            
-            {/* COLUMNA 1: Panel de Categorías */}
-            <div className="md:col-span-1 space-y-3 p-3 bg-[#1d2834] rounded-lg h-[400px] overflow-y-auto">
-                <h4 className="text-white font-semibold mb-3 border-b border-[#305176] pb-2 flex items-center">
-                    <Filter className="h-4 w-4 mr-2 text-[#33d9f6]" />
-                    Filtrar Categoría
-                </h4>
-                
-                {/* Botones de Categorías */}
-                {categories.map((cat) => (
-                    <div
-                        key={cat.id}
-                        className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                            selectedCategoryFilter === cat.id
-                                ? "bg-[#aff606] text-black font-bold"
-                                : "text-white hover:bg-[#305176]"
-                        }`}
-                        onClick={() => setSelectedCategoryFilter(cat.id)}
-                    >
-                        {cat.name}
-                    </div>
-                ))}
-                <div
-                    className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedCategoryFilter === "all"
-                            ? "bg-[#33d9f6] text-black font-bold"
-                            : "text-white hover:bg-[#305176]"
-                    }`}
-                    onClick={() => setSelectedCategoryFilter("all")}
-                >
-                    Mostrar Todas
-                </div>
-            </div>
+          {/* Nuevo Layout Grid: 1 columna para información, 2 para estadísticas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* COLUMNA 2-4: Lista de Jugadores Filtrada */}
-            <div className="md:col-span-3 space-y-4">
-                <Input
-                    placeholder="Buscar jugador por nombre o apodo..."
-                    value={playerListSearchTerm}
-                    onChange={(e) => setPlayerListSearchTerm(e.target.value)}
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                />
+            {/* COLUMNA 1: Información del Jugador (NUEVA ADICIÓN) */}
+            <Card className="bg-[#1d2834] border-[#305176] lg:col-span-1 h-fit">
+              <CardHeader>
+                <CardTitle className="text-white text-lg flex items-center"> 
+                   <Users className="h-5 w-5 mr-2 text-[#33d9f6]" /> Información de Jugador
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 flex flex-col items-center p-6">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={showPlayerDetailModal?.photo} alt={showPlayerDetailModal?.name} />
+                  <AvatarFallback className="bg-[#305176] text-white text-2xl">
+                    {showPlayerDetailModal?.name?.split(" ").map((n: string) => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-center">
+                  <h3 className="text-white font-bold text-xl">{showPlayerDetailModal?.name}</h3>
+                </div>
                 
-                <ScrollArea className="h-[400px] pr-4">
-                    <div className="space-y-3">
-                        {filteredPlayers.length > 0 ? (
-                            filteredPlayers.map((player) => (
-                                <div 
-                                    key={player.id} 
-                                    className="p-3 bg-[#1d2834] rounded-lg flex items-center justify-between cursor-pointer hover:bg-[#305176]"
-                                    onClick={() => {
-                                        // 1. Cierra el modal de lista
-                                        setShowAllPlayersModal(false);
-                                        // 2. Abre el modal de detalle del jugador
-                                        setShowPlayerDetailModal(player);
-                                    }}
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <Avatar className="size-10">
-                                            <AvatarImage src={player.photo} alt={player.name} />
-                                            <AvatarFallback className="bg-[#305176] text-white text-xs">
-                                                {player.name.split(" ").map((n) => n[0])}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="text-white font-medium">{player.name}</p>
-                                            <p className="text-gray-400 text-xs">{player.position} ({categories.find(c => c.id === player.category)?.name})</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[#25d03f] font-bold">{player.generalStats.goals} goles</p>
-                                        <p className="text-gray-400 text-xs">{player.generalStats.matches} partidos</p>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-center text-gray-500 pt-10">No se encontraron jugadores con estos filtros.</p>
-                        )}
+                {/* Detalles del Jugador */}
+                <div className="w-full space-y-2 text-sm pt-4 border-t border-[#305176]">
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Apodo</span>
+                        <span className="text-white font-medium">"{showPlayerDetailModal?.nickname || 'N/A'}"</span>
                     </div>
-                </ScrollArea>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Posición</span>
+                        <span className="text-white font-medium">{showPlayerDetailModal?.position}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Pierna Hábil</span>
+                        <span className="text-white font-medium">{showPlayerDetailModal?.foot}</span>
+                    </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* COLUMNAS 2 & 3: Estadísticas */}
+            <div className="lg:col-span-2">
+              <ScrollArea className="h-[500px] pr-6 space-y-6">
+                
+                {/* CUADRANTE 1: ESTADÍSTICAS TOTALES (Diseño optimizado) */}
+                <Card className="bg-[#1d2834] border-[#305176]">
+                  <CardHeader>
+                    <CardTitle className="text-white text-lg">Historial Acumulado</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                    
+                    {/* Bloque Ofensivo */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Tiempo Jugado</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Goles</span>
+                            <span className="text-[#25d03f] font-bold">{showPlayerDetailModal?.generalStats?.goals}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Asistencias</span>
+                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.assists}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Remate</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remate}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">Tiro al Arco</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remateAlArco}</span>
+                        </div>
+                    </div>
+
+                    {/* Bloque Defensivo y Disciplina */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Pelota Recuperada</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Pelota Perdida</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.perdioPelota}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Falta Recibida</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaRecibida}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">Falta Cometida</span>
+                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaCometida}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-1">
+                            <span className="text-gray-400">T. Amarilla</span>
+                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.yellowCards}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">T. Roja</span>
+                            <span className="text-[#ea3498] font-bold">{showPlayerDetailModal?.generalStats?.redCards}</span>
+                        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* CUADRANTE 2: DETALLE POR PARTIDO (Diseño optimizado y vertical) */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white mb-2">Historial Partido a Partido</h3>
+                    {showPlayerDetailModal?.matchHistory?.map((match: any) => (
+                        <Card key={match.matchId} className="bg-[#1d2834] border-[#305176] p-0">
+                            <CardHeader className="py-2 px-4 bg-[#305176]/50 rounded-t-lg">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-white text-sm font-bold">VS {match.opponent} ({match.date})</CardTitle>
+                                    <Badge className={getResultColor(match.status)}>{match.result}</Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-y-1 gap-x-4 p-4 text-sm">
+                                
+                                {/* Fila 1 */}
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Minutos</span>
+                                    <span className="text-white font-bold">{match.minutes} min</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Goles</span>
+                                    <span className="text-[#25d03f] font-bold">{match.goles}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Asistencias</span>
+                                    <span className="text-[#f4c11a] font-bold">{match.asistencias || 0}</span>
+                                </div>
+                                
+                                {/* Fila 2 (Separador implícito) */}
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">Recuperada</span>
+                                    <span className="text-white font-bold">{match.recupero}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">Perdida</span>
+                                    <span className="text-white font-bold">{match.perdida}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">Remates</span>
+                                    <span className="text-white font-bold">{match.remate}</span>
+                                </div>
+                                
+                                {/* Fila 3 (Separador implícito) */}
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">R. al Arco</span>
+                                    <span className="text-white font-bold">{match.tiroAlArco}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">F. Recibida</span>
+                                    <span className="text-white font-bold">{match.faltaRecibida}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">F. Cometida</span>
+                                    <span className="text-white font-bold">{match.faltaCometida}</span>
+                                </div>
+
+                                {/* Fila 4 (Disciplina) */}
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">T. Amarilla</span>
+                                    <span className="text-[#f4c11a] font-bold">{match.tAmarilla}</span>
+                                </div>
+                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-gray-400">T. Roja</span>
+                                    <span className="text-[#ea3498] font-bold">{match.tRoja}</span>
+                                </div>
+                                
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+              </ScrollArea>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal global de todos los jugadores (Sin cambios) */}
+      <Dialog open={showAllPlayersModal} onOpenChange={setShowAllPlayersModal}>
+        <DialogContent className="sm:max-w-[1200px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white text-2xl font-bold">
+              Estadísticas de Jugadores
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Resumen completo del rendimiento de todos los jugadores.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[500px] pr-6">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-[#305176]">
+                    <TableHead className="text-white">Jugador</TableHead>
+                    <TableHead className="text-white text-center">Minutos</TableHead>
+                    <TableHead className="text-white text-center">Gol</TableHead>
+                    <TableHead className="text-white text-center">Pelota Recuperada</TableHead>
+                    <TableHead className="text-white text-center">Pelota Perdida</TableHead>
+                    <TableHead className="text-white text-center">Remate</TableHead>
+                    <TableHead className="text-white text-center">R. al Arco</TableHead>
+                    <TableHead className="text-white text-center">Falta Recibida</TableHead>
+                    <TableHead className="text-white text-center">Falta Cometida</TableHead>
+                    <TableHead className="text-white text-center">T. Amarilla</TableHead>
+                    <TableHead className="text-white text-center">T. Roja</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {players.map((player) => (
+                    <TableRow key={player.id} className="hover:bg-[#1d2834] border-[#305176]">
+                      <TableCell className="py-2 flex items-center space-x-2">
+                        <Avatar className="size-8">
+                          <AvatarImage src={player.photo} alt={player.name} />
+                          <AvatarFallback className="bg-[#305176] text-white text-xs">
+                            {player.name.split(" ").map((n) => n[0])}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="text-white font-medium">{player.name}</p>
+                      </TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.minutesPlayed} min</TableCell>
+                      <TableCell className="py-2 text-center text-[#25d03f] font-bold">{player.generalStats.goals}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.recuperoPelota}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.perdioPelota}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.remate}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.remateAlArco}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.faltaRecibida}</TableCell>
+                      <TableCell className="py-2 text-center text-gray-300">{player.generalStats.faltaCometida}</TableCell>
+                      <TableCell className="py-2 text-center text-[#f4c11a] font-bold">{player.generalStats.yellowCards}</TableCell>
+                      <TableCell className="py-2 text-center text-[#ea3498] font-bold">{player.generalStats.redCards}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

@@ -335,7 +335,7 @@ export function StatisticsSection() {
             className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
             onClick={() => setShowAllMatchesModal(true)}
           >
-            Ver demás partidos
+            Ver Demás Partidos
           </Button>
         </CardHeader>
         <CardContent>
@@ -381,7 +381,7 @@ export function StatisticsSection() {
               variant="outline"
               className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
             >
-              Ver Demas Jugadores
+              Ver Demás Jugadores
             </Button>
           </Link>
         </CardHeader>

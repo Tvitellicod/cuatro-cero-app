@@ -28,7 +28,7 @@ import {
 
 // --- Importaciones del Calendario ---
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as DatePickerCalendar } from "@/components/ui/calendar" // Renombrado para evitar conflicto
+import { Calendar as DatePickerCalendar } from "@/components/ui/calendar" // Renomrado para evitar conflicto
 import { format } from "date-fns"
 import { es } from 'date-fns/locale/es';
 // ------------------------------------
@@ -386,21 +386,21 @@ export function UpcomingMatches() {
           </CardHeader>
           <CardContent className="space-y-4">
             
-            {/* PRIMERA FILA: Rival, Torneo, Condición, Categoría, Jugadores (Todos del mismo ancho) */}
-            <div className="grid grid-cols-5 gap-4 items-center"> 
+            {/* PRIMERA FILA: Rival, Torneo, Condición, Categoría, Jugadores */}
+            <div className="grid grid-cols-8 gap-4 items-center"> {/* <-- CAMBIO: Usamos grid-cols-8 */}
               
-              {/* Rival (1/5) */}
+              {/* Rival (1/8) */}
               <div className="col-span-1 w-full"> 
                 <Input
-                  placeholder="Nombre del Rival" 
+                  placeholder="Rival" 
                   className="bg-[#1d2834] border-[#305176] text-white h-10" // Altura uniforme h-10
                   value={newMatch.opponent}
                   onChange={(e) => setNewMatch({ ...newMatch, opponent: e.target.value })}
                 />
               </div>
 
-              {/* Torneo (1/5) */}
-              <div className="col-span-1 w-full">
+              {/* Torneo (2/8) */}
+              <div className="col-span-2 w-full"> {/* <-- CAMBIO: col-span-2 */}
                 <Select
                   value={newMatch.tournament}
                   onValueChange={(value) => setNewMatch({ ...newMatch, tournament: value })}
@@ -418,8 +418,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Condición (1/5) */}
-              <div className="col-span-1 w-full">
+              {/* Condición (2/8) */}
+              <div className="col-span-2 w-full"> {/* <-- CAMBIO: col-span-2 */}
                 <Select
                   value={newMatch.location}
                   onValueChange={(value) => setNewMatch({ ...newMatch, location: value })}
@@ -438,8 +438,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Categoría (1/5) */}
-              <div className="col-span-1 w-full">
+              {/* Categoría (2/8) */}
+              <div className="col-span-2 w-full"> {/* <-- CAMBIO: col-span-2 */}
                 <Select
                   value={newMatch.category}
                   onValueChange={(value) => {
@@ -461,8 +461,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
               
-              {/* Botón de Selección de Jugadores (1/5) */}
-              <div className="col-span-1 w-full">
+              {/* Botón de Selección de Jugadores (1/8) */}
+              <div className="col-span-1 w-full"> {/* <-- CAMBIO: col-span-1 */}
                   <Button
                       className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-10 w-full" // Altura uniforme h-10
                       onClick={() => {
@@ -472,17 +472,16 @@ export function UpcomingMatches() {
                       }}
                   >
                       <Users className="h-4 w-4 mr-2" />
-                      Seleccionar Jugadores ({selectedPlayers.length})
+                      Jugadores ({selectedPlayers.length})
                   </Button>
               </div>
             </div>
 
             {/* SEGUNDA FILA: Fecha y Hora */}
-            {/* Fecha: 1/5 (col-span-1) - Hora: 4/5 (col-span-4) */}
-            <div className="grid grid-cols-5 gap-4 pt-4 border-t border-[#305176] items-center">
+            <div className="grid grid-cols-8 gap-4 pt-4 border-t border-[#305176] items-center"> {/* <-- CAMBIO: Usamos grid-cols-8 */}
               
-              {/* Fecha (Ocupa 1/5) */}
-              <div className="space-y-1 col-span-1 w-full"> {/* <-- CAMBIO: col-span-1 */}
+              {/* Fecha (Ocupa 1/8) */}
+              <div className="space-y-1 col-span-1 w-full"> 
                 <label className="text-white text-sm">Fecha</label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -518,8 +517,8 @@ export function UpcomingMatches() {
                 </Popover>
               </div>
               
-              {/* Hora (Ocupa 4/5) */}
-              <div className="space-y-1 col-span-4 w-full"> {/* <-- CAMBIO: col-span-4 */}
+              {/* Hora (Ocupa 7/8) */}
+              <div className="space-y-1 col-span-7 w-full"> {/* <-- CAMBIO: col-span-7 */}
                 <label className="text-white text-sm">Hora</label>
                 <div className="flex items-center space-x-1">
                   <Select

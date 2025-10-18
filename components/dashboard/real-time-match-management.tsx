@@ -79,6 +79,72 @@ interface RealTimeMatchManagementProps {
   matchId: string;
 }
 
+// --- MOCK DATA PARA DEMO ---
+
+// Lista maestra de todos los jugadores (Simulando consulta a la base de datos)
+const MASTER_PLAYERS = [
+  { id: 1, name: "Juan García", category: "primera", position: "Arquero", status: "DISPONIBLE" },
+  { id: 2, name: "Carlos Rodríguez", category: "primera", position: "Defensor", status: "DISPONIBLE" },
+  { id: 3, name: "Miguel González", category: "primera", position: "Mediocampista", status: "DISPONIBLE" },
+  { id: 4, name: "Roberto Fernández", category: "primera", position: "Delantero", status: "DISPONIBLE" },
+  { id: 5, name: "Diego López", category: "primera", position: "Defensor", status: "DISPONIBLE" },
+  { id: 6, name: "Fernando Martínez", category: "primera", position: "Mediocampista", status: "DISPONIBLE" },
+  { id: 7, name: "Alejandro Sánchez", category: "tercera", position: "Delantero", status: "DISPONIBLE" },
+  { id: 8, name: "Sebastián Pérez", category: "tercera", position: "Arquero", status: "LESIONADO" },
+  { id: 9, name: "Martín Gómez", category: "tercera", position: "Defensor", status: "DISPONIBLE" },
+  { id: 10, name: "Pablo Martín", category: "tercera", position: "Mediocampista", status: "DISPONIBLE" },
+  { id: 11, name: "Gonzalo Jiménez", category: "juveniles", position: "Delantero", status: "DISPONIBLE" },
+  { id: 12, name: "Nicolás Ruiz", category: "juveniles", position: "Arquero", status: "DISPONIBLE" },
+  { id: 13, name: "Facundo Hernández", category: "juveniles", position: "Defensor", status: "DISPONIBLE" },
+  { id: 14, name: "Matías Díaz", category: "juveniles", position: "Mediocampista", status: "DISPONIBLE" },
+  { id: 15, name: "Lucas Moreno", category: "juveniles", position: "Delantero", status: "DISPONIBLE" },
+  { id: 16, name: "Tomás Muñoz", category: "cuarta", position: "Defensor", status: "DISPONIBLE" },
+  { id: 17, name: "Agustín Álvarez", category: "cuarta", position: "Mediocampista", status: "LESIONADO" },
+];
+
+// Partidos citados (Simulando datos guardados en Próximos Partidos)
+const UPCOMING_MATCHES_MOCK = [
+  { id: "1", opponent: "Club Atlético River", category: "Primera División", citedPlayers: [1, 2, 3, 4, 5, 6] },
+  { id: "2", opponent: "Boca Juniors", category: "Primera División", citedPlayers: [1, 2, 3, 4, 5, 7, 9, 10] },
+  { id: "100", opponent: "San Lorenzo", category: "Juveniles", citedPlayers: [11, 12, 13, 14, 15] },
+];
+
+// --- FUNCIÓN DE INICIALIZACIÓN ---
+const initializePlayers = (matchId: string): Player[] => {
+  const match = UPCOMING_MATCHES_MOCK.find(m => m.id.toString() === matchId);
+  const citedIds = match ? match.citedPlayers : [];
+
+  return MASTER_PLAYERS
+    .filter(p => citedIds.includes(p.id)) // <-- FILTRADO CLAVE: Solo jugadores citados
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      position: p.position,
+      photo: "/placeholder-user.jpg",
+      stats: { // Stats iniciales en 0
+        goles: 0, asistencias: 0, minutosJugados: 0, minutosPrimerTiempo: 0, minutosSegundoTiempo: 0,
+        recuperoPelota: 0, perdioPelota: 0, remate: 0, remateAlArco: 0, tarjetaAmarilla: 0, tarjetaRoja: 0,
+        faltaCometida: 0, faltaRecibida: 0, golAFavor: 0, golEnContra: 0,
+      },
+      isExpelled: false,
+      isStarter: false,
+    }));
+};
+
+// --- FUNCIÓN DE INICIALIZACIÓN DE DATOS DEL PARTIDO ---
+const getMatchInfo = (matchId: string) => {
+    const defaultInfo = {
+        id: matchId,
+        opponent: "Rival Desconocido",
+        date: "N/A",
+        location: "N/A",
+        tournament: "N/A",
+        category: "N/A",
+    };
+    return UPCOMING_MATCHES_MOCK.find(m => m.id.toString() === matchId) || defaultInfo;
+};
+
+
 export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManagementProps) {
   const isMobile = useIsMobile();
   const [gameState, setGameState] = useState<GameState>("roster_selection");
@@ -97,34 +163,24 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   
   const actionHistoryRef = useRef<MatchAction[]>([]);
   
-  const [allPlayers, setAllPlayers] = useState<Player[]>(
-    Array.from({ length: 14 }, (_, i) => ({
-      id: i + 1,
-      name: `Jugador ${i + 1}`,
-      position: ["Arquero", "Defensor", "Mediocampista", "Delantero"][Math.floor(Math.random() * 4)],
-      photo: "/placeholder-user.jpg",
-      stats: {
-        goles: 0, asistencias: 0, minutosJugados: 0, minutosPrimerTiempo: 0, minutosSegundoTiempo: 0,
-        recuperoPelota: 0, perdioPelota: 0, remate: 0, remateAlArco: 0, tarjetaAmarilla: 0, tarjetaRoja: 0,
-        faltaCometida: 0, faltaRecibida: 0, golAFavor: 0, golEnContra: 0,
-      },
-      isExpelled: false,
-      isStarter: false,
-    }))
-  );
+  // INICIALIZACIÓN USANDO EL matchId
+  const [allPlayers, setAllPlayers] = useState<Player[]>(() => initializePlayers(matchId)); 
 
+  const matchInfo = useMemo(() => getMatchInfo(matchId), [matchId]);
+
+  const clubName = "Amigos de Villa Luro";
+
+  // Jugadores que actualmente están en el campo (isStarter = true)
   const starters = useMemo(() => allPlayers.filter(p => p.isStarter && !p.isExpelled), [allPlayers]);
+  
+  // Jugadores que están en el banquillo (isStarter = false)
   const substitutes = useMemo(() => allPlayers.filter(p => !p.isStarter && !p.isExpelled), [allPlayers]);
+  
+  // Jugadores disponibles para seleccionar como titulares al inicio de cada mitad
+  const starterSelectionPlayers = useMemo(() => {
+    return allPlayers.filter(p => !p.isExpelled);
+  }, [allPlayers]);
 
-  const [matchInfo] = useState({
-    id: "1",
-    opponent: "Club Atlético River",
-    date: "15-09-2025",
-    location: "Local",
-    tournament: "Liga Profesional",
-    category: "Primera División",
-  });
-  const [clubName, setClubName] = useState("Amigos de Villa Luro");
 
   // Timer logic for clock and activePlayerTimers
   useEffect(() => {
@@ -398,7 +454,14 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
   };
 
   const confirmRoster = () => {
-    if (starters.length !== 5) return;
+    if (starters.length !== 5) {
+        toast({
+            title: "Error de Selección",
+            description: "Debes seleccionar exactamente 5 jugadores para iniciar el partido.",
+            variant: "default",
+        });
+        return;
+    }
     
     // --- LÓGICA DE INICIALIZACIÓN DE TIEMPO ---
     const timeField = currentHalf === 1 ? 'minutosPrimerTiempo' : 'minutosSegundoTiempo';
@@ -406,6 +469,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     
     // Inicializa los timers con el tiempo que tienen acumulado en esta mitad (tiempo congelado).
     allPlayers.forEach(player => {
+      // Solo los jugadores seleccionados como titulares (y no expulsados) entran en el juego
       if (player.isStarter && !player.isExpelled) {
         initialTimers[player.id] = player.stats[timeField] || 0;
       }
@@ -451,6 +515,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
             scoreChange: { home: 0, away: 0 },
             exitingPlayerId: exitingPlayer.id, 
             enteringPlayerId: enteringPlayer.id,
+            // Guardamos el tiempo base antes del stint (tiempo congelado)
             timeOnFieldBeforeSub: exitingPlayer.stats[timeField] 
         });
 
@@ -678,11 +743,6 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     }
   };
 
-  
-  const starterSelectionPlayers = useMemo(() => {
-    return allPlayers.filter(p => !p.isExpelled);
-  }, [allPlayers]);
-
   const renderPlayerCard = (player: Player, isStarter: boolean) => {
     const isSelectedForAction = selectedPlayerForAction?.id === player.id;
     const isSelectedSubstitute = selectedSubstitute?.id === player.id;
@@ -871,7 +931,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
         starterSelectionPlayers.length > 0 ? (
           starterSelectionUI
         ) : (
-          <p className="text-center text-gray-400">No hay jugadores disponibles para esta categoría.</p>
+          <p className="text-center text-gray-400">No hay jugadores citados disponibles para este partido.</p>
         )
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

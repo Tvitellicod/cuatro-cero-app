@@ -256,15 +256,16 @@ export function UpcomingMatches() {
         </div>
       </div>
 
-      {/* Player Selection Modal - CORREGIDO PARA EL FONDO OPACO */}
+      {/* Player Selection Modal - CORREGIDO PARA ELIMINAR LA CRUZ REDUNDANTE */}
       <Dialog open={showPlayerSelection} onOpenChange={setShowPlayerSelection}>
         <DialogContent 
             className="sm:max-w-4xl bg-[#213041] border-[#305176] text-white p-6" 
             style={{ maxWidth: '900px' }}
+            showCloseButton={false} // <-- Deshabilita la cruz por defecto
         >
             <div className="flex items-center justify-between mb-4">
                 <DialogTitle className="text-white text-2xl font-bold">Seleccionar Jugadores</DialogTitle>
-                <Button
+                <Button // <-- Esta es la única cruz que se mantiene
                   variant="ghost"
                   size="icon"
                   className="text-white hover:text-red-400"
@@ -383,28 +384,28 @@ export function UpcomingMatches() {
           <CardHeader>
             <CardTitle className="text-white">Agendar Nuevo Partido</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6"> 
+          <CardContent className="space-y-4">
             
-            {/* PRIMER RENGLÓN: Rival - Torneo - Condición - Categoría - Botón Jugadores (5 elementos) */}
-            <div className="grid grid-cols-2 md:grid-cols-12 gap-4 items-center"> 
+            {/* PRIMERA FILA: Rival, Torneo, Condición, Categoría, Jugadores (Todos del mismo ancho) */}
+            <div className="grid grid-cols-5 gap-4 items-center"> 
               
-              {/* Rival (Ocupa 2/12 en desktop) */}
-              <div className="col-span-2 w-full"> 
+              {/* Rival (1/5) */}
+              <div className="col-span-1 w-full"> 
                 <Input
-                  placeholder="Rival" 
-                  className="bg-[#1d2834] border-[#305176] text-white h-11" 
+                  placeholder="Nombre del Rival" 
+                  className="bg-[#1d2834] border-[#305176] text-white h-10" // Altura uniforme h-10
                   value={newMatch.opponent}
                   onChange={(e) => setNewMatch({ ...newMatch, opponent: e.target.value })}
                 />
               </div>
 
-              {/* Torneo (Ocupa 3/12 en desktop) - MÁS ANCHO */}
-              <div className="col-span-2 md:col-span-3 w-full">
+              {/* Torneo (1/5) */}
+              <div className="col-span-1 w-full">
                 <Select
                   value={newMatch.tournament}
                   onValueChange={(value) => setNewMatch({ ...newMatch, tournament: value })}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> 
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10">  {/* Altura uniforme h-10 */}
                     <SelectValue placeholder="Torneo" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
@@ -417,13 +418,13 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Condición (Ocupa 2/12 en desktop) */}
-              <div className="col-span-2 md:col-span-2 w-full">
+              {/* Condición (1/5) */}
+              <div className="col-span-1 w-full">
                 <Select
                   value={newMatch.location}
                   onValueChange={(value) => setNewMatch({ ...newMatch, location: value })}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> 
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10">  {/* Altura uniforme h-10 */}
                     <SelectValue placeholder="Condición" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
@@ -437,8 +438,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Categoría (Ocupa 3/12 en desktop) - MÁS ANCHO */}
-              <div className="col-span-2 md:col-span-3 w-full">
+              {/* Categoría (1/5) */}
+              <div className="col-span-1 w-full">
                 <Select
                   value={newMatch.category}
                   onValueChange={(value) => {
@@ -447,7 +448,7 @@ export function UpcomingMatches() {
                     setSelectedPlayers([])
                   }}
                 >
-                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11"> 
+                  <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10">  {/* Altura uniforme h-10 */}
                     <SelectValue placeholder="Categoría" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
@@ -460,10 +461,10 @@ export function UpcomingMatches() {
                 </Select>
               </div>
               
-              {/* Botón de Selección de Jugadores (Ocupa 2/12 en desktop) */}
-              <div className="col-span-2 md:col-span-2 w-full">
+              {/* Botón de Selección de Jugadores (1/5) */}
+              <div className="col-span-1 w-full">
                   <Button
-                      className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11 w-full"
+                      className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-10 w-full" // Altura uniforme h-10
                       onClick={() => {
                         // Al abrir, preseleccionar la categoría del partido
                         setSelectedModalCategory(newMatch.category);
@@ -471,22 +472,23 @@ export function UpcomingMatches() {
                       }}
                   >
                       <Users className="h-4 w-4 mr-2" />
-                      Jugadores ({selectedPlayers.length})
+                      Seleccionar Jugadores ({selectedPlayers.length})
                   </Button>
               </div>
             </div>
 
-            {/* SEGUNDO RENGLÓN: Fecha - Hora (Compactado y unido) */}
-            <div className="flex flex-col md:flex-row gap-4 pt-4 border-t border-[#305176] items-center">
+            {/* SEGUNDA FILA: Fecha y Hora */}
+            {/* Fecha: 1/5 (col-span-1) - Hora: 4/5 (col-span-4) */}
+            <div className="grid grid-cols-5 gap-4 pt-4 border-t border-[#305176] items-center">
               
-              {/* Fecha (Ocupa la mitad del espacio) */}
-              <div className="space-y-1 w-full md:w-1/2">
+              {/* Fecha (Ocupa 1/5) */}
+              <div className="space-y-1 col-span-1 w-full"> {/* <-- CAMBIO: col-span-1 */}
                 <label className="text-white text-sm">Fecha</label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal bg-[#1d2834] border-[#305176] text-white hover:bg-[#305176] hover:text-white h-11"
+                      className="w-full justify-start text-left font-normal bg-[#1d2834] border-[#305176] text-white hover:bg-[#305176] hover:text-white h-10" // Altura uniforme h-10
                     >
                       <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                       {newMatch.date ? (
@@ -516,15 +518,15 @@ export function UpcomingMatches() {
                 </Popover>
               </div>
               
-              {/* CAMPOS DE HORA Y MINUTO (Unificado - Ocupa la otra mitad) */}
-              <div className="space-y-1 w-full md:w-1/2">
+              {/* Hora (Ocupa 4/5) */}
+              <div className="space-y-1 col-span-4 w-full"> {/* <-- CAMBIO: col-span-4 */}
                 <label className="text-white text-sm">Hora</label>
                 <div className="flex items-center space-x-1">
                   <Select
                     value={getCurrentHour()}
                     onValueChange={(value) => setTimePart('hour', value)}
                   >
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11">
+                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10"> {/* Altura uniforme h-10 */}
                       <SelectValue placeholder="HH" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#213041] border-[#305176] max-h-[15rem]">
@@ -533,12 +535,12 @@ export function UpcomingMatches() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-white text-lg h-11 flex items-center">:</span>
+                  <span className="text-white text-lg h-10 flex items-center">:</span> {/* Altura uniforme h-10 */}
                   <Select
                     value={getCurrentMinute()}
                     onValueChange={(value) => setTimePart('minute', value)}
                   >
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-11">
+                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10"> {/* Altura uniforme h-10 */}
                       <SelectValue placeholder="MM" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#213041] border-[#305176] max-h-[15rem]">
@@ -555,12 +557,13 @@ export function UpcomingMatches() {
             <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
               <Button
                 variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11"
+                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11" 
                 onClick={() => setShowScheduleForm(false)}
               >
                 Cancelar
               </Button>
-              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f] h-11" onClick={handleSaveMatch}>
+              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f] h-11" 
+              onClick={handleSaveMatch}>
                 Agendar Partido
               </Button>
             </div>

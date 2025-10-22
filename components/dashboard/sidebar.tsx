@@ -13,6 +13,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  // Mantenemos las secciones expandidas por defecto para roles de gestión
   const [expandedSections, setExpandedSections] = useState<string[]>(["club", "entrenamiento", "torneos"])
 
   // Obtener el perfil del usuario
@@ -26,14 +27,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const getMenuItems = () => {
     const profileType = profileData?.profileType
 
-    // --- LÓGICA ESPECÍFICA PARA EL ROL PUBLICADOR ---
+    // --- LÓGICA EXCLUSIVA PARA EL ROL PUBLICADOR ---
     if (profileType === "PUBLICADOR") {
       return [
         {
           id: "publicar",
           label: "PUBLICAR PRODUCTOS",
           icon: Upload,
-          href: "/dashboard/tienda-admin", // Nueva ruta
+          href: "/dashboard/tienda-admin", // Ruta de administración de la tienda
           items: [],
           show: true,
         },
@@ -41,6 +42,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
     // --- FIN LÓGICA PUBLICADOR ---
 
+
+    // --- LÓGICA PARA TODOS LOS DEMÁS ROLES DE GESTIÓN (DT, PF, NUT, ETC.) ---
 
     const baseItems = [
       {
@@ -56,15 +59,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         label: "CLUB",
         icon: Users,
         href: "/dashboard/club",
-        items: [], // Se eliminan los submenús
+        items: [], // Se mantiene sin submenús según la estructura original
         show: true,
       },
     ]
 
-    // ENTRENAMIENTO - No aparece para NUTRICIONISTA
+    // Sección ENTRENAMIENTO - No aparece para NUTRICIONISTA
     if (profileType !== "NUTRICIONISTA") {
       const trainingItems = []
 
+      // Lógica de ejercicios basada en el rol
       if (profileType === "DIRECTOR TECNICO") {
         trainingItems.push({ label: "Ejercicios", href: "/dashboard/entrenamiento/ejercicios" })
       }
@@ -94,20 +98,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
 
-    // TORNEOS (ex-PARTIDOS)
+    // Sección TORNEOS
     baseItems.push({
       id: "torneos",
       label: "TORNEOS",
       icon: Trophy,
       href: "/dashboard/torneos",
       items: [
-        { label: "Partidos", href: "/dashboard/torneos/partidos" },
+        { label: "Partidos", href: "/dashboard/torneos/partidos" }, // Historial de partidos
         { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
       ],
       show: true,
     })
 
-    // ESTADÍSTICAS - Solo para DIRECTOR TECNICO y DIRECTIVO
+    // Sección ESTADÍSTICAS - Solo para DIRECTOR TECNICO y DIRECTIVO
     if (profileType === "DIRECTOR TECNICO" || profileType === "DIRECTIVO") {
       baseItems.push({
         id: "estadisticas",
@@ -119,7 +123,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
 
-    // NUTRICIÓN - Solo para NUTRICIONISTA
+    // Sección NUTRICIÓN - Solo para NUTRICIONISTA
     if (profileType === "NUTRICIONISTA") {
       baseItems.push({
         id: "nutricion",
@@ -130,6 +134,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         show: true,
       })
     }
+    
+    // --- FIN LÓGICA PARA DEMÁS ROLES ---
 
     return baseItems.filter((item) => item.show)
   }
@@ -159,7 +165,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={`flex items-center flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    pathname === item.href
+                    pathname === item.href || (item.items.length > 0 && item.items.some(sub => pathname.includes(sub.href)))
                       ? "bg-[#aff606] text-black"
                       : "text-white hover:bg-[#305176] hover:text-[#aff606]"
                   }`}

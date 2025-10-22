@@ -36,7 +36,7 @@ const ALL_ACTIONS = [...GAME_ACTIONS, ...GOAL_ACTIONS];
 
 type PlayerStats = {
   goles: number;
-  asistencias: number;
+  // 'asistencias' ELIMINADO
   minutosJugados: number; 
   minutosPrimerTiempo: number; 
   minutosSegundoTiempo: number; 
@@ -109,7 +109,20 @@ const UPCOMING_MATCHES_MOCK = [
   { id: "100", opponent: "San Lorenzo", category: "Juveniles", citedPlayers: [11, 12, 13, 14, 15] },
 ];
 
-// --- FUNCIÓN DE INICIALIZACIÓN ---
+// --- FUNCIÓN DE INICIALIZACIÓN DE DATOS DEL PARTIDO ---
+const getMatchInfo = (matchId: string) => {
+    const defaultInfo = {
+        id: matchId,
+        opponent: "Rival Desconocido",
+        date: "N/A",
+        location: "N/A",
+        tournament: "N/A",
+        category: "N/A",
+    };
+    return UPCOMING_MATCHES_MOCK.find(m => m.id.toString() === matchId) || defaultInfo;
+};
+
+// --- FUNCIÓN DE INICIALIZACIÓN DE JUGADORES ---
 const initializePlayers = (matchId: string): Player[] => {
   const match = UPCOMING_MATCHES_MOCK.find(m => m.id.toString() === matchId);
   const citedIds = match ? match.citedPlayers : [];
@@ -122,26 +135,15 @@ const initializePlayers = (matchId: string): Player[] => {
       position: p.position,
       photo: "/placeholder-user.jpg",
       stats: { // Stats iniciales en 0
-        goles: 0, asistencias: 0, minutosJugados: 0, minutosPrimerTiempo: 0, minutosSegundoTiempo: 0,
+        goles: 0, 
+        // asistencias: 0, <-- ELIMINADO
+        minutosJugados: 0, minutosPrimerTiempo: 0, minutosSegundoTiempo: 0,
         recuperoPelota: 0, perdioPelota: 0, remate: 0, remateAlArco: 0, tarjetaAmarilla: 0, tarjetaRoja: 0,
         faltaCometida: 0, faltaRecibida: 0, golAFavor: 0, golEnContra: 0,
       },
       isExpelled: false,
       isStarter: false,
     }));
-};
-
-// --- FUNCIÓN DE INICIALIZACIÓN DE DATOS DEL PARTIDO ---
-const getMatchInfo = (matchId: string) => {
-    const defaultInfo = {
-        id: matchId,
-        opponent: "Rival Desconocido",
-        date: "N/A",
-        location: "N/A",
-        tournament: "N/A",
-        category: "N/A",
-    };
-    return UPCOMING_MATCHES_MOCK.find(m => m.id.toString() === matchId) || defaultInfo;
 };
 
 
@@ -229,7 +231,7 @@ export default function RealTimeMatchManagement({ matchId }: RealTimeMatchManage
     });
   };
 
-  // --- FUNCIÓN UNDO (CORREGIDA PARA EL MENSAJE) ---
+  // --- FUNCIÓN UNDO ---
   const undoLastAction = () => {
     const lastAction = actionHistoryRef.current.pop();
     if (!lastAction) return;

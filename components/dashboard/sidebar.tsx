@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { X, Home, Users, Dumbbell, Trophy, ChevronDown, ChevronRight, BarChart3, Apple } from "lucide-react"
+import { X, Home, Users, Dumbbell, Trophy, ChevronDown, ChevronRight, BarChart3, Apple, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
@@ -25,6 +25,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const getMenuItems = () => {
     const profileType = profileData?.profileType
+
+    // --- LÓGICA ESPECÍFICA PARA EL ROL PUBLICADOR ---
+    if (profileType === "PUBLICADOR") {
+      return [
+        {
+          id: "publicar",
+          label: "PUBLICAR PRODUCTOS",
+          icon: Upload,
+          href: "/dashboard/tienda-admin", // Nueva ruta
+          items: [],
+          show: true,
+        },
+      ]
+    }
+    // --- FIN LÓGICA PUBLICADOR ---
+
 
     const baseItems = [
       {

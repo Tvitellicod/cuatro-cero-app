@@ -1,14 +1,18 @@
 "use client"
 
 import { useState } from "react"
+// Eliminada importación de Check y uso de estado local de addedItems
+import { ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingCart, Check } from "lucide-react"
+import { useCart } from "@/hooks/use-cart" // <-- AÑADIDO
 
 export function StoreSection() {
   const [activeTab, setActiveTab] = useState("pizarras")
-  const [addedItems, setAddedItems] = useState<number[]>([])
+  // Eliminado el estado 'addedItems' ya que el contexto y el toast lo manejan
+  
+  const { addItemToCart } = useCart() // <-- USANDO EL HOOK
 
   const pizarras = [
     {
@@ -39,25 +43,25 @@ export function StoreSection() {
 
   const ebooks = [
     {
-      id: 1,
+      id: 5, // Asegurando ID único en toda la tienda
       name: "Metodología de Entrenamiento Moderno",
       price: "$29.99",
       image: "/placeholder.svg?height=200&width=300",
     },
     {
-      id: 2,
+      id: 6,
       name: "Táctica y Estrategia Futbolística",
       price: "$24.99",
       image: "/placeholder.svg?height=200&width=300",
     },
     {
-      id: 3,
+      id: 7,
       name: "Preparación Física en el Fútbol",
       price: "$22.99",
       image: "/placeholder.svg?height=200&width=300",
     },
     {
-      id: 4,
+      id: 8,
       name: "Psicología Deportiva Aplicada",
       price: "$19.99",
       image: "/placeholder.svg?height=200&width=300",
@@ -66,13 +70,9 @@ export function StoreSection() {
 
   const currentProducts = activeTab === "pizarras" ? pizarras : ebooks
 
-  const handleAddToCart = (productId: number) => {
-    setAddedItems((prev) => [...prev, productId])
-
-    // Remover el item después de 2 segundos para poder volver a hacer la animación
-    setTimeout(() => {
-      setAddedItems((prev) => prev.filter((id) => id !== productId))
-    }, 2000)
+  // Lógica simplificada: Llama al hook que maneja el estado y el toast.
+  const handleAddToCart = (product: any) => {
+    addItemToCart(product)
   }
 
   return (
@@ -136,24 +136,11 @@ export function StoreSection() {
                   <span className="text-lg md:text-2xl font-bold text-[#aff606]">{product.price}</span>
                   <Button
                     size="sm"
-                    className={`text-xs md:text-sm transition-all duration-300 transform ${
-                      addedItems.includes(product.id)
-                        ? "bg-[#25d03f] text-black scale-110 animate-pulse"
-                        : "bg-[#aff606] text-black hover:bg-[#25d03f] hover:scale-105"
-                    }`}
-                    onClick={() => handleAddToCart(product.id)}
+                    className="text-xs md:text-sm bg-[#aff606] text-black hover:bg-[#25d03f] hover:scale-105 transition-all duration-300 transform"
+                    onClick={() => handleAddToCart(product)} // <-- LLAMADA AL NUEVO HOOK
                   >
-                    {addedItems.includes(product.id) ? (
-                      <>
-                        <Check className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                        ¡Agregado!
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                        Agregar
-                      </>
-                    )}
+                    <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                    Agregar
                   </Button>
                 </div>
               </div>

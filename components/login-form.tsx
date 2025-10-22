@@ -13,31 +13,62 @@ import { isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 
+// CREDENCIALES DEL USUARIO PUBLICADOR (MODO DEMO)
+const PUBLISHER_EMAIL = "cuatrocero@gmail.com";
+const PUBLISHER_PASSWORD = "Chata202";
+const PUBLISHER_PROFILE = {
+    id: 9999,
+    firstName: "Cuatro",
+    lastName: "Cero",
+    profileType: "PUBLICADOR", // <-- ROL ÚNICO PARA GESTIÓN DE TIENDA
+    category: "primera",
+    fullName: "Cuatro Cero",
+    displayName: "Cuatro Cero - Publicador",
+};
+
+
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const { signIn, signUp } = useAuth()
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent, isSignUp = false) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
+  const handleDemoLogin = (email: string, isSignUp: boolean) => {
     if (!isSupabaseConfigured()) {
-      // For demo purposes, simulate successful login
       setTimeout(() => {
         setIsLoading(false)
-        // Verificar si ya existe un perfil
+        
+        // 1. Verificar si es el usuario publicador
+        if (email === PUBLISHER_EMAIL) {
+            
+            // Forzamos la creación del perfil del publicador en localStorage
+            localStorage.setItem("userProfile", JSON.stringify(PUBLISHER_PROFILE));
+            
+            // Redirige al dashboard
+            router.push("/dashboard");
+            return;
+        }
+
+        // 2. Comportamiento normal del demo (para cualquier otro email)
         const savedProfile = localStorage.getItem("userProfile")
-        if (savedProfile) {
+        if (savedProfile && !isSignUp) {
           router.push("/dashboard")
+        } else if (isSignUp) {
+          router.push("/create-profile") 
         } else {
           router.push("/create-profile")
         }
       }, 1000)
-      return
+      return true;
     }
+    return false;
+  }
+
+
+  const handleSubmit = async (e: React.FormEvent, isSignUp = false) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
 
     const formData = new FormData(e.target as HTMLFormElement)
     const email = formData.get("email") as string
@@ -50,7 +81,25 @@ export function LoginForm() {
       setIsLoading(false)
       return
     }
+    
+    // Manejo del usuario publicador en modo demo
+    if (!isSupabaseConfigured() && email === PUBLISHER_EMAIL) {
+        if (password !== PUBLISHER_PASSWORD) {
+            setError("Contraseña incorrecta para el usuario publicador demo.");
+            setIsLoading(false);
+            return;
+        }
+        handleDemoLogin(email, isSignUp);
+        return;
+    }
+    
+    // Manejo general del demo para cualquier otro usuario/login
+    if (!isSupabaseConfigured()) {
+        handleDemoLogin(email, isSignUp);
+        return;
+    }
 
+    // --- Lógica de Supabase Real (si está configurado) ---
     try {
       let result
       if (isSignUp) {
@@ -94,8 +143,7 @@ export function LoginForm() {
           {!isSupabaseConfigured() && (
             <Alert className="mb-4 bg-[#f4c11a] border-[#f4c11a] text-black">
               <AlertDescription>
-                <strong>Modo Demo:</strong> La base de datos no está configurada. Puedes explorar la interfaz, pero los
-                datos no se guardarán.
+                <strong>Modo Demo:</strong> Usa <code>cuatrocero@gmail.com</code> / <code>Chata202</code> para el perfil publicador. Los datos no se guardarán.
               </AlertDescription>
             </Alert>
           )}

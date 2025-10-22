@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useMockIntegration } from "@/hooks/use-mock-integration" 
 
 
 // NUEVA CONSTANTE PARA REINICIAR EL FORMULARIO (MÁS ROBUSTO)
@@ -37,18 +38,17 @@ const INITIAL_EXERCISE_STATE = {
 
 
 export function ExerciseManagement() {
+  const { getIntegratedExercises } = useMockIntegration(); 
   const [selectedCategory, setSelectedCategory] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showCreateCategory, setShowCreateCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
-  // USANDO LA CONSTANTE DEFINIDA ARRIBA
   const [newExercise, setNewExercise] = useState(INITIAL_EXERCISE_STATE)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
   const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null)
   const [showValidationAlert, setShowValidationAlert] = useState(false)
-  // Nota: setEditingPlayer se eliminó previamente en una corrección para ClubManagement
 
 
   // Filtros
@@ -66,15 +66,15 @@ export function ExerciseManagement() {
     "#a1c5d9", "#f5d76e", "#e8787c", "#c9d99d", "#7c7c7c"
   ];
 
-  const [exerciseCategories, setExerciseCategories] = useState([
-    { name: "Ataque", color: "#ea3498", exercises: 12 },
-    { name: "Defensa", color: "#33d9f6", exercises: 8 },
-    { name: "Arquero-Jugador", color: "#25d03f", exercises: 6 },
-    { name: "Transiciones", color: "#f4c11a", exercises: 10 },
-    { name: "Balón Parado", color: "#8a46c5", exercises: 5 },
-  ])
-
-  const [exercises, setExercises] = useState([
+  const initialCategories = [
+    { name: "Ataque", color: "#ea3498", exercises: 12, isNew: false },
+    { name: "Defensa", color: "#33d9f6", exercises: 8, isNew: false },
+    { name: "Arquero-Jugador", color: "#25d03f", exercises: 6, isNew: false },
+    { name: "Transiciones", color: "#f4c11a", exercises: 10, isNew: false },
+    { name: "Balón Parado", color: "#8a46c5", exercises: 5, isNew: false },
+  ];
+  
+  const initialExercises = [
     {
       id: 1,
       name: "Ataque 4-3-3 por bandas",
@@ -108,7 +108,6 @@ export function ExerciseManagement() {
       goalkeepers: 1,
       difficulty: "Media",
       materials: "Balones, conos",
-      objective: "Mejorar transiciones rápidas",
       createdAt: "2024-01-13",
     },
     {
@@ -120,7 +119,6 @@ export function ExerciseManagement() {
       goalkeepers: 1,
       difficulty: "Fácil",
       materials: "Balones, barrera",
-      objective: "Mejorar precisión en tiros libres",
       createdAt: "2024-01-12",
     },
     {
@@ -132,28 +130,69 @@ export function ExerciseManagement() {
       goalkeepers: 1,
       difficulty: "Media",
       materials: "Balones, conos",
-      objective: "Mejorar distribución del arquero",
       createdAt: "2024-01-11",
     },
-  ])
+  ];
+  
+  const [exercises, setExercises] = useState(initialExercises);
+  const [exerciseCategories, setExerciseCategories] = useState(initialCategories);
 
-  // Lógica para actualizar el conteo de ejercicios por categoría
+
+  // Efecto para cargar y actualizar los ejercicios/categorías integradas (Ebooks)
   useEffect(() => {
-    const updatedCategories = exerciseCategories.map(cat => ({
-      ...cat,
-      exercises: exercises.filter(ex => ex.category === cat.name).length
-    }))
-    setExerciseCategories(updatedCategories)
-  }, [exercises])
+    
+    const integratedExercises = getIntegratedExercises();
+    
+    // 1. Crear un mapa de todos los ejercicios (base + integrados) para manejar IDs mixtos
+    const allExercisesMap = new Map();
+    [...initialExercises, ...integratedExercises].forEach(ex => {
+        allExercisesMap.set(ex.id, ex);
+    });
+    
+    const currentExercisesList = Array.from(allExercisesMap.values());
+    
+    // 2. Obtener todas las categorías únicas
+    const allUniqueCategories = new Set([
+        ...initialCategories.map(c => c.name), 
+        ...integratedExercises.map(ex => ex.category)
+    ]);
+
+    // 3. Crear la lista de categorías actualizada con conteos y colores
+    const updatedCategories = Array.from(allUniqueCategories).map(catName => {
+        const existingCat = initialCategories.find(c => c.name === catName);
+        
+        let color = existingCat ? existingCat.color : "#33d9f6"; 
+        let isNew = false;
+        
+        if (catName === "Biblioteca Ebook") {
+            color = "#aff606"; // Color distintivo para la categoría de Ebooks
+            isNew = true;
+        }
+
+        return {
+            name: catName,
+            color: color,
+            exercises: currentExercisesList.filter(ex => ex.category === catName).length,
+            isNew: isNew,
+        };
+    });
+    
+    // Solo actualizamos si hay cambios reales en los ejercicios o categorías
+    setExercises(currentExercisesList);
+    setExerciseCategories(updatedCategories);
+    
+  }, [getIntegratedExercises]); // Dependencia del hook para re-ejecutar si el mock cambia.
+
 
   const handleCreateCategory = () => {
     if (newCategoryName.trim()) {
-      setExerciseCategories([
-        ...exerciseCategories,
+      setExerciseCategories(prev => [
+        ...prev,
         {
           name: newCategoryName,
           color: newCategoryColor,
           exercises: 0,
+          isNew: true,
         },
       ])
       setNewCategoryName("")
@@ -174,14 +213,13 @@ export function ExerciseManagement() {
       return;
     }
     
-    // CORREGIDO: Usar Date.now() para un ID numérico único y robusto
     const exerciseToAdd = {
       ...newExercise,
       id: Date.now(), 
       createdAt: new Date().toISOString().split('T')[0],
     }
-    setExercises([...exercises, exerciseToAdd])
-    setNewExercise(INITIAL_EXERCISE_STATE) // <--- USA LA CONSTANTE PARA RESETEAR
+    setExercises(prev => [...prev, exerciseToAdd])
+    setNewExercise(INITIAL_EXERCISE_STATE)
     setShowCreateForm(false)
   }
 
@@ -193,8 +231,7 @@ export function ExerciseManagement() {
 
   const handleDeleteExercise = () => {
     if (exerciseToDelete) {
-      // CORREGIDO: La lógica de filtrado es correcta, utiliza el ID numérico
-      setExercises(exercises.filter(ex => ex.id !== exerciseToDelete));
+      setExercises(prev => prev.filter(ex => ex.id !== exerciseToDelete));
       setExerciseToDelete(null);
       setShowExerciseDetail(null);
     }
@@ -202,8 +239,8 @@ export function ExerciseManagement() {
 
   const handleDeleteCategory = () => {
     if (categoryToDelete) {
-      setExerciseCategories(exerciseCategories.filter(cat => cat.name !== categoryToDelete))
-      setExercises(exercises.filter(ex => ex.category !== categoryToDelete))
+      setExerciseCategories(prev => prev.filter(cat => cat.name !== categoryToDelete))
+      setExercises(prev => prev.filter(ex => ex.category !== categoryToDelete))
       setSelectedCategory("")
       setCategoryToDelete(null)
     }
@@ -227,21 +264,15 @@ export function ExerciseManagement() {
     }
   }
 
-  // --- LÓGICA DE FILTROS DINÁMICOS CORREGIDA AQUÍ ---
-  
-  // 1. Determinar la fuente de datos para las opciones del filtro.
+  // Lógica de filtros
   const exercisesForFilterOptions = selectedCategory === ""
     ? exercises
     : exercises.filter(ex => ex.category === selectedCategory);
 
-  // 2. Generar opciones dinámicas usando solo los ejercicios de la categoría seleccionada
   const uniquePlayers = [...new Set(exercisesForFilterOptions.map(ex => ex.players))].sort((a, b) => a - b)
   const uniqueGoalkeepers = [...new Set(exercisesForFilterOptions.map(ex => ex.goalkeepers))].sort((a, b) => a - b)
   const uniqueDurations = [...new Set(exercisesForFilterOptions.map(ex => ex.duration))].sort((a, b) => a - b)
 
-  // ----------------------------------------------------
-
-  // Función para resetear todos los filtros
   const handleClearFilters = () => {
     setFilterPlayers("all")
     setFilterGoalkeepers("all")
@@ -250,13 +281,11 @@ export function ExerciseManagement() {
     setSearchQuery("")
   }
 
-  // Filtrar ejercicios (Esta lógica ya filtra por selectedCategory internamente)
   const filteredExercises = exercises
     .filter((exercise) => {
       const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "" || exercise.category === selectedCategory
       
-      // Aplicar filtros secundarios a la lista ya filtrada por categoría
       const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
       const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
       const matchesDifficulty = filterDifficulty === "all" || exercise.difficulty === filterDifficulty
@@ -264,7 +293,12 @@ export function ExerciseManagement() {
 
       return matchesSearch && matchesCategory && matchesPlayers && matchesGoalkeepers && matchesDifficulty && matchesTime
     })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => {
+        if (a.category === "Biblioteca Ebook" && b.category !== "Biblioteca Ebook") return -1;
+        if (b.category === "Biblioteca Ebook" && a.category !== "Biblioteca Ebook") return 1;
+        // Orden por fecha (más reciente)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    })
 
   return (
     <div className="space-y-6">
@@ -290,11 +324,9 @@ export function ExerciseManagement() {
                     selectedCategory === category.name ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
                   }`}
                   onClick={() => {
-                    // Si se selecciona la misma categoría, se deselecciona.
                     const newCategory = selectedCategory === category.name ? "" : category.name;
                     setSelectedCategory(newCategory);
                     
-                    // Resetear filtros secundarios al cambiar la categoría principal
                     setFilterPlayers("all");
                     setFilterGoalkeepers("all");
                     setFilterDifficulty("all");
@@ -302,11 +334,11 @@ export function ExerciseManagement() {
                   }}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></div>
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: getCategoryColor(category.name) }}></div>
                     <span className="text-white font-medium">{category.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {selectedCategory === category.name ? (
+                    {selectedCategory === category.name && !category.isNew ? (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -835,7 +867,7 @@ export function ExerciseManagement() {
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteExercise}
+              onClick={() => handleDeleteExercise()}
               className="bg-red-500 text-white hover:bg-red-600"
             >
               Eliminar

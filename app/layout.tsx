@@ -5,6 +5,7 @@ import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
 import { Toaster } from "@/components/ui/toaster"
 import { ProfileProvider } from "@/hooks/use-profile"
+import { CartProvider } from "@/hooks/use-cart" // <-- AÑADIDO
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -24,8 +25,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ProfileProvider>
-            {children}
-            <Toaster />
+            {/* ENVOLVEMOS CON CARTPROVIDER */}
+            <CartProvider>
+              {children}
+              <Toaster />
+            </CartProvider>
           </ProfileProvider>
         </AuthProvider>
       </body>

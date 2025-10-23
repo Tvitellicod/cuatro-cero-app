@@ -13,38 +13,30 @@ import { toast } from "@/hooks/use-toast"
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false) 
-  const { cart, cartTotalItems, clearCart, getEbooks, removeItemFromCart } = useCart() // <-- USANDO removeItemFromCart
+  const { cart, cartTotalItems, clearCart, getEbooks, removeItemFromCart } = useCart() 
   const { integrateEbooks, hasManagementService } = useMockIntegration() 
 
-  // Lógica de cálculo de subtotal
   const subtotal = cart.reduce((sum, item) => {
     const priceNum = parseFloat(item.price.replace('$', '')) || 0;
     return sum + priceNum * item.quantity;
   }, 0);
   
-  // Función de pago simulada (inicia el flujo de autenticación y simula la integración)
   const handleCheckout = () => {
-    
-    // 1. Simulación de autenticación (redirige a la página de login/creación de perfil)
     window.open("/app", "_blank")
     
-    // 2. MOCK DE LA INTEGRACIÓN (asumimos que el pago fue exitoso)
     if (hasManagementService()) {
         const ebooksToIntegrate = getEbooks();
         if (ebooksToIntegrate.length > 0) {
-            // Llama a la función de integración solo para Ebooks
             integrateEbooks(ebooksToIntegrate);
         }
     }
     
-    // 3. Vaciamos el carrito y cerramos el drawer
     clearCart();
     setIsCartOpen(false);
   }
 
-  // <-- FUNCIÓN CORREGIDA
   const handleRemoveItem = (productId: number, productName: string) => {
-      removeItemFromCart(productId); // <-- USO LA FUNCIÓN CORRECTA
+      removeItemFromCart(productId); 
       toast({
           title: "Producto Eliminado",
           description: `"${productName}" ha sido retirado del carrito.`,
@@ -89,9 +81,9 @@ export function Navbar() {
           {/* Logo - Centrado absoluto */}
           <div className="absolute left-1/2 transform -translate-x-1/2 leading-9">
             <img
-              src="/images/cuatro-cero-logo.png"
+              src="/images/logo-cuatro-cero.png"
               alt="CUATRO CERO - Gestión de Equipo"
-              className="h-10 md:h-12 w-auto"
+              className="h-[2.31rem] md:h-[3.41rem] w-auto" // <-- TAMAÑO AUMENTADO EN 5%
             />
           </div>
 
@@ -192,7 +184,7 @@ export function Navbar() {
                       variant="ghost" 
                       size="icon" 
                       className="text-red-400 hover:bg-red-500/20"
-                      onClick={() => handleRemoveItem(item.id, item.name)} // <-- USO DE LA FUNCIÓN CORREGIDA
+                      onClick={() => handleRemoveItem(item.id, item.name)} 
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

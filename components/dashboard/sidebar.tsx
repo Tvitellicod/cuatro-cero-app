@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { X, Home, Users, Dumbbell, Trophy, ChevronDown, ChevronRight, BarChart3, Apple, Upload } from "lucide-react"
+import { X, Home, Users, Dumbbell, Trophy, ChevronDown, ChevronRight, BarChart3, Apple, Upload, Briefcase } from "lucide-react" // Importar Briefcase
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
@@ -13,10 +13,8 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
-  // Mantenemos las secciones expandidas por defecto para roles de gestión
   const [expandedSections, setExpandedSections] = useState<string[]>(["club", "entrenamiento", "torneos"])
 
-  // Obtener el perfil del usuario
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
 
@@ -27,14 +25,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const getMenuItems = () => {
     const profileType = profileData?.profileType
 
-    // --- LÓGICA EXCLUSIVA PARA EL ROL PUBLICADOR ---
+    // --- LÓGICA EXCLUSIVA PARA EL ROL PUBLICADOR (Gestión de Contenido) ---
     if (profileType === "PUBLICADOR") {
       return [
         {
           id: "publicar",
-          label: "PUBLICAR PRODUCTOS",
-          icon: Upload,
-          href: "/dashboard/tienda-admin", // Ruta de administración de la tienda
+          label: "GESTIÓN DE CONTENIDO", // <-- NOMBRE ACTUALIZADO
+          icon: Briefcase, // <-- ÍCONO ACTUALIZADO
+          href: "/dashboard/tienda-admin", 
           items: [],
           show: true,
         },
@@ -42,8 +40,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
     // --- FIN LÓGICA PUBLICADOR ---
 
-
-    // --- LÓGICA PARA TODOS LOS DEMÁS ROLES DE GESTIÓN (DT, PF, NUT, ETC.) ---
 
     const baseItems = [
       {
@@ -59,16 +55,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         label: "CLUB",
         icon: Users,
         href: "/dashboard/club",
-        items: [], // Se mantiene sin submenús según la estructura original
+        items: [],
         show: true,
       },
     ]
 
-    // Sección ENTRENAMIENTO - No aparece para NUTRICIONISTA
+    // ... (El resto de la lógica de roles de gestión permanece sin cambios) ...
+
     if (profileType !== "NUTRICIONISTA") {
       const trainingItems = []
 
-      // Lógica de ejercicios basada en el rol
       if (profileType === "DIRECTOR TECNICO") {
         trainingItems.push({ label: "Ejercicios", href: "/dashboard/entrenamiento/ejercicios" })
       }
@@ -98,14 +94,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
 
-    // Sección TORNEOS
+    // Sección TORNEOS (ex-PARTIDOS)
     baseItems.push({
       id: "torneos",
       label: "TORNEOS",
       icon: Trophy,
       href: "/dashboard/torneos",
       items: [
-        { label: "Partidos", href: "/dashboard/torneos/partidos" }, // Historial de partidos
+        { label: "Partidos", href: "/dashboard/torneos/partidos" },
         { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
       ],
       show: true,
@@ -135,8 +131,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
     
-    // --- FIN LÓGICA PARA DEMÁS ROLES ---
-
     return baseItems.filter((item) => item.show)
   }
 
@@ -152,7 +146,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#213041] border-r border-[#305176] transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between p-4 border-b border-[#305176]">
-          <img src="/images/cuatro-cero-logo.png" alt="CUATRO CERO" className="h-8 w-auto" />
+          <img src="/images/logo-cuatro-cero.png" alt="CUATRO CERO" className="h-8 w-auto" />
           <Button variant="ghost" size="icon" className="lg:hidden text-white hover:text-[#aff606]" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>

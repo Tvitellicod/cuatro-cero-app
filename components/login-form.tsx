@@ -20,7 +20,7 @@ const PUBLISHER_PROFILE = {
     id: 9999,
     firstName: "Cuatro",
     lastName: "Cero",
-    profileType: "PUBLICADOR", // <-- ROL ÚNICO PARA GESTIÓN DE TIENDA
+    profileType: "PUBLICADOR", 
     category: "primera",
     fullName: "Cuatro Cero",
     displayName: "Cuatro Cero - Publicador",
@@ -32,13 +32,27 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const { signIn, signUp } = useAuth()
   const router = useRouter()
+  
+  // --- FUNCIÓN CLAVE: FORZAR CIERRE DE SESIÓN EN MODO DEMO ---
+  const clearDemoSession = () => {
+      localStorage.removeItem("userProfile");
+      localStorage.removeItem("selectedProfile"); // Limpia el perfil seleccionado también
+      // Opcional: Podrías limpiar el carrito si quieres sesiones totalmente aisladas
+      // localStorage.removeItem("app_cart"); 
+  };
+
 
   const handleDemoLogin = (email: string, isSignUp: boolean) => {
+    // Si estamos en modo demo (Supabase no configurado)
     if (!isSupabaseConfigured()) {
+      
+      // *** 1. LIMPIAR SIEMPRE LA SESIÓN ANTERIOR ANTES DE CONTINUAR ***
+      clearDemoSession();
+
       setTimeout(() => {
         setIsLoading(false)
         
-        // 1. Verificar si es el usuario publicador
+        // 2. Verificar si es el usuario publicador
         if (email === PUBLISHER_EMAIL) {
             
             // Forzamos la creación del perfil del publicador en localStorage
@@ -49,19 +63,15 @@ export function LoginForm() {
             return;
         }
 
-        // 2. Comportamiento normal del demo (para cualquier otro email)
-        const savedProfile = localStorage.getItem("userProfile")
-        if (savedProfile && !isSignUp) {
-          router.push("/dashboard")
-        } else if (isSignUp) {
-          router.push("/create-profile") 
-        } else {
-          router.push("/create-profile")
-        }
+        // 3. Comportamiento normal del demo (para cualquier otro email que inicia sesión)
+        // El usuario normal SIEMPRE debe pasar por la creación de perfil si no es el publicador,
+        // ya que la sesión anterior fue limpiada.
+        router.push("/create-profile"); 
+
       }, 1000)
-      return true;
+      return true; // Indica que manejamos el login demo
     }
-    return false;
+    return false; // Indica que se debe usar el login de Supabase
   }
 
 
@@ -82,24 +92,28 @@ export function LoginForm() {
       return
     }
     
-    // Manejo del usuario publicador en modo demo
-    if (!isSupabaseConfigured() && email === PUBLISHER_EMAIL) {
-        if (password !== PUBLISHER_PASSWORD) {
-            setError("Contraseña incorrecta para el usuario publicador demo.");
-            setIsLoading(false);
-            return;
-        }
-        handleDemoLogin(email, isSignUp);
-        return;
-    }
-    
-    // Manejo general del demo para cualquier otro usuario/login
+    // Si estamos usando el modo demo
     if (!isSupabaseConfigured()) {
+        
+        // Manejo del usuario publicador en modo demo
+        if (email === PUBLISHER_EMAIL) {
+            if (password !== PUBLISHER_PASSWORD) {
+                setError("Contraseña incorrecta para el usuario publicador demo.");
+                setIsLoading(false);
+                return;
+            }
+        } else if (!isSignUp) {
+             // Cualquier otro login en modo demo va directo a handleDemoLogin para limpiar la sesión anterior.
+        }
+
         handleDemoLogin(email, isSignUp);
         return;
     }
 
     // --- Lógica de Supabase Real (si está configurado) ---
+    // *** Nota: Esta lógica debería incluir un signOut() al inicio para limpiar la sesión de Supabase si estuviera activa,
+    // pero nos enfocamos en el demo mode que es donde tienes el problema. ***
+    
     try {
       let result
       if (isSignUp) {
@@ -134,7 +148,7 @@ export function LoginForm() {
             <img
               src="/images/cuatro-cero-logo.png"
               alt="CUATRO CERO - Gestión de Equipo"
-              className="h-16 md:h-20 w-auto"
+              className="h-[3.14rem] md:h-[4.19rem] w-auto"
             />
           </div>
           <CardTitle className="text-white text-lg md:text-xl">Acceso a la App Web</CardTitle>
@@ -143,7 +157,7 @@ export function LoginForm() {
           {!isSupabaseConfigured() && (
             <Alert className="mb-4 bg-[#f4c11a] border-[#f4c11a] text-black">
               <AlertDescription>
-                <strong>Modo Demo:</strong> Usa <code>cuatrocero@gmail.com</code> / <code>Chata202</code> para el perfil publicador. Los datos no se guardarán.
+                <strong>Modo Demo:</strong> Usa `cuatrocero@gmail.com` / `Chata202` para el perfil publicador. Los datos no se guardarán.
               </AlertDescription>
             </Alert>
           )}

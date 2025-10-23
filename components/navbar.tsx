@@ -8,34 +8,48 @@ import { useCart } from "@/hooks/use-cart"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet" 
 import { ScrollArea } from "@/components/ui/scroll-area" 
 import { useMockIntegration } from "@/hooks/use-mock-integration" 
+import { toast } from "@/hooks/use-toast"
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false) 
-  const { cart, cartTotalItems, clearCart, getEbooks } = useCart() 
+  const { cart, cartTotalItems, clearCart, getEbooks, removeItemFromCart } = useCart() // <-- USANDO removeItemFromCart
   const { integrateEbooks, hasManagementService } = useMockIntegration() 
 
+  // Lógica de cálculo de subtotal
   const subtotal = cart.reduce((sum, item) => {
     const priceNum = parseFloat(item.price.replace('$', '')) || 0;
     return sum + priceNum * item.quantity;
   }, 0);
   
+  // Función de pago simulada (inicia el flujo de autenticación y simula la integración)
   const handleCheckout = () => {
+    
+    // 1. Simulación de autenticación (redirige a la página de login/creación de perfil)
     window.open("/app", "_blank")
     
+    // 2. MOCK DE LA INTEGRACIÓN (asumimos que el pago fue exitoso)
     if (hasManagementService()) {
         const ebooksToIntegrate = getEbooks();
         if (ebooksToIntegrate.length > 0) {
+            // Llama a la función de integración solo para Ebooks
             integrateEbooks(ebooksToIntegrate);
         }
     }
     
+    // 3. Vaciamos el carrito y cerramos el drawer
     clearCart();
     setIsCartOpen(false);
   }
 
-  const handleRemoveItem = (productId: number) => {
-    clearCart();
+  // <-- FUNCIÓN CORREGIDA
+  const handleRemoveItem = (productId: number, productName: string) => {
+      removeItemFromCart(productId); // <-- USO LA FUNCIÓN CORRECTA
+      toast({
+          title: "Producto Eliminado",
+          description: `"${productName}" ha sido retirado del carrito.`,
+          variant: "default",
+      });
   }
 
   return (
@@ -47,7 +61,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:text-[#aff606] hover:bg-[#305176]"
+              className="lg:hidden text-white hover:text-[#aff606] hover:bg-[#305176]"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -178,7 +192,7 @@ export function Navbar() {
                       variant="ghost" 
                       size="icon" 
                       className="text-red-400 hover:bg-red-500/20"
-                      onClick={() => handleRemoveItem(item.id)}
+                      onClick={() => handleRemoveItem(item.id, item.name)} // <-- USO DE LA FUNCIÓN CORREGIDA
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -19,8 +19,9 @@ interface CartContextType {
   cartTotalItems: number
   addItemToCart: (product: Product) => void
   clearCart: () => void
-  getEbooks: () => CartItem[]
-  getPizarras: () => CartItem[]
+  getEbooks: () => CartItem[] 
+  getPizarras: () => CartItem[] 
+  removeItemFromCart: (productId: number) => void // <-- NUEVA FUNCIÓN
 }
 
 const CartContext = React.createContext<CartContextType | undefined>(undefined)
@@ -71,10 +72,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }
   
-  // Lógica de filtrado de Ebooks (IDs 5, 6, 7, 8 según store-section.tsx)
-  const getEbooks = () => cart.filter(item => item.id >= 5 && item.id <= 8);
+  // <-- LÓGICA DE ELIMINACIÓN INDIVIDUAL: FILTRA EL CARRITO POR ID
+  const removeItemFromCart = (productId: number) => {
+      setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  }
   
-  // Lógica de filtrado de Pizarras (IDs 1, 2, 3, 4 según store-section.tsx)
+  const getEbooks = () => cart.filter(item => item.id >= 5 && item.id <= 8);
   const getPizarras = () => cart.filter(item => item.id >= 1 && item.id <= 4);
 
   return (
@@ -86,6 +89,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         getEbooks,
         getPizarras,
+        removeItemFromCart, // <-- EXPUESTA
       }}
     >
       {children}

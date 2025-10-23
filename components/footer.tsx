@@ -20,7 +20,7 @@ export function Footer() {
           {/* Brand - Logo centrado */}
           <div className="sm:col-span-2 lg:col-span-1 text-center">
             <div className="flex justify-center mb-4">
-              <img src="/images/cuatro-cero-logo.png" alt="CUATRO CERO - Gestión de Equipo" className="h-12 w-auto" />
+              <img src="/images/logo-cuatro-cero.png" alt="CUATRO CERO - Gestión de Equipo" className="h-12 w-auto" />
             </div>
             <p className="text-gray-400 text-sm">
               La plataforma más completa para la gestión profesional de equipos de fútbol.

@@ -16,7 +16,8 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      // CLASES MODIFICADAS: max-w-full en sm, luego un ancho máximo razonable.
+      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col sm:max-w-full md:max-w-[450px]", 
       className
     )}
     {...props}
@@ -106,7 +107,8 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90", className)}
+    // CLASE MODIFICADA: Aseguramos el ajuste de línea
+    className={cn("text-sm opacity-90 break-words", className)}
     {...props}
   />
 ))

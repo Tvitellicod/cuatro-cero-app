@@ -1,6 +1,18 @@
+"use client" // <--- AÑADIDO USE CLIENT para manejar el estado del modal
+
 import Link from "next/link"
+import { useState } from "react"
+import { LegalModal } from "./legal-modal" // <-- IMPORTADO
 
 export function Footer() {
+  // Estado para controlar qué modal se abre
+  const [modalType, setModalType] = useState<'terms' | 'privacy' | null>(null);
+
+  const handleOpenModal = (type: 'terms' | 'privacy') => (e: React.MouseEvent) => {
+    e.preventDefault(); // Evita la navegación por defecto del Link
+    setModalType(type);
+  }
+
   return (
     <footer className="bg-[#213041] border-t border-[#305176] py-8">
       <div className="max-w-6xl mx-auto px-4">
@@ -48,10 +60,20 @@ export function Footer() {
           <div className="text-center">
             <h3 className="text-white font-semibold mb-4">Legal</h3>
             <div className="space-y-2">
-              <Link href="/terminos" className="block text-gray-400 hover:text-[#aff606] text-sm">
+              {/* ENLACE MODIFICADO PARA ABRIR MODAL */}
+              <Link 
+                href="#" 
+                onClick={handleOpenModal('terms')} 
+                className="block text-gray-400 hover:text-[#aff606] text-sm"
+              >
                 Términos y Condiciones
               </Link>
-              <Link href="/privacidad" className="block text-gray-400 hover:text-[#aff606] text-sm">
+              {/* ENLACE MODIFICADO PARA ABRIR MODAL */}
+              <Link 
+                href="#" 
+                onClick={handleOpenModal('privacy')} 
+                className="block text-gray-400 hover:text-[#aff606] text-sm"
+              >
                 Política de Privacidad
               </Link>
             </div>
@@ -62,6 +84,13 @@ export function Footer() {
           <p className="text-gray-400 text-sm">© 2025 CUATRO CERO. Todos los derechos reservados.</p>
         </div>
       </div>
+      
+      {/* MODAL LEGAL */}
+      <LegalModal 
+        type={modalType}
+        isOpen={!!modalType}
+        onClose={() => setModalType(null)}
+      />
     </footer>
   )
 }

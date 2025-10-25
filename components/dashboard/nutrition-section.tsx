@@ -1,17 +1,14 @@
+// components/dashboard/nutrition-section.tsx
+
 "use client"
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Apple, FileText, Scale, Activity } from "lucide-react"
+// ... (otras importaciones) ...
 
 export function NutritionSection() {
-  const [selectedCategory, setSelectedCategory] = useState("")
+  // Cambia el estado inicial de selectedCategory a "all"
+  const [selectedCategory, setSelectedCategory] = useState("all") // <-- CAMBIO AQUÍ
   const [showReportForm, setShowReportForm] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
 
@@ -22,6 +19,7 @@ export function NutritionSection() {
   ]
 
   const players = [
+     // ... (datos de jugadores sin cambios) ...
     {
       id: 1,
       name: "Juan Carlos",
@@ -51,20 +49,12 @@ export function NutritionSection() {
     },
   ]
 
-  const filteredPlayers = selectedCategory
-    ? players.filter((player) => player.category === categories.find((c) => c.id === selectedCategory)?.name)
-    : players
+  // Ajusta la lógica de filtrado para usar "all"
+  const filteredPlayers = selectedCategory === "all" // <-- CAMBIO AQUÍ
+    ? players
+    : players.filter((player) => player.category === categories.find((c) => c.id === selectedCategory)?.name)
 
-  const handleCreateReport = (player: any) => {
-    setSelectedPlayer(player)
-    setShowReportForm(true)
-  }
-
-  const handleSaveReport = () => {
-    setShowReportForm(false)
-    setSelectedPlayer(null)
-    // Aquí se guardaría el reporte
-  }
+  // ... (resto de las funciones handleCreateReport, handleSaveReport sin cambios) ...
 
   return (
     <div className="space-y-6">
@@ -85,7 +75,8 @@ export function NutritionSection() {
                     <SelectValue placeholder="Todas las categorías" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="" className="text-white">
+                    {/* Cambia value="" a value="all" */}
+                    <SelectItem value="all" className="text-white"> {/* <-- CAMBIO AQUÍ */}
                       Todas las categorías
                     </SelectItem>
                     {categories.map((cat) => (
@@ -99,7 +90,8 @@ export function NutritionSection() {
             </CardContent>
           </Card>
 
-          {/* Lista de Jugadores */}
+          {/* ... (resto del componente Lista de Jugadores y Formulario sin cambios) ... */}
+           {/* Lista de Jugadores */}
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
               <CardTitle className="text-white flex items-center">

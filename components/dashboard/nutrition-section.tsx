@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+// --- IMPORTACIONES CORREGIDAS ---
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Apple, FileText, Scale, Activity } from "lucide-react"
+// --- FIN IMPORTACIONES CORREGIDAS ---
 
 export function NutritionSection() {
-  const [selectedCategory, setSelectedCategory] = useState("")
+  // Cambia el estado inicial de selectedCategory a "all"
+  const [selectedCategory, setSelectedCategory] = useState("all") // <-- CAMBIO AQUÍ
   const [showReportForm, setShowReportForm] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
 
@@ -51,9 +54,10 @@ export function NutritionSection() {
     },
   ]
 
-  const filteredPlayers = selectedCategory
-    ? players.filter((player) => player.category === categories.find((c) => c.id === selectedCategory)?.name)
-    : players
+  // Ajusta la lógica de filtrado para usar "all"
+  const filteredPlayers = selectedCategory === "all" // <-- CAMBIO AQUÍ
+    ? players
+    : players.filter((player) => player.category === categories.find((c) => c.id === selectedCategory)?.name)
 
   const handleCreateReport = (player: any) => {
     setSelectedPlayer(player)
@@ -85,7 +89,8 @@ export function NutritionSection() {
                     <SelectValue placeholder="Todas las categorías" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="" className="text-white">
+                    {/* Cambia value="" a value="all" */}
+                    <SelectItem value="all" className="text-white"> {/* <-- CAMBIO AQUÍ */}
                       Todas las categorías
                     </SelectItem>
                     {categories.map((cat) => (

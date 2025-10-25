@@ -1,12 +1,14 @@
 "use client"
 
+import { useState, useEffect } from "react" // <-- Añadir useEffect
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Check } from "lucide-react"
+import { Check, Users } from "lucide-react" // <-- Añadir Users
 
 export function PlansSection() {
   const plans = [
+    // ... (contenido de los planes sin cambios) ...
     {
       name: "TÉCNICO",
       price: "$29",
@@ -21,6 +23,7 @@ export function PlansSection() {
       ],
       popular: false,
       color: "bg-[#213041]",
+      id: "tecnico", // <-- Añadir IDs para la simulación
     },
     {
       name: "CUERPO TÉCNICO",
@@ -37,6 +40,7 @@ export function PlansSection() {
       ],
       popular: true,
       color: "bg-[#213041]",
+      id: "cuerpo_tecnico", // <-- Añadir IDs para la simulación
     },
     {
       name: "INSTITUCIONAL",
@@ -54,8 +58,30 @@ export function PlansSection() {
       ],
       popular: false,
       color: "bg-[#213041]",
+      id: "institucional", // <-- Añadir IDs para la simulación
     },
   ]
+
+  // Estado para los contadores (simulados)
+  const [planCounts, setPlanCounts] = useState({
+    tecnico: 123,
+    cuerpo_tecnico: 456,
+    institucional: 78,
+  })
+
+  // Simulación de actualización en tiempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlanCounts(prevCounts => ({
+        tecnico: prevCounts.tecnico + Math.floor(Math.random() * 3) - 1, // Cambia +/- 1
+        cuerpo_tecnico: prevCounts.cuerpo_tecnico + Math.floor(Math.random() * 3) - 1,
+        institucional: prevCounts.institucional + Math.floor(Math.random() * 3) - 1,
+      }))
+    }, 3000) // Actualiza cada 3 segundos
+
+    return () => clearInterval(interval) // Limpia el intervalo al desmontar
+  }, [])
+
 
   return (
     <div className="max-w-6xl mx-auto px-4 mb-2 mt-2">
@@ -67,7 +93,8 @@ export function PlansSection() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-2">
-        {plans.map((plan, index) => (
+        {/* ... (mapeo de los planes sin cambios) ... */}
+         {plans.map((plan, index) => (
           <Card
             key={index}
             className={`${plan.color} border-[#305176] relative flex flex-col ${plan.popular ? "ring-2 ring-[#aff606]" : ""}`}
@@ -114,9 +141,10 @@ export function PlansSection() {
         ))}
       </div>
 
-      {/* Div de ayuda con formato horizontal como en la imagen */}
+      {/* Div de ayuda */}
       <div className="bg-[#213041] border border-[#305176] rounded-lg p-4 w-full mb-2 px-16 mt-6 py-5">
-        <div className="flex items-center justify-between">
+        {/* ... (contenido del div de ayuda sin cambios) ... */}
+         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-white mb-1">
               ¿No sabes cual es tu plan ideal? Nosotros te ayudamos!
@@ -132,6 +160,29 @@ export function PlansSection() {
           </div>
         </div>
       </div>
+
+      {/* --- NUEVA SECCIÓN DE CONTADORES --- */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold text-white mb-4 text-center">Usuarios Activos por Plan</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {plans.map((plan) => (
+            <Card key={plan.id} className="bg-[#1d2834] border-[#305176] text-center">
+              <CardContent className="p-4">
+                <Users className="h-8 w-8 text-[#aff606] mx-auto mb-2" />
+                <p className="text-sm font-medium text-gray-400 mb-1">{plan.name}</p>
+                <p className="text-3xl font-bold text-white">
+                  {/* Aseguramos que la clave exista antes de accederla */}
+                  {planCounts[plan.id as keyof typeof planCounts] !== undefined
+                    ? planCounts[plan.id as keyof typeof planCounts]
+                    : 0}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+      {/* --- FIN NUEVA SECCIÓN --- */}
+
     </div>
   )
 }

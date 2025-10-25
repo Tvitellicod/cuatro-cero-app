@@ -20,9 +20,8 @@ const PUBLISHER_PROFILE = {
     id: 9999,
     firstName: "Cuatro",
     lastName: "Cero",
-    profileType: "PUBLICADOR", 
-    category: "primera",
-    fullName: "Cuatro Cero",
+    profileType: "PUBLICADOR",
+    category: "primera", // Aunque publicador no use categoría, la necesita para el objeto
     displayName: "Cuatro Cero - Publicador",
 };
 
@@ -32,43 +31,42 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const { signIn, signUp } = useAuth()
   const router = useRouter()
-  
+
   // --- FUNCIÓN CLAVE: FORZAR CIERRE DE SESIÓN EN MODO DEMO ---
   const clearDemoSession = () => {
-      localStorage.removeItem("userProfile");
+      localStorage.removeItem("userProfile"); // <- Mantenemos esto por si acaso
       localStorage.removeItem("selectedProfile"); // Limpia el perfil seleccionado también
+      localStorage.removeItem("activeProfile"); // <-- LIMPIAR EL NUEVO PERFIL ACTIVO
       // Opcional: Podrías limpiar el carrito si quieres sesiones totalmente aisladas
-      // localStorage.removeItem("app_cart"); 
+      // localStorage.removeItem("app_cart");
   };
 
 
   const handleDemoLogin = (email: string, isSignUp: boolean) => {
     // Si estamos en modo demo (Supabase no configurado)
     if (!isSupabaseConfigured()) {
-      
+
       // *** 1. LIMPIAR SIEMPRE LA SESIÓN ANTERIOR ANTES DE CONTINUAR ***
       clearDemoSession();
 
       setTimeout(() => {
         setIsLoading(false)
-        
+
         // 2. Verificar si es el usuario publicador
         if (email === PUBLISHER_EMAIL) {
-            
-            // Forzamos la creación del perfil del publicador en localStorage
-            localStorage.setItem("userProfile", JSON.stringify(PUBLISHER_PROFILE));
-            
-            // Redirige al dashboard
+            // Guardamos el perfil del publicador como 'activeProfile' también
+            localStorage.setItem("activeProfile", JSON.stringify(PUBLISHER_PROFILE));
+            // Redirige al dashboard directamente
             router.push("/dashboard");
             return;
         }
 
-        // 3. Comportamiento normal del demo (para cualquier otro email que inicia sesión)
-        // El usuario normal SIEMPRE debe pasar por la creación de perfil si no es el publicador,
-        // ya que la sesión anterior fue limpiada.
-        router.push("/create-profile"); 
+        // --- REDIRECCIÓN MODIFICADA PARA DEMO ---
+        // Cualquier otro usuario demo va a seleccionar contexto
+        router.push("/select-working-context");
+        // ------------------------------------
 
-      }, 1000)
+      }, 1000);
       return true; // Indica que manejamos el login demo
     }
     return false; // Indica que se debe usar el login de Supabase
@@ -91,10 +89,9 @@ export function LoginForm() {
       setIsLoading(false)
       return
     }
-    
-    // Si estamos usando el modo demo
+
+    // --- Lógica de Modo Demo ---
     if (!isSupabaseConfigured()) {
-        
         // Manejo del usuario publicador en modo demo
         if (email === PUBLISHER_EMAIL) {
             if (password !== PUBLISHER_PASSWORD) {
@@ -102,18 +99,15 @@ export function LoginForm() {
                 setIsLoading(false);
                 return;
             }
-        } else if (!isSignUp) {
-             // Cualquier otro login en modo demo va directo a handleDemoLogin para limpiar la sesión anterior.
+             handleDemoLogin(email, isSignUp); // Llama a la lógica demo del publicador
+        } else {
+             // Cualquier otro login/signup en modo demo va directo a handleDemoLogin
+             handleDemoLogin(email, isSignUp);
         }
-
-        handleDemoLogin(email, isSignUp);
-        return;
+        return; // Detiene la ejecución aquí para el modo demo
     }
 
     // --- Lógica de Supabase Real (si está configurado) ---
-    // *** Nota: Esta lógica debería incluir un signOut() al inicio para limpiar la sesión de Supabase si estuviera activa,
-    // pero nos enfocamos en el demo mode que es donde tienes el problema. ***
-    
     try {
       let result
       if (isSignUp) {
@@ -125,13 +119,10 @@ export function LoginForm() {
       if (result.error) {
         setError(result.error.message)
       } else {
-        // Verificar si ya existe un perfil
-        const savedProfile = localStorage.getItem("userProfile")
-        if (savedProfile) {
-          router.push("/dashboard")
-        } else {
-          router.push("/create-profile")
-        }
+        // --- REDIRECCIÓN MODIFICADA ---
+        // Siempre ir a seleccionar contexto después de login/signup exitoso
+        router.push("/select-working-context");
+        // -----------------------------
       }
     } catch (err) {
       setError("Ha ocurrido un error inesperado")

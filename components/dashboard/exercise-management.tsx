@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useMockIntegration } from "@/hooks/use-mock-integration" 
+import { useMockIntegration } from "@/hooks/use-mock-integration"
 
 
 // NUEVA CONSTANTE PARA REINICIAR EL FORMULARIO (MÁS ROBUSTO)
@@ -38,7 +38,7 @@ const INITIAL_EXERCISE_STATE = {
 
 
 export function ExerciseManagement() {
-  const { getIntegratedExercises } = useMockIntegration(); 
+  const { getIntegratedExercises } = useMockIntegration();
   const [selectedCategory, setSelectedCategory] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showCreateCategory, setShowCreateCategory] = useState(false)
@@ -73,7 +73,7 @@ export function ExerciseManagement() {
     { name: "Transiciones", color: "#f4c11a", exercises: 10, isNew: false },
     { name: "Balón Parado", color: "#8a46c5", exercises: 5, isNew: false },
   ];
-  
+
   const initialExercises = [
     {
       id: 1,
@@ -133,37 +133,37 @@ export function ExerciseManagement() {
       createdAt: "2024-01-11",
     },
   ];
-  
+
   const [exercises, setExercises] = useState(initialExercises);
   const [exerciseCategories, setExerciseCategories] = useState(initialCategories);
 
 
   // Efecto para cargar y actualizar los ejercicios/categorías integradas (Ebooks)
   useEffect(() => {
-    
+
     const integratedExercises = getIntegratedExercises();
-    
+
     // 1. Crear un mapa de todos los ejercicios (base + integrados) para manejar IDs mixtos
     const allExercisesMap = new Map();
     [...initialExercises, ...integratedExercises].forEach(ex => {
         allExercisesMap.set(ex.id, ex);
     });
-    
+
     const currentExercisesList = Array.from(allExercisesMap.values());
-    
+
     // 2. Obtener todas las categorías únicas
     const allUniqueCategories = new Set([
-        ...initialCategories.map(c => c.name), 
+        ...initialCategories.map(c => c.name),
         ...integratedExercises.map(ex => ex.category)
     ]);
 
     // 3. Crear la lista de categorías actualizada con conteos y colores
     const updatedCategories = Array.from(allUniqueCategories).map(catName => {
         const existingCat = initialCategories.find(c => c.name === catName);
-        
-        let color = existingCat ? existingCat.color : "#33d9f6"; 
+
+        let color = existingCat ? existingCat.color : "#33d9f6";
         let isNew = false;
-        
+
         if (catName === "Biblioteca Ebook") {
             color = "#aff606"; // Color distintivo para la categoría de Ebooks
             isNew = true;
@@ -176,11 +176,11 @@ export function ExerciseManagement() {
             isNew: isNew,
         };
     });
-    
+
     // Solo actualizamos si hay cambios reales en los ejercicios o categorías
     setExercises(currentExercisesList);
     setExerciseCategories(updatedCategories);
-    
+
   }, [getIntegratedExercises]); // Dependencia del hook para re-ejecutar si el mock cambia.
 
 
@@ -203,19 +203,19 @@ export function ExerciseManagement() {
 
   const handleCreateExercise = () => {
     if (
-        !newExercise.name || 
-        !newExercise.category || 
-        !newExercise.difficulty || 
-        newExercise.duration === 0 || 
+        !newExercise.name ||
+        !newExercise.category ||
+        !newExercise.difficulty ||
+        newExercise.duration === 0 ||
         newExercise.players === 0
       ) {
       setShowValidationAlert(true);
       return;
     }
-    
+
     const exerciseToAdd = {
       ...newExercise,
-      id: Date.now(), 
+      id: Date.now(),
       createdAt: new Date().toISOString().split('T')[0],
     }
     setExercises(prev => [...prev, exerciseToAdd])
@@ -285,7 +285,7 @@ export function ExerciseManagement() {
     .filter((exercise) => {
       const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "" || exercise.category === selectedCategory
-      
+
       const matchesPlayers = filterPlayers === "all" || exercise.players.toString() === filterPlayers.toString()
       const matchesGoalkeepers = filterGoalkeepers === "all" || exercise.goalkeepers.toString() === filterGoalkeepers.toString()
       const matchesDifficulty = filterDifficulty === "all" || exercise.difficulty === filterDifficulty
@@ -297,8 +297,12 @@ export function ExerciseManagement() {
         if (a.category === "Biblioteca Ebook" && b.category !== "Biblioteca Ebook") return -1;
         if (b.category === "Biblioteca Ebook" && a.category !== "Biblioteca Ebook") return 1;
         // Orden por fecha (más reciente)
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        // Ensure createdAt exists and is valid before comparing
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
     })
+
 
   return (
     <div className="space-y-6">
@@ -319,19 +323,24 @@ export function ExerciseManagement() {
             <CardContent className="space-y-3">
               {exerciseCategories.map((category, index) => (
                 <div
-                  key={category.name}
+                  key={category.name} // Use name as key since it's unique after merge
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                     selectedCategory === category.name ? "bg-[#305176]" : "bg-[#1d2834] hover:bg-[#305176]"
                   }`}
+                  // --- onClick MODIFICADO ---
                   onClick={() => {
                     const newCategory = selectedCategory === category.name ? "" : category.name;
-                    setSelectedCategory(newCategory);
-                    
+                    setSelectedCategory(newCategory); // Actualiza la categoría seleccionada
+
+                    // Resetea los otros filtros cuando la categoría cambia
                     setFilterPlayers("all");
                     setFilterGoalkeepers("all");
                     setFilterDifficulty("all");
                     setFilterTime("all");
+                    // Opcionalmente, puedes resetear la búsqueda también si lo ves necesario
+                    // setSearchQuery("");
                   }}
+                  // --- FIN onClick MODIFICADO ---
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: getCategoryColor(category.name) }}></div>
@@ -417,13 +426,13 @@ export function ExerciseManagement() {
           {showCreateForm ? (
             <Card className="bg-[#213041] border-[#305176]">
               <CardHeader className="text-center">
-                <CardTitle className="text-white text-2xl font-bold">Crear Nuevo Ejercicio</CardTitle>
+                <CardTitle className="text-white text-2xl font-bold">{newExercise.id ? "Editar Ejercicio" : "Crear Nuevo Ejercicio"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="exercise-name" className="text-white">
-                      Nombre del Ejercicio
+                      Nombre del Ejercicio *
                     </Label>
                     <Input
                       id="exercise-name"
@@ -434,7 +443,7 @@ export function ExerciseManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white">Categoría</Label>
+                    <Label className="text-white">Categoría *</Label>
                     <Select
                       value={newExercise.category}
                       onValueChange={(value) => setNewExercise({ ...newExercise, category: value })}
@@ -443,7 +452,7 @@ export function ExerciseManagement() {
                         <SelectValue placeholder="Seleccionar categoría" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                        {exerciseCategories.map((cat) => (
+                        {exerciseCategories.filter(c => c.name !== 'Biblioteca Ebook').map((cat) => ( // Excluir Ebooks
                           <SelectItem key={cat.name} value={cat.name} className="text-white">
                             {cat.name}
                           </SelectItem>
@@ -456,24 +465,24 @@ export function ExerciseManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="duration" className="text-white">
-                      Duración (min)
+                      Duración (min) *
                     </Label>
                     <Input
                       id="duration"
                       type="number"
                       placeholder="20"
-                      value={newExercise.duration}
+                      value={newExercise.duration > 0 ? newExercise.duration : ""}
                       onChange={(e) => setNewExercise({ ...newExercise, duration: parseInt(e.target.value) || 0 })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white">Jugadores</Label>
+                    <Label className="text-white">Jugadores *</Label>
                     <Input
                       id="players"
                       type="number"
                       placeholder="11"
-                      value={newExercise.players}
+                      value={newExercise.players > 0 ? newExercise.players : ""}
                       onChange={(e) => setNewExercise({ ...newExercise, players: parseInt(e.target.value) || 0 })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
@@ -484,7 +493,7 @@ export function ExerciseManagement() {
                       id="goalkeepers"
                       type="number"
                       placeholder="1"
-                      value={newExercise.goalkeepers}
+                      value={newExercise.goalkeepers > 0 ? newExercise.goalkeepers : ""}
                       onChange={(e) => setNewExercise({ ...newExercise, goalkeepers: parseInt(e.target.value) || 0 })}
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
@@ -493,7 +502,7 @@ export function ExerciseManagement() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-white">Dificultad</Label>
+                    <Label className="text-white">Dificultad *</Label>
                     <Select
                       value={newExercise.difficulty}
                       onValueChange={(value) => setNewExercise({ ...newExercise, difficulty: value })}
@@ -559,14 +568,17 @@ export function ExerciseManagement() {
                 <div className="flex justify-between space-x-4">
                   <Button
                     className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-                    onClick={handleCreateExercise}
+                    onClick={handleCreateExercise} // Usa la misma función para crear/actualizar
                   >
-                    Guardar Ejercicio
+                    {newExercise.id ? "Actualizar Ejercicio" : "Guardar Ejercicio"}
                   </Button>
                   <Button
                     variant="outline"
                     className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-                    onClick={() => setShowCreateForm(false)}
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setNewExercise(INITIAL_EXERCISE_STATE); // Reiniciar al cancelar
+                    }}
                   >
                     Cancelar
                   </Button>
@@ -579,6 +591,8 @@ export function ExerciseManagement() {
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <CardTitle className="text-2xl font-bold text-white whitespace-nowrap">
                     {selectedCategory && selectedCategory !== "" ? selectedCategory : "Ejercicios Creados"}
+                    {" "}
+                    ({filteredExercises.length})
                   </CardTitle>
                   <Button
                     size="default"
@@ -688,50 +702,56 @@ export function ExerciseManagement() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {filteredExercises.map((exercise) => (
-                    <div key={exercise.id} className="p-4 bg-[#1d2834] rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-white font-medium">{exercise.name}</h3>
-                        <Badge className="text-white" style={{ backgroundColor: getCategoryColor(exercise.category) }}>
-                          {exercise.category}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
-                        <div className="flex items-center text-gray-400">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {exercise.duration}min
-                        </div>
-                        <div className="flex items-center text-gray-400">
-                          <Users className="h-4 w-4 mr-1" />
-                          {exercise.players}+{exercise.goalkeepers}
-                        </div>
-                        <div className="flex items-center text-gray-400">
-                          <Target className="h-4 w-4 mr-1" />
-                          <Badge className={getDifficultyColor(exercise.difficulty)}>
-                            {exercise.difficulty}
+                  {filteredExercises.length > 0 ? (
+                    filteredExercises.map((exercise) => (
+                      <div key={exercise.id} className="p-4 bg-[#1d2834] rounded-lg">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-white font-medium">{exercise.name}</h3>
+                          <Badge className="text-white" style={{ backgroundColor: getCategoryColor(exercise.category) }}>
+                            {exercise.category}
                           </Badge>
                         </div>
+                        <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
+                          <div className="flex items-center text-gray-400">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {exercise.duration}min
+                          </div>
+                          <div className="flex items-center text-gray-400">
+                            <Users className="h-4 w-4 mr-1" />
+                            {exercise.players}{exercise.goalkeepers > 0 ? `+${exercise.goalkeepers}` : ''}
+                          </div>
+                          <div className="flex items-center text-gray-400">
+                            <Target className="h-4 w-4 mr-1" />
+                            <Badge className={getDifficultyColor(exercise.difficulty)}>
+                              {exercise.difficulty}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="text-gray-400 text-sm mb-3">{exercise.objective}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-500">{exercise.materials}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                            onClick={() => setShowExerciseDetail(exercise)}
+                          >
+                            Ver Detalles
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-gray-400 text-sm mb-3">{exercise.objective}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">{exercise.materials}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                          onClick={() => setShowExerciseDetail(exercise)}
-                        >
-                          Ver Detalles
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-400">No se encontraron ejercicios con los filtros aplicados.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
         </div>
       </div>
+
+      {/* AlertDialog for Category Deletion */}
       <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
@@ -753,6 +773,8 @@ export function ExerciseManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog for Exercise Detail */}
       <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -829,11 +851,7 @@ export function ExerciseManagement() {
             <Button
               variant="default"
               className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-              onClick={() => {
-                setShowExerciseDetail(null);
-                setNewExercise(showExerciseDetail);
-                setShowCreateForm(true);
-              }}
+              onClick={() => handleEditExercise(showExerciseDetail)} // Llama a la función de edición
             >
               <Edit className="h-4 w-4 mr-2" />
               Editar Ejercicio
@@ -841,10 +859,7 @@ export function ExerciseManagement() {
             <Button
               variant="outline"
               className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-              onClick={() => {
-                setShowExerciseDetail(null);
-                setExerciseToDelete(showExerciseDetail?.id);
-              }}
+              onClick={() => setExerciseToDelete(showExerciseDetail?.id)} // Inicia el proceso de borrado
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Eliminar Ejercicio
@@ -853,7 +868,7 @@ export function ExerciseManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog for Deleting Exercise */}
+      {/* AlertDialog for Exercise Deletion */}
       <AlertDialog open={!!exerciseToDelete} onOpenChange={() => setExerciseToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
@@ -867,7 +882,7 @@ export function ExerciseManagement() {
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => handleDeleteExercise()}
+              onClick={handleDeleteExercise} // Llama a la función de borrado final
               className="bg-red-500 text-white hover:bg-red-600"
             >
               Eliminar
@@ -875,6 +890,27 @@ export function ExerciseManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AlertDialog for Form Validation */}
+      <AlertDialog open={showValidationAlert} onOpenChange={setShowValidationAlert}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Campos Requeridos</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Por favor, completa Nombre, Categoría, Duración, Jugadores y Dificultad para guardar el ejercicio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setShowValidationAlert(false)}
+              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+            >
+              Aceptar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   )
 }

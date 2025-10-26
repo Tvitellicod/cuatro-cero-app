@@ -61,9 +61,9 @@ export function LoginForm() {
             return;
         }
 
-        // --- REDIRECCIÓN MODIFICADA PARA DEMO ---
-        // Cualquier otro usuario demo va a seleccionar contexto
-        router.push("/select-working-context");
+        // --- CORRECCIÓN: REDIRIGIR A /create-profile ---
+        // Cualquier otro usuario demo va a crear/seleccionar perfil
+        router.push("/create-profile"); // <-- ¡CAMBIO AQUÍ!
         // ------------------------------------
 
       }, 1000);
@@ -119,9 +119,9 @@ export function LoginForm() {
       if (result.error) {
         setError(result.error.message)
       } else {
-        // --- REDIRECCIÓN MODIFICADA ---
-        // Siempre ir a seleccionar contexto después de login/signup exitoso
-        router.push("/select-working-context");
+        // --- CORRECCIÓN: REDIRIGIR A /create-profile ---
+        // Siempre ir a crear/seleccionar perfil después de login/signup exitoso
+        router.push("/create-profile"); // <-- ¡CAMBIO AQUÍ!
         // -----------------------------
       }
     } catch (err) {

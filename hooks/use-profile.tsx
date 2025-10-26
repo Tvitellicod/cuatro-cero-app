@@ -3,12 +3,20 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 
-interface ProfileContextType {
-  currentProfile: string | null
-  userPlan: string
-  setCurrentProfile: (profile: string) => void
-  setUserPlan: (plan: string) => void
-  getPermissions: () => ProfilePermissions
+// --- INTERFACES ---
+interface UserCategory {
+  id: string; 
+  name: string;
+  color: string;
+}
+
+interface UserProfile {
+    id: number;
+    firstName: string;
+    lastName: string;
+    profileType: string;
+    category: string; // ID de la categoría
+    displayName: string;
 }
 
 interface ProfilePermissions {
@@ -24,31 +32,110 @@ interface ProfilePermissions {
   sections: string[]
 }
 
+interface ProfileContextType {
+  // Perfil Activo (quién eres)
+  currentProfile: string | null // El displayName
+  setCurrentProfile: (profile: string) => void
+  
+  // Categoría Activa (dónde estás trabajando)
+  selectedCategory: UserCategory | null
+  allCategories: UserCategory[]
+  setSelectedCategory: (category: UserCategory | null) => void
+  
+  // Permisos y Plan
+  userPlan: string
+  setUserPlan: (plan: string) => void
+  getPermissions: () => ProfilePermissions
+}
+
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined)
+
+// --- Claves de LocalStorage ---
+const ACTIVE_PROFILE_KEY = "userProfile"; // El perfil con rol (DT, PF...)
+const SELECTED_CATEGORY_KEY = "selectedCategory"; // La categoría (Primera, Reserva...)
+const ALL_CATEGORIES_KEY = "allUserCategories";
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [currentProfile, setCurrentProfile] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategoryState] = useState<UserCategory | null>(null)
+  const [allCategories, setAllCategories] = useState<UserCategory[]>([])
   const [userPlan, setUserPlan] = useState<string>("institucional")
 
+  // Cargar estado desde localStorage al iniciar
   useEffect(() => {
-    const savedProfile = typeof window !== "undefined" ? localStorage.getItem("selectedProfile") : null
-    if (savedProfile) {
-      setCurrentProfile(savedProfile)
+    const savedProfileJson = localStorage.getItem(ACTIVE_PROFILE_KEY);
+    const savedCategoryJson = localStorage.getItem(SELECTED_CATEGORY_KEY);
+    const savedAllCategoriesJson = localStorage.getItem(ALL_CATEGORIES_KEY);
+
+    if (savedProfileJson) {
+      try {
+        const savedProfile: UserProfile = JSON.parse(savedProfileJson);
+        setCurrentProfile(savedProfile.displayName);
+      } catch (e) {
+        console.error("Error parsing profile", e);
+        localStorage.removeItem(ACTIVE_PROFILE_KEY);
+      }
+    }
+    
+    if (savedCategoryJson) {
+       try {
+        const savedCategory: UserCategory = JSON.parse(savedCategoryJson);
+        setSelectedCategoryState(savedCategory);
+      } catch (e) {
+        console.error("Error parsing selected category", e);
+        localStorage.removeItem(SELECTED_CATEGORY_KEY);
+      }
+    }
+
+    if (savedAllCategoriesJson) {
+       try {
+        const allCats: UserCategory[] = JSON.parse(savedAllCategoriesJson);
+        setAllCategories(allCats);
+      } catch (e) {
+        console.error("Error parsing all categories", e);
+        localStorage.removeItem(ALL_CATEGORIES_KEY);
+      }
     }
   }, [])
 
-  const getPermissions = (): ProfilePermissions => {
-    const isTechnician = currentProfile?.includes("TECNICO")
-    const isPhysicalTrainer = currentProfile?.includes("PREPARADOR FISICO")
-    const isKinesiologist = currentProfile === "KINESIOLOGO"
-    const isNutritionist = currentProfile === "NUTRICIONISTA"
-    const isDirective = currentProfile?.includes("DIRECTIVO") || currentProfile?.includes("EXTRA")
+  // Función para actualizar la categoría (y guardarla en localStorage)
+  const setSelectedCategory = (category: UserCategory | null) => {
+    setSelectedCategoryState(category);
+    if (category) {
+      localStorage.setItem(SELECTED_CATEGORY_KEY, JSON.stringify(category));
+    } else {
+      localStorage.removeItem(SELECTED_CATEGORY_KEY);
+    }
+  };
 
-    return {
+  // --- Lógica de Permisos ---
+  const getPermissions = (): ProfilePermissions => {
+    let profileType: string | null = null;
+    if (typeof window !== 'undefined') {
+        const savedProfileJson = localStorage.getItem(ACTIVE_PROFILE_KEY);
+        if (savedProfileJson) {
+            try {
+                const savedProfile: UserProfile = JSON.parse(savedProfileJson);
+                profileType = savedProfile.profileType;
+            } catch (e) {
+                console.error("Error parsing profile for permissions", e);
+            }
+        }
+    }
+
+    // Basado en el profileType (esto no cambia)
+    const isTechnician = profileType?.includes("DIRECTOR TECNICO") || profileType?.includes("TECNICO");
+    const isPhysicalTrainer = profileType?.includes("PREPARADOR FISICO");
+    const isKinesiologist = profileType === "KINESIOLOGO";
+    const isNutritionist = profileType === "NUTRICIONISTA";
+    const isDirective = profileType?.includes("DIRECTIVO") || profileType?.includes("EXTRA");
+    const isPublisher = profileType === "PUBLICADOR";
+
+     return {
       canEditClub: isTechnician || false,
       canEditPlayers: isTechnician || false,
       canCreateExercises: isTechnician || isPhysicalTrainer || isKinesiologist || false,
-      canPlanTraining: !isNutritionist,
+      canPlanTraining: !isNutritionist && !isPublisher, 
       canManageMatches: isTechnician || false,
       canViewStats: isTechnician || isDirective || false,
       canViewNutrition: isNutritionist || false,
@@ -60,16 +147,19 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           : isKinesiologist
             ? ["EJERCICIOS KINESIOLOGIA"]
             : [],
-      sections: getSectionsForProfile(currentProfile),
-    }
-  }
+      sections: getSectionsForProfile(profileType),
+    };
+  };
 
   return (
     <ProfileContext.Provider
       value={{
         currentProfile,
-        userPlan,
         setCurrentProfile,
+        selectedCategory,
+        allCategories,
+        setSelectedCategory,
+        userPlan,
         setUserPlan,
         getPermissions,
       }}
@@ -79,34 +169,45 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-function getSectionsForProfile(profile: string | null): string[] {
-  if (!profile) return []
+// --- Función para Secciones (sin cambios) ---
+function getSectionsForProfile(profileType: string | null): string[] {
+  if (!profileType) return [];
 
-  const isTechnician = profile.includes("TECNICO")
-  const isPhysicalTrainer = profile.includes("PREPARADOR FISICO")
-  const isKinesiologist = profile === "KINESIOLOGO"
-  const isNutritionist = profile === "NUTRICIONISTA"
-  const isDirective = profile.includes("DIRECTIVO") || profile.includes("EXTRA")
+  const isTechnician = profileType.includes("DIRECTOR TECNICO") || profileType.includes("TECNICO");
+  const isPhysicalTrainer = profileType.includes("PREPARADOR FISICO");
+  const isKinesiologist = profileType === "KINESIOLOGO";
+  const isNutritionist = profileType === "NUTRICIONISTA";
+  const isDirective = profileType.includes("DIRECTIVO") || profileType.includes("EXTRA");
+  const isPublisher = profileType === "PUBLICADOR";
 
-  const sections = ["INICIO", "CLUB"]
+  const sections = ["INICIO"];
 
-  if (!isNutritionist) {
-    sections.push("ENTRENAMIENTO")
+  if (isPublisher) {
+    sections.push("PUBLICAR");
+    return sections;
   }
 
-  sections.push("PARTIDOS")
+  sections.push("CLUB");
+
+  if (!isNutritionist) {
+    sections.push("ENTRENAMIENTO");
+  }
+
+  sections.push("TORNEOS");
 
   if (isTechnician || isDirective) {
-    sections.push("ESTADISTICAS")
+    sections.push("ESTADISTICAS");
   }
 
   if (isNutritionist) {
-    sections.push("NUTRICION")
+    sections.push("NUTRICION");
   }
 
-  return sections
+  return sections;
 }
 
+
+// --- Hook useProfile (sin cambios) ---
 export function useProfile() {
   const context = useContext(ProfileContext)
   if (context === undefined) {

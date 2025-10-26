@@ -34,11 +34,12 @@ export function LoginForm() {
 
   // --- FUNCIÓN CLAVE: FORZAR CIERRE DE SESIÓN EN MODO DEMO ---
   const clearDemoSession = () => {
-      localStorage.removeItem("userProfile"); // <- Mantenemos esto por si acaso
-      localStorage.removeItem("selectedProfile"); // Limpia el perfil seleccionado también
-      localStorage.removeItem("activeProfile"); // <-- LIMPIAR EL NUEVO PERFIL ACTIVO
-      // Opcional: Podrías limpiar el carrito si quieres sesiones totalmente aisladas
-      // localStorage.removeItem("app_cart");
+      localStorage.removeItem("userProfile"); 
+      localStorage.removeItem("selectedProfile"); 
+      localStorage.removeItem("activeProfile"); 
+      localStorage.removeItem("selectedCategory"); // Limpiamos la categoría
+      localStorage.removeItem("allUserCategories"); // Limpiamos las categorías
+      localStorage.removeItem("allUserProfiles"); // Limpiamos los perfiles
   };
 
 
@@ -61,9 +62,9 @@ export function LoginForm() {
             return;
         }
 
-        // --- CORRECCIÓN: REDIRIGIR A /create-profile ---
-        // Cualquier otro usuario demo va a crear/seleccionar perfil
-        router.push("/create-profile"); // <-- ¡CAMBIO AQUÍ!
+        // --- CORRECCIÓN: REDIRIGIR A /select-category ---
+        // Cualquier otro usuario demo va a seleccionar categoría
+        router.push("/select-category"); // <-- ¡CAMBIO AQUÍ!
         // ------------------------------------
 
       }, 1000);
@@ -119,9 +120,9 @@ export function LoginForm() {
       if (result.error) {
         setError(result.error.message)
       } else {
-        // --- CORRECCIÓN: REDIRIGIR A /create-profile ---
-        // Siempre ir a crear/seleccionar perfil después de login/signup exitoso
-        router.push("/create-profile"); // <-- ¡CAMBIO AQUÍ!
+        // --- CORRECCIÓN: REDIRIGIR A /select-category ---
+        // Siempre ir a seleccionar categoría después de login/signup exitoso
+        router.push("/select-category"); // <-- ¡CAMBIO AQUÍ!
         // -----------------------------
       }
     } catch (err) {

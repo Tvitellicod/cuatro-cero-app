@@ -1,6 +1,6 @@
 "use client"
 
-import { Menu, Bell, User, LogOut } from "lucide-react"
+import { Menu, Bell, User, LogOut, Users } from "lucide-react" // Importar Users
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -9,18 +9,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useProfile } from "@/hooks/use-profile"
+// Eliminamos useProfile ya que leeremos directo de localStorage aquí
+// import { useProfile } from "@/hooks/use-profile"
+import { useAuth } from "@/hooks/use-auth"; // Mantenemos useAuth para signOut
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
 }
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
-  const { currentProfile } = useProfile()
+  // const { currentProfile } = useProfile() // Ya no necesitamos esto aquí
+  const { signOut } = useAuth(); // Obtenemos signOut del hook de autenticación
 
-  // Obtener el perfil guardado
-  const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
-  const profileData = savedProfile ? JSON.parse(savedProfile) : null
+  // Leer el perfil activo directamente desde localStorage
+  const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null;
+  const profileData = savedProfile ? JSON.parse(savedProfile) : null;
+
+  const handleSignOut = async () => {
+    await signOut();
+    // Limpiar perfiles al cerrar sesión
+    localStorage.removeItem("userProfile");
+    localStorage.removeItem("allUserProfiles"); // Limpiamos todos los perfiles también
+    localStorage.removeItem("userCategories");
+    localStorage.removeItem("userNamedProfiles");
+    window.location.href = "/app"; // Redirigir a la página de login
+  };
+
 
   return (
     <header className="bg-[#213041] border-b border-[#305176] px-4 lg:px-8 py-4">
@@ -35,26 +49,14 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold text-white">{profileData ? profileData.displayName : "Dashboard"}</h1>
+            {/* Mostrar Nombre y Rol del Perfil Activo */}
+            <h1 className="text-xl font-semibold text-white">
+              {profileData ? `${profileData.firstName} ${profileData.lastName}` : "Dashboard"}
+            </h1>
+            {/* Mostrar Rol y Categoría */}
             {profileData && (
               <p className="text-sm text-gray-400">
-                {profileData.category === "primera"
-                  ? "Primera División"
-                  : profileData.category === "tercera"
-                    ? "Tercera División"
-                    : profileData.category === "cuarta"
-                      ? "Cuarta División"
-                      : profileData.category === "quinta"
-                        ? "Quinta División"
-                        : profileData.category === "sexta"
-                          ? "Sexta División"
-                          : profileData.category === "septima"
-                            ? "Séptima División"
-                            : profileData.category === "juveniles"
-                              ? "Juveniles"
-                              : profileData.category === "infantiles"
-                                ? "Infantiles"
-                                : profileData.category}
+                {profileData.role} - {profileData.categoryName || profileData.category}
               </p>
             )}
           </div>
@@ -72,22 +74,24 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#213041] border-[#305176]">
-              <DropdownMenuItem className="text-white hover:bg-[#305176]">
-                <User className="h-4 w-4 mr-2" />
-                Perfil
-              </DropdownMenuItem>
+              {/* Opción para ir a la pantalla de selección/creación */}
               <DropdownMenuItem
                 className="text-white hover:bg-[#305176]"
                 onClick={() => {
-                  localStorage.removeItem("userProfile")
-                  window.location.href = "/create-profile"
+                  // Solo limpiamos el perfil activo para forzar la re-selección
+                  localStorage.removeItem("userProfile");
+                  window.location.href = "/create-profile"; // Ir a la pantalla de selección
                 }}
               >
-                <User className="h-4 w-4 mr-2" />
-                Cambiar Perfil
+                <Users className="h-4 w-4 mr-2" /> {/* Cambiado a Users */}
+                Cambiar Perfil/Categoría
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-[#305176]" />
-              <DropdownMenuItem className="text-white hover:bg-[#305176]">
+              {/* Usar handleSignOut para cerrar sesión y limpiar localStorage */}
+              <DropdownMenuItem
+                className="text-white hover:bg-[#305176]"
+                onClick={handleSignOut}
+               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Cerrar Sesión
               </DropdownMenuItem>

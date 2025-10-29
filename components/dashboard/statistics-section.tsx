@@ -365,32 +365,7 @@ export function StatisticsSection() {
           </Card>
         ))}
       </div>
-      
-      {/* Gráfico de Rendimiento (Goles) */}
-      <Card className="bg-[#213041] border-[#305176]">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center">
-            <BarChart3 className="h-5 w-5 mr-2" />
-            Rendimiento en Goles (Últimos Partidos)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
-            >
-              <CartesianGrid vertical={false} stroke="#305176" strokeDasharray="3 3" />
-              <XAxis dataKey="name" stroke="#a1a1aa" tickLine={false} axisLine={false} />
-              <YAxis stroke="#a1a1aa" tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: '#305176' }} content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="GolesAFavor" fill="#25d03f" name="Goles a Favor" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="GolesEnContra" fill="#ff6b35" name="Goles en Contra" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+
 
       {/* Estadísticas de Partidos */}
       <Card className="bg-[#213041] border-[#305176]">

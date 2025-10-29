@@ -8,69 +8,18 @@ import { useProfile } from "@/hooks/use-profile"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+// Eliminada la importación de Select ya que no se usa más en esta parte
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Menu, LogOut, Settings, User as UserIcon, Tag } from "lucide-react"
-import { SidebarNav } from "./sidebar" // Asumiendo que sidebar.tsx exporta SidebarNav
+// Eliminada la importación de Tag
+import { Menu, LogOut, Settings, User as UserIcon } from "lucide-react" // Se mantiene UserIcon
+import { SidebarNav } from "./sidebar"
 
-// --- Interfaz para Categoría (debe coincidir con use-profile) ---
-interface UserCategory {
-  id: string; 
-  name: string;
-  color: string;
-}
-
-// --- NUEVO COMPONENTE: Selector de Categoría ---
-function CategorySwitcher() {
-  const { selectedCategory, allCategories, setSelectedCategory } = useProfile();
-  
-  if (!selectedCategory || allCategories.length === 0) {
-    return null; // No mostrar nada si no hay categoría seleccionada
-  }
-
-  const handleCategoryChange = (categoryId: string) => {
-    const newCategory = allCategories.find(cat => cat.id === categoryId);
-    if (newCategory) {
-      // Aquí simplemente cambiamos la categoría en el contexto.
-      // El perfil (rol) sigue siendo el mismo.
-      setSelectedCategory(newCategory);
-      
-      // Opcional: Podrías forzar una recarga para que toda la app lea la nueva categoría,
-      // aunque el contexto debería ser suficiente.
-      // window.location.reload(); 
-      
-      // IMPORTANTE: Si cambiar de categoría implica cambiar de ROL,
-      // deberías redirigir a "/select-profile"
-      // router.push("/select-profile");
-      // Por ahora, solo cambiamos el contexto.
-    }
-  };
-
-  return (
-    <div className="flex items-center space-x-2">
-      <Tag className={`h-5 w-5 ${selectedCategory.color.replace('bg', 'text')}`} />
-      <Select value={selectedCategory.id} onValueChange={handleCategoryChange}>
-        <SelectTrigger className="w-[180px] bg-transparent border-none text-white text-lg font-semibold focus:ring-0">
-          <SelectValue placeholder="Seleccionar categoría" />
-        </SelectTrigger>
-        <SelectContent className="bg-[#213041] border-[#305176] text-white">
-          {allCategories.map((cat) => (
-            <SelectItem key={cat.id} value={cat.id} className={`focus:text-black ${cat.color.replace('bg-', 'focus:bg-')}`}>
-              {cat.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-// --- FIN NUEVO COMPONENTE ---
-
+// --- COMPONENTE CategorySwitcher ELIMINADO ---
 
 export function DashboardHeader() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const { signOut } = useAuth()
-  const { currentProfile } = useProfile() // Obtener el nombre del perfil
+  const { currentProfile } = useProfile() // Obtener el nombre completo del perfil y rol
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -83,11 +32,9 @@ export function DashboardHeader() {
     router.push("/app") // Redirigir a la página de login
   }
   
-  // Extraer iniciales del nombre del perfil
+  // Extraer iniciales del nombre del perfil (Se mantiene igual)
   const getInitials = (name: string | null) => {
     if (!name) return "4C"
-    // Tomar el displayName "John Doe - DIRECTOR TECNICO (Primera)"
-    // y extraer "JD"
     const parts = name.split(" - ")[0]?.split(" ");
     if (!parts) return "4C";
     const firstNameInitial = parts[0] ? parts[0][0] : "";
@@ -98,7 +45,7 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[#305176] bg-[#213041] px-4 md:px-6">
       
-      {/* --- Lado Izquierdo: Switcher de Categoría y Menú Móvil --- */}
+      {/* --- Lado Izquierdo: Texto del Perfil y Menú Móvil --- */}
       <div className="flex items-center gap-4">
         {/* Menú Hamburguesa (Móvil) */}
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -118,13 +65,17 @@ export function DashboardHeader() {
           </SheetContent>
         </Sheet>
         
-        {/* --- Selector de Categoría (Visible en Desktop) --- */}
-        <div className="hidden md:flex">
-          <CategorySwitcher />
+        {/* --- Texto del Perfil/Rol/Categoría (Visible en Desktop) --- */}
+        {/* Se reemplaza CategorySwitcher por un div simple */}
+        <div className="hidden md:flex items-center space-x-2">
+          <UserIcon className="h-5 w-5 text-[#aff606]" /> {/* Ícono de usuario */}
+          <span className="text-white text-sm font-semibold truncate max-w-xs lg:max-w-md">
+            {currentProfile || "Cargando perfil..."} {/* Muestra el texto directamente */}
+          </span>
         </div>
       </div>
 
-      {/* --- Lado Derecho: Perfil de Usuario --- */}
+      {/* --- Lado Derecho: Perfil de Usuario (Se mantiene igual) --- */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -157,10 +108,11 @@ export function DashboardHeader() {
           </DropdownMenuItem>
           <DropdownMenuItem 
             className="focus:bg-[#305176]"
-            onClick={() => router.push('/select-category')} // Opción para cambiar todo
+            // Ahora redirige a seleccionar categoría, que es el inicio del flujo
+            onClick={() => router.push('/select-category')} 
           >
             <UserIcon className="mr-2 h-4 w-4" />
-            <span>Cambiar Perfil</span>
+            <span>Cambiar Categoría/Perfil</span> {/* Texto actualizado */}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-[#305176]" />
           <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:bg-red-500 focus:text-white">

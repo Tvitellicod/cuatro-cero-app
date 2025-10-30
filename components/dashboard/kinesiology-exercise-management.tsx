@@ -71,12 +71,12 @@ const MOCK_PLAYERS_KINE: PlayerInfo[] = [
   { id: 5, name: "Miguel Torres", category: "primera" },
   { id: 10, name: "Lucas Martínez", category: "juveniles" },
   { id: 11, name: "Diego Salas", category: "juveniles" },
+  { id: 12, name: "Tomás Giménez", category: "juveniles" },
 ];
 
 // EJEMPLO 2: Ejercicios iniciales (simula lo que el Kine y tú ya han guardado)
-// Esto se cargará si el localStorage está vacío.
-const INITIAL_MOCK_EXERCISES: KinesiologyExercise[] = [
-  // Ejercicios para "Primera"
+const INITIAL_MOCK_EXERCISES_LIST: KinesiologyExercise[] = [
+  // --- EJEMPLOS PARA "PRIMERA" ---
   {
     id: 101,
     name: "Rehabilitación Rodilla LCA (Semana 2)",
@@ -84,7 +84,7 @@ const INITIAL_MOCK_EXERCISES: KinesiologyExercise[] = [
     duration: 30,
     difficulty: "Media",
     materials: "Banda elástica, pelota",
-    description: "Ejercicios isométricos de cuádriceps y movilidad pasiva.",
+    description: "Ejercicios isométricos de cuádriceps 4x15seg. Movilidad pasiva de rodilla hasta 90 grados.",
     createdBy: "Kinesiólogo", // <--- Creado por Kine
     playerId: 1, // ID de Juan Pérez
     playerName: "Juan Pérez",
@@ -93,12 +93,26 @@ const INITIAL_MOCK_EXERCISES: KinesiologyExercise[] = [
   },
   {
     id: 102,
-    name: "Fortalecimiento Tobillo Post-Esguince",
-    kineCategory: "Fortalecimiento",
+    name: "Propiocepción Tobillo (Post-Esguince)",
+    kineCategory: "Rehabilitación",
     duration: 15,
     difficulty: "Fácil",
-    materials: "Plataforma inestable",
-    description: "Ejercicios de balance y propiocepción.",
+    materials: "Plataforma inestable (BOSU)",
+    description: "Balance unipodal 3x30 segundos por pierna. Foco en estabilidad.",
+    createdBy: "Kinesiólogo",
+    playerId: 1, // ID de Juan Pérez
+    playerName: "Juan Pérez",
+    createdAt: "2025-10-25",
+    category: "primera",
+  },
+  {
+    id: 103,
+    name: "Fortalecimiento Isquiotibiales",
+    kineCategory: "Fortalecimiento",
+    duration: 20,
+    difficulty: "Media",
+    materials: "Pesas rusas, slider",
+    description: "Puente de glúteos unipodal 3x10. Curls nórdicos asistidos 3x5.",
     createdBy: "Preparador Físico", // <--- Creado por PF
     playerId: 2, // ID de Carlos Gómez
     playerName: "Carlos Gómez",
@@ -106,34 +120,105 @@ const INITIAL_MOCK_EXERCISES: KinesiologyExercise[] = [
     category: "primera",
   },
   {
-    id: 103,
-    name: "Prevención General de Isquios",
-    kineCategory: "Prevención",
-    duration: 10,
+    id: 104,
+    name: "Recuperación Post-Partido",
+    kineCategory: "Recuperación",
+    duration: 15,
     difficulty: "Fácil",
-    materials: "Ninguno",
-    description: "Ejercicios excéntricos suaves.",
-    createdBy: "Preparador Físico", // <--- Creado por PF
-    playerId: null, // <--- Ejercicio General
-    playerName: null,
+    materials: "Foam roller, colchoneta",
+    description: "Rodillo en cuádriceps, isquios y glúteos (2 min por grupo). Elongación suave general.",
+    createdBy: "Preparador Físico",
+    playerId: 5, // ID de Miguel Torres
+    playerName: "Miguel Torres",
     createdAt: "2025-10-27",
     category: "primera",
   },
-  // Ejercicio para "Juveniles" (para demostrar el filtro de categoría)
   {
-    id: 201,
-    name: "Movilidad de Cadera",
+    id: 105,
+    name: "Prevención General de Hombro (Arqueros)",
+    kineCategory: "Prevención",
+    duration: 10,
+    difficulty: "Fácil",
+    materials: "Bandas elásticas ligeras",
+    description: "Manguito rotador: Rotaciones externas e internas 3x15.",
+    createdBy: "Kinesiólogo",
+    playerId: null, // <--- Ejercicio General
+    playerName: null,
+    createdAt: "2025-10-26",
+    category: "primera",
+  },
+  {
+    id: 106,
+    name: "Activación Core Pre-Entreno",
     kineCategory: "Movilidad",
     duration: 10,
     difficulty: "Fácil",
     materials: "Colchoneta",
-    description: "Rutina de movilidad articular pre-entreno.",
-    createdBy: "Kinesiólogo", // <--- Creado por Kine
+    description: "Planchas frontales (3x30s), laterales (3x20s) y 'bicho muerto' (3x10).",
+    createdBy: "Preparador Físico",
+    playerId: null, // <--- Ejercicio General
+    playerName: null,
+    createdAt: "2025-10-24",
+    category: "primera",
+  },
+
+  // --- EJEMPLOS PARA "JUVENILES" ---
+  {
+    id: 201,
+    name: "Movilidad de Cadera (Psoas)",
+    kineCategory: "Movilidad",
+    duration: 10,
+    difficulty: "Fácil",
+    materials: "Colchoneta",
+    description: "Estiramiento del psoas (3x30s por lado) y rotaciones de cadera '90/90'.",
+    createdBy: "Kinesiólogo",
     playerId: 10, // ID de Lucas Martínez
     playerName: "Lucas Martínez",
     createdAt: "2025-10-28",
     category: "juveniles",
   },
+    {
+    id: 202,
+    name: "Tratamiento Pubalgia (Fase 1)",
+    kineCategory: "Rehabilitación",
+    duration: 25,
+    difficulty: "Media",
+    materials: "Pelota de pilates (esfera)",
+    description: "Ejercicios de aducción isométrica (apretar pelota) 5x10seg. Activación de transverso.",
+    createdBy: "Kinesiólogo",
+    playerId: 12, // ID de Tomás Giménez
+    playerName: "Tomás Giménez",
+    createdAt: "2025-10-29",
+    category: "juveniles",
+  },
+  {
+    id: 203,
+    name: "Fortalecimiento Zona Media (Pubalgia)",
+    kineCategory: "Fortalecimiento",
+    duration: 15,
+    difficulty: "Media",
+    materials: "Colchoneta, banda elástica",
+    description: "Ejercicios de estabilización lumbopélvica. Puente de glúteos con banda.",
+    createdBy: "Preparador Físico",
+    playerId: 12, // ID de Tomás Giménez
+    playerName: "Tomás Giménez",
+    createdAt: "2025-10-30",
+    category: "juveniles",
+  },
+  {
+    id: 204,
+    name: "Técnica de Aterrizaje (Prevención)",
+    kineCategory: "Prevención",
+    duration: 15,
+    difficulty: "Media",
+    materials: "Cajón pliométrico bajo",
+    description: "Saltos al cajón (3x8) y 'drop jumps' controlados (3x5). Foco en alinear rodilla con pie.",
+    createdBy: "Preparador Físico",
+    playerId: null, // <-- Ejercicio General
+    playerName: null,
+    createdAt: "2025-10-27",
+    category: "juveniles",
+  }
 ];
 
 // Tipos de ejercicios Kine (para el Select del formulario)
@@ -179,12 +264,12 @@ export function KinesiologyExerciseManagement() {
     if (typeof window !== 'undefined') {
       const savedExercises = localStorage.getItem(KINESIOLOGY_EXERCISES_KEY);
       // Si no hay nada, carga los ejemplos
-      const exercises = savedExercises ? JSON.parse(savedExercises) : INITIAL_MOCK_EXERCISES;
+      const exercises = savedExercises ? JSON.parse(savedExercises) : INITIAL_MOCK_EXERCISES_LIST; // <--- USA LA LISTA GRANDE
       setAllExercises(exercises);
       
       // (Opcional) Si cargas los mocks, guárdalos para que el Kine los vea
       if (!savedExercises) {
-          localStorage.setItem(KINESIOLOGY_EXERCISES_KEY, JSON.stringify(INITIAL_MOCK_EXERCISES));
+          localStorage.setItem(KINESIOLOGY_EXERCISES_KEY, JSON.stringify(INITIAL_MOCK_EXERCISES_LIST)); // <--- USA LA LISTA GRANDE
       }
     }
   }, []);
@@ -314,6 +399,7 @@ export function KinesiologyExerciseManagement() {
   const uniqueDurations = [...new Set(exercisesForFilterOptions.map(ex => ex.duration))].sort((a, b) => a - b);
 
   // --- Renderizado ---
+  // CORRECCIÓN: 'retuto (' -> 'return ('
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -422,11 +508,13 @@ export function KinesiologyExerciseManagement() {
                       />
                     </div>
                      <div className="space-y-2">
-                      <Label className="text-white">Jugador Asociado *</Label>
+                      <Label className="text-white">Jugador Asociado</Label>
                       <Select
+                        // El valor debe ser "general" si playerId es null
                         value={newExercise.playerId?.toString() ?? "general"}
                         onValueChange={(value) => setNewExercise({
                             ...newExercise,
+                            // Si el valor es "general", playerId es null
                             playerId: value === "general" ? null : parseInt(value)
                         })}
                         disabled={playersInCategory.length === 0}

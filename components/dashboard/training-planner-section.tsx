@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react" // 'useMemo' no se usaba, se eliminó
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,7 +56,8 @@ const getInitialCategory = (): string => {
       try {
         const profile = JSON.parse(profileJson);
         // Retorna el 'id' de la categoría guardada (ej: "primera")
-        return profile.category || "";
+        // CORRECCIÓN: debe leer de profile.category.id
+        return profile?.category?.id || "";
       } catch (e) {
         console.error("Error parsing user profile from localStorage", e);
         return "";
@@ -103,42 +104,48 @@ export function TrainingPlannerSection() {
     }
   });
 
+  // #######################################################################
+  // ###       EJEMPLOS DE ENTRENAMIENTOS CON "createdBy" AÑADIDO        ###
+  // #######################################################################
   const [trainingSessions, setTrainingSessions] = useState([
     {
       id: 1,
       name: "Entrenamiento Táctico - Ataque",
-      date: "2025-09-08",
+      date: "2025-11-08", // Fecha futura
       time: "10:00",
       duration: 90,
       exercises: [
         { id:1, name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas", description: "Ejercicio de ataque posicional para romper líneas por las bandas y buscar centros al área.", },
         { id:2, name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas", description: "Ejercicio para practicar la transición rápida de defensa a ataque, creando superioridad numérica.", },
-        { id:3, name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Físico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva", description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.", },
+        { id:3, name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Táctico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva", description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.", },
         { id:4, name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico", players:6, goalkeepers:1, difficulty:"Fácil", materials:"Balones, barrera", objective:"Mejorar precisión en tiros libres", description: "Práctica de tiros libres directos para mejorar la técnica y la efectividad en estas jugadas.", },
-        { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Físico", players:4, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar distribución del arquero", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
+        { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Táctico", players:4, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar distribución del arquero", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
       ],
       category: "Primera División",
-      categoryId: "primera", // Aseguramos el categoryId
-      attendance: "20/22",
+      categoryId: "primera",
+      createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
+      attendance: "0/25", // Aún no sucedió
       path: "/dashboard/entrenamiento/planificar"
     },
     {
       id: 2,
       name: "Preparación Física - Resistencia",
-      date: "2025-09-10",
+      date: "2025-11-10", // Fecha futura
       time: "15:00",
       duration: 75,
       exercises: [
-        { id:101, name: "Circuito de resistencia", category: "Físico", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
+        { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
         { id:102, name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico", players:12, goalkeepers:0, difficulty:"Difícil", materials:"Pesas, bandas elásticas", objective:"Desarrollar fuerza específica para fútbol", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
-        { id:103, name: "Trabajo aeróbico", category: "Físico", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
+        { id:103, name: "Trabajo aeróbico", category: "Resistencia", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
       ],
       category: "Primera División",
-      categoryId: "primera", // Aseguramos el categoryId
-      attendance: "21/22",
+      categoryId: "primera",
+      createdBy: "PREPARADOR FISICO", // <-- ETIQUETA
+      attendance: "0/25", // Aún no sucedió
       path: "/dashboard/entrenamiento/planificar"
     },
   ]);
+  // #######################################################################
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState("")
@@ -149,10 +156,17 @@ export function TrainingPlannerSection() {
   const [filterTime, setFilterTime] = useState("all")
   const today = new Date().toISOString().split("T")[0]
 
-  // Obtener el perfil del usuario para filtrar jugadores
+  // --- OBTENER PERFIL Y CATEGORÍA ACTUAL (CORREGIDO) ---
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
-  const profileType = profileData?.profileType
+
+  // #######################################################################
+  // ###                 ESTA ES LA CORRECCIÓN CLAVE                     ###
+  // #######################################################################
+  const profileType = profileData?.profile?.role; // Ej: "PREPARADOR FISICO"
+  const profileCategory = profileData?.category?.id; // Ej: "primera"
+  // #######################################################################
+
 
   // Helper function to format the date as DD - MM - YYYY
   const formatDate = (dateString: string | undefined) => {
@@ -233,6 +247,9 @@ export function TrainingPlannerSection() {
   
   const allPlayers = generatePlayersForCategory()
   
+  // #######################################################################
+  // ###     EJEMPLOS DE SESIONES RECIENTES CON "createdBy" AÑADIDO      ###
+  // #######################################################################
   const previousSessions = [
     {
       id: 3,
@@ -246,6 +263,7 @@ export function TrainingPlannerSection() {
       ],
       category: "Juveniles",
       categoryId: "juveniles",
+      createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
       attendance: "19/22"
     },
     {
@@ -260,29 +278,25 @@ export function TrainingPlannerSection() {
       ],
       category: "Primera División",
       categoryId: "primera",
+      createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
       attendance: "20/22"
     },
     {
       id: 5,
-      name: "Sesión 3",
+      name: "Sesión Física Juveniles",
       date: "2024-01-07",
       duration: 40,
-      exercises: [],
-      category: "Infantiles",
-      categoryId: "infantiles",
+      exercises: [ 
+        { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 40, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "...", },
+      ],
+      category: "Juveniles",
+      categoryId: "juveniles",
+      createdBy: "PREPARADOR FISICO", // <-- ETIQUETA
       attendance: "15/15"
     },
-    {
-      id: 6,
-      name: "Sesión 4 (No debe verse)",
-      date: "2024-01-06",
-      duration: 50,
-      exercises: [],
-      category: "Infantiles",
-      categoryId: "infantiles",
-      attendance: "14/15"
-    },
-  ]
+  ];
+  // #######################################################################
+  
   const exercisesFromManagement = [
     {
       id: 1,
@@ -401,7 +415,7 @@ export function TrainingPlannerSection() {
       materials: "Banda elástica, pelota suiza",
       objective: "Recuperar movilidad y fuerza en rodilla",
       createdBy: "Kinesiólogo",
-      type: "Kinesiológico",
+      type: "Kinesiológico", // Ajustado a "Kinesiológico"
       createdAt: "2024-01-15",
       description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.",
     },
@@ -416,22 +430,30 @@ export function TrainingPlannerSection() {
       materials: "Conos, plataforma inestable",
       objective: "Fortalecer músculos estabilizadores del tobillo",
       createdBy: "Kinesiólogo",
-      type: "Kinesiológico",
+      type: "Kinesiológico", // Ajustado a "Kinesiológico"
       createdAt: "2024-01-14",
       description: "Fortalecimiento de músculos estabilizadores del tobillo para prevenir lesiones comunes en el fútbol.",
     },
   ];
 
+  // --- LÓGICA DE EJERCICIOS DISPONIBLES MODIFICADA ---
+  // El PF ahora también puede ver los ejercicios TÉCNICOS del DT
   let availableExercises = []
   if (profileType === "DIRECTOR TECNICO") {
     availableExercises = exercisesFromManagement.filter(ex => ex.type === "Técnico")
   } else if (profileType === "PREPARADOR FISICO") {
-    availableExercises = [...exercisesFromPhysical, ...exercisesFromKinesiology].filter(ex => ex.type === "Físico" || ex.type === "Kinesiológico")
+    availableExercises = [
+      ...exercisesFromPhysical, 
+      ...exercisesFromKinesiology,
+      ...exercisesFromManagement.filter(ex => ex.type === "Técnico") // <-- PF PUEDE VER TÉCNICOS
+    ]
   } else if (profileType === "KINESIOLOGO") {
     availableExercises = exercisesFromKinesiology.filter(ex => ex.type === "Kinesiológico")
   } else {
+    // Modo "TODOS" (ej. Directivo)
     availableExercises = [...exercisesFromManagement, ...exercisesFromPhysical, ...exercisesFromKinesiology]
   }
+  // --------------------------------------------------
 
   // Filtros
   const uniquePlayers = [...new Set(availableExercises.map(ex => ex.players))].sort((a, b) => a - b);
@@ -520,6 +542,8 @@ export function TrainingPlannerSection() {
         case 'Rehabilitación': return '#4ecdc4';
         case 'Prevención': return '#45b7d1';
         case 'Técnico': return '#aff606';
+        case 'Kinesiológico': return '#4ecdc4'; // Añadido para Kine
+        case 'Físico': return '#25d03f'; // Añadido para Físico
         case NOTE_CATEGORY_NAME: return NOTE_NEUTRAL_COLOR; // Color neutral para notas
         default: return '#aff606';
     }
@@ -629,6 +653,7 @@ export function TrainingPlannerSection() {
     setSelectedExercises([]);
   };
 
+  // --- FUNCIÓN DE GUARDADO MODIFICADA ---
   const handleSaveTraining = () => {
     // 0. Preliminary validation (Fields)
     if (!newTraining.name || !newTraining.date || !newTraining.time || !newTraining.category || selectedExercises.length === 0) {
@@ -664,14 +689,15 @@ export function TrainingPlannerSection() {
       exercises: selectedExercises,
       category: playersInTraining.find(cat => cat.id === newTraining.category)?.name || "N/A",
       categoryId: newTraining.category,
-      // Focus eliminado
-      attendance: "0/0",
+      createdBy: profileType, // <-- CAMBIO CLAVE: Se etiqueta el ROL que lo crea
+      attendance: `0/${allPlayers.filter(p => p.category === newTraining.category).length}`, // Simulación de asistencia
       path: "/dashboard/entrenamiento/planificar"
     };
 
     setTrainingSessions(prevSessions => [...prevSessions, newSession]);
     handleCancelForm();
   };
+  // --- FIN DE FUNCIÓN DE GUARDADO ---
   
   const handleDeleteTraining = () => {
     if (trainingToDelete) {
@@ -712,6 +738,24 @@ export function TrainingPlannerSection() {
     }
     return acc;
   }, { present: 0, missing: 0 });
+
+  
+  // #######################################################################
+  // ###       FILTRADO DE SESIONES POR ROL Y CATEGORÍA                  ###
+  // #######################################################################
+  // Filtramos las sesiones que se mostrarán en la UI
+  const filteredProgrammedSessions = trainingSessions.filter(
+    (session) =>
+      session.categoryId === profileCategory && // Coincide la categoría (ej: "primera")
+      session.createdBy === profileType // Coincide el ROL (ej: "PREPARADOR FISICO")
+  );
+
+  const filteredRecentSessions = previousSessions.filter(
+    (session) =>
+      session.categoryId === profileCategory && // Coincide la categoría
+      session.createdBy === profileType // Coincide el ROL
+  );
+  // #######################################################################
 
 
   return (
@@ -942,64 +986,76 @@ export function TrainingPlannerSection() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {trainingSessions.slice(0, 3).map((session) => (
-                  <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <CalendarIcon className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
-                        <p className="text-xs text-gray-400">{session.time}</p>
+                
+                {/* ###################################################### */}
+                {/* ###    SE USA LA LISTA FILTRADA "filteredProgrammedSessions"   ### */}
+                {/* ###################################################### */}
+                {filteredProgrammedSessions.length > 0 ? (
+                  filteredProgrammedSessions.slice(0, 3).map((session) => (
+                    <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-center">
+                          <CalendarIcon className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
+                          <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
+                          <p className="text-xs text-gray-400">{session.time}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-white font-medium">{session.name}</h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {session.duration}min
+                            </div>
+                            <div className="flex items-center">
+                              <Target className="h-4 w-4 mr-1" />
+                              {session.exercises.length} ejercicios
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {getCategoriesInTraining(session.exercises).map((cat, index) => (
+                              <div
+                                key={index}
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: cat.color }}
+                                title={cat.name}
+                              ></div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{session.category}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-medium">{session.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {session.duration}min
-                          </div>
-                          <div className="flex items-center">
-                            <Target className="h-4 w-4 mr-1" />
-                            {session.exercises.length} ejercicios
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {getCategoriesInTraining(session.exercises).map((cat, index) => (
-                            <div
-                              key={index}
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: cat.color }}
-                              title={cat.name}
-                            ></div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{session.category}</p>
+                      <div className="flex items-center space-x-3">
+                        {/* Botón de Programados con Eye icon y estilo outline */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                          onClick={() => {
+                              setShowAttendance(false); // <-- Asegura que se abra en vista de detalles
+                              setShowTrainingDetail(session);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Entrenamiento
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                          onClick={() => setTrainingToDelete(session.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      {/* Botón de Programados con Eye icon y estilo outline */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                        onClick={() => {
-                            setShowAttendance(false); // <-- Asegura que se abra en vista de detalles
-                            setShowTrainingDetail(session);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Entrenamiento
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
-                        onClick={() => setTrainingToDelete(session.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-4">
+                    No hay entrenamientos programados para este perfil en esta categoría.
+                  </p>
+                )}
+                {/* ###################################################### */}
+
               </div>
             </CardContent>
           </Card>
@@ -1014,55 +1070,67 @@ export function TrainingPlannerSection() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {previousSessions.slice(0, 3).map((session) => (
-                  <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <CalendarIcon className="h-8 w-8 text-gray-500 mx-auto mb-1" />
-                        <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
+                
+                {/* ###################################################### */}
+                {/* ###    SE USA LA LISTA FILTRADA "filteredRecentSessions"   ### */}
+                {/* ###################################################### */}
+                {filteredRecentSessions.length > 0 ? (
+                  filteredRecentSessions.slice(0, 3).map((session) => (
+                    <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-center">
+                          <CalendarIcon className="h-8 w-8 text-gray-500 mx-auto mb-1" />
+                          <p className="text-xs text-gray-400">{formatDate(session.date)}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-white font-medium">{session.name}</h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {session.duration}min
+                            </div>
+                            <div className="flex items-center">
+                              <Target className="h-4 w-4 mr-1" />
+                              {session.exercises.length} ejercicios
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {getCategoriesInTraining(session.exercises).map((cat, index) => (
+                              <div
+                                key={index}
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: cat.color }}
+                                title={cat.name}
+                              ></div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{session.category}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-white font-medium">{session.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {session.duration}min
-                          </div>
-                          <div className="flex items-center">
-                            <Target className="h-4 w-4 mr-1" />
-                            {session.exercises.length} ejercicios
-                          </div>
+                      <div className="flex items-center space-x-3">
+                        {/* Badge de session.focus eliminado */}
+                        <Button
+                          size="sm"
+                          className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
+                          onClick={() => setShowTrainingDetail(session)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Entrenamiento
+                        </Button>
+                        <div className="text-right">
+                          <p className="text-[#aff606] font-medium">{session.attendance}</p>
+                          <p className="text-gray-400 text-sm">Asistencia</p>
                         </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {getCategoriesInTraining(session.exercises).map((cat, index) => (
-                            <div
-                              key={index}
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: cat.color }}
-                              title={cat.name}
-                            ></div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{session.category}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      {/* Badge de session.focus eliminado */}
-                      <Button
-                        size="sm"
-                        className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
-                        onClick={() => setShowTrainingDetail(session)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Entrenamiento
-                      </Button>
-                      <div className="text-right">
-                        <p className="text-[#aff606] font-medium">{session.attendance}</p>
-                        <p className="text-gray-400 text-sm">Asistencia</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-4">
+                    No hay entrenamientos recientes para este perfil en esta categoría.
+                  </p>
+                )}
+                {/* ###################################################### */}
+
               </div>
             </CardContent>
           </Card>

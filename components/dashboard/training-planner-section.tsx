@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react" // 'useMemo' no se usaba, se eliminó
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,16 +48,15 @@ const getInitialDateTime = () => {
   return { date: dateObject, time: timeString };
 };
 
-// --- FUNCIÓN AUXILIAR PARA OBTENER LA CATEGORÍA POR DEFECTO DEL PERFIL ---
+// --- FUNCIÓN AUXILIAR PARA OBTENER LA CATEGORÍA POR DEFECTO DEL PERFIL (CORREGIDA) ---
 const getInitialCategory = (): string => {
   if (typeof window !== "undefined") {
     const profileJson = localStorage.getItem("userProfile");
     if (profileJson) {
       try {
         const profile = JSON.parse(profileJson);
-        // Retorna el 'id' de la categoría guardada (ej: "primera")
-        // CORRECCIÓN: debe leer de profile.category.id
-        return profile?.category?.id || "";
+        // CORRECCIÓN: La categoría está anidada
+        return profile?.category?.id || ""; 
       } catch (e) {
         console.error("Error parsing user profile from localStorage", e);
         return "";
@@ -74,31 +73,25 @@ export function TrainingPlannerSection() {
   const [selectedExercises, setSelectedExercises] = useState<any[]>([])
   const [showTrainingDetail, setShowTrainingDetail] = useState<any>(null)
   const [showAttendance, setShowAttendance] = useState(false)
-  // Mantenemos el estado de asistencia, pero su lógica de visualización es simulada
   const [attendance, setAttendance] = useState<Record<number, boolean>>({}) 
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [trainingToDelete, setTrainingToDelete] = useState<number | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
   
-  // --- ESTADO AÑADIDO PARA MENSAJES DE VALIDACIÓN DINÁMICOS ---
   const [validationMessage, setValidationMessage] = useState("Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.");
-  // -----------------------------------------------------------
 
-  // --- ESTADOS AÑADIDOS PARA LA NOTA ---
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [newNote, setNewNote] = useState({
     title: "",
-    duration: "", // Kept as string for input
+    duration: "",
     description: "",
   })
-  // ------------------------------------
 
-  // --- INICIALIZACIÓN DE NEWTRAINING CON LA CATEGORÍA POR DEFECTO ---
   const [newTraining, setNewTraining] = useState(() => {
     const initialDateTime = getInitialDateTime();
     return {
       name: "",
-      date: initialDateTime.date as Date, // Cambiamos a objeto Date
+      date: initialDateTime.date as Date, 
       time: initialDateTime.time,
       category: getInitialCategory(), // <-- Se establece la categoría predeterminada aquí
     }
@@ -162,6 +155,7 @@ export function TrainingPlannerSection() {
 
   // #######################################################################
   // ###                 ESTA ES LA CORRECCIÓN CLAVE                     ###
+  // ###     Se lee la estructura correcta del JSON de userProfile       ###
   // #######################################################################
   const profileType = profileData?.profile?.role; // Ej: "PREPARADOR FISICO"
   const profileCategory = profileData?.category?.id; // Ej: "primera"

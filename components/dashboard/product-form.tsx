@@ -243,17 +243,29 @@ export function ProductForm({ onBack }: ProductFormProps) {
                   </div>
             </div>
 
-            {/* Botón de Publicar Final */}
-            <div className="pt-4 border-t border-[#305176]">
+            {/* --- MODIFICACIÓN AQUÍ --- */}
+            {/* Botones de Publicar y Cancelar */}
+            <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176]">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
+                onClick={onBack}
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
               <Button
                 type="submit"
-                className="w-full bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11 text-lg font-bold"
+                className="w-1/2 bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11 text-lg font-bold"
                 disabled={isLoading}
               >
                 <Save className="h-5 w-5 mr-2" />
-                {isLoading ? "Publicando Producto..." : "Publicar Producto"}
+                {isLoading ? "Publicando..." : "Publicar Producto"}
               </Button>
             </div>
+            {/* --- FIN DE LA MODIFICACIÓN --- */}
+
           </form>
         </CardContent>
       </Card>

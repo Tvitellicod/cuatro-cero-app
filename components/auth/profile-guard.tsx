@@ -37,8 +37,12 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
 
       // Si ni el contexto ni localStorage tienen perfil al inicio, redirige
       if (!currentProfile && !profileExistsInitially) {
-        console.log("ProfileGuard: No profile in context or localStorage initially. Redirecting...");
-        router.push("/create-profile");
+        console.log("ProfileGuard: No profile in context or localStorage initially. Redirecting to /select-category...");
+        
+        // --- CORRECCIÓN AQUÍ ---
+        router.push("/select-category"); // <-- RUTA CORREGIDA (antes era /create-profile)
+        // ---------------------
+
       } else {
         // Si hay perfil (ya sea en contexto o localmente), marca como verificado
         console.log("ProfileGuard: Initial check passed (profile found in context or localStorage).");
@@ -55,8 +59,12 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
       console.log("ProfileGuard: Context check running. Current profile:", currentProfile);
       if (!currentProfile) {
         // Si el contexto se vacía DESPUÉS de la carga inicial (ej. logout), redirige
-        console.log("ProfileGuard: Profile lost from context. Redirecting...");
-        router.push("/create-profile");
+        console.log("ProfileGuard: Profile lost from context. Redirecting to /select-category...");
+        
+        // --- CORRECCIÓN AQUÍ ---
+        router.push("/select-category"); // <-- RUTA CORREGIDA (antes era /create-profile)
+        // ---------------------
+
       } else {
         // Si el perfil existe en el contexto, nos aseguramos de no estar cargando
         if (isVerifying) setIsVerifying(false); // Asegura que salgamos del estado de carga si el contexto ya tiene datos

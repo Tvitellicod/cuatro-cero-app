@@ -25,6 +25,9 @@ const PUBLISHER_PROFILE = {
     displayName: "Cuatro Cero - Publicador",
 };
 
+// --- CORRECCIÓN: Clave correcta de localStorage ---
+// Esta clave debe coincidir con ACTIVE_PROFILE_KEY en use-profile.tsx
+const ACTIVE_PROFILE_KEY = "userProfile"; 
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -55,8 +58,12 @@ export function LoginForm() {
 
         // 2. Verificar si es el usuario publicador
         if (email === PUBLISHER_EMAIL) {
-            // Guardamos el perfil del publicador como 'activeProfile' también
-            localStorage.setItem("activeProfile", JSON.stringify(PUBLISHER_PROFILE));
+            
+            // --- CORRECCIÓN ---
+            // Guardamos el perfil del publicador en la clave correcta "userProfile"
+            localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(PUBLISHER_PROFILE));
+            // ------------------
+
             // Redirige al dashboard directamente
             router.push("/dashboard");
             return;

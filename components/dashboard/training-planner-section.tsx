@@ -115,7 +115,7 @@ export function TrainingPlannerSection() {
         { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Táctico", players:4, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar distribución del arquero", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
       ],
       category: "Primera División",
-      categoryId: "primera",
+      categoryId: "primera", // <-- ID Estático para Mocks
       createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
       attendance: "0/25", // Aún no sucedió
       path: "/dashboard/entrenamiento/planificar"
@@ -132,7 +132,7 @@ export function TrainingPlannerSection() {
         { id:103, name: "Trabajo aeróbico", category: "Resistencia", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
       ],
       category: "Primera División",
-      categoryId: "primera",
+      categoryId: "primera", // <-- ID Estático para Mocks
       createdBy: "PREPARADOR FISICO", // <-- ETIQUETA
       attendance: "0/25", // Aún no sucedió
       path: "/dashboard/entrenamiento/planificar"
@@ -149,16 +149,46 @@ export function TrainingPlannerSection() {
   const [filterTime, setFilterTime] = useState("all")
   const today = new Date().toISOString().split("T")[0]
 
+  
   // --- OBTENER PERFIL Y CATEGORÍA ACTUAL (CORREGIDO) ---
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
+  
+  // #######################################################################
+  // ###                  INICIO DE LA CORRECCIÓN                        ###
+  // #######################################################################
+
+  // 1. Lectura corregida de localStorage
+  const profileType = profileData?.profileType; // Ej: "PREPARADOR FISICO"
+  
+  // 2. Extraer el NOMBRE de la categoría del displayName
+  // (El displayName es "Nombre Apellido - ROL (Nombre Categoria)")
+  const getCategoryNameFromProfile = (data: any) => {
+    if (!data?.displayName) return null;
+    const match = data.displayName.match(/\(([^)]+)\)/);
+    return match ? match[1] : null; // Ej: "Primera División"
+  };
+  const profileCategoryName = getCategoryNameFromProfile(profileData);
+
+  // 3. Función helper para convertir el Nombre de Categoría al ID estático de los Mocks
+  const getMockIdFromName = (name: string | null) => {
+    if (!name) return "";
+    if (name.toLowerCase().includes("primera")) return "primera";
+    if (name.toLowerCase().includes("juveniles")) return "juveniles";
+    if (name.toLowerCase().includes("tercera")) return "tercera";
+    if (name.toLowerCase().includes("cuarta")) return "cuarta";
+    if (name.toLowerCase().includes("quinta")) return "quinta";
+    if (name.toLowerCase().includes("sexta")) return "sexta";
+    if (name.toLowerCase().includes("septima")) return "septima";
+    if (name.toLowerCase().includes("infantiles")) return "infantiles";
+    return name; // fallback
+  };
+
+  // 4. Obtener el ID estático (ej: "primera") que coincide con los mocks
+  const mockCategoryId = getMockIdFromName(profileCategoryName);
 
   // #######################################################################
-  // ###                 ESTA ES LA CORRECCIÓN CLAVE                     ###
-  // ###     Se lee la estructura correcta del JSON de userProfile       ###
-  // #######################################################################
-  const profileType = profileData?.profile?.role; // Ej: "PREPARADOR FISICO"
-  const profileCategory = profileData?.category?.id; // Ej: "primera"
+  // ###                   FIN DE LA CORRECCIÓN                          ###
   // #######################################################################
 
 
@@ -256,7 +286,7 @@ export function TrainingPlannerSection() {
         { id:3, name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
       ],
       category: "Juveniles",
-      categoryId: "juveniles",
+      categoryId: "juveniles", // <-- ID Estático para Mocks
       createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
       attendance: "19/22"
     },
@@ -271,7 +301,7 @@ export function TrainingPlannerSection() {
         { id:3, name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
       ],
       category: "Primera División",
-      categoryId: "primera",
+      categoryId: "primera", // <-- ID Estático para Mocks
       createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
       attendance: "20/22"
     },
@@ -284,7 +314,7 @@ export function TrainingPlannerSection() {
         { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 40, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "...", },
       ],
       category: "Juveniles",
-      categoryId: "juveniles",
+      categoryId: "juveniles", // <-- ID Estático para Mocks
       createdBy: "PREPARADOR FISICO", // <-- ETIQUETA
       attendance: "15/15"
     },
@@ -388,7 +418,7 @@ export function TrainingPlannerSection() {
       players: 12,
       goalkeepers: 0,
       difficulty: "Difícil",
-      materials: "Pesas, bandas elásticas",
+      materials: "Pesas rusas, bandas elásticas",
       objective: "Desarrollar fuerza específica para fútbol",
       createdBy: "Preparador Físico",
       type: "Físico",
@@ -430,16 +460,17 @@ export function TrainingPlannerSection() {
     },
   ];
 
-  // --- LÓGICA DE EJERCICIOS DISPONIBLES MODIFICADA ---
-  // El PF ahora también puede ver los ejercicios TÉCNICOS del DT
+  // --- LÓGICA DE EJERCICIOS DISPONIBLES MODIFICADA (PETICIÓN DEL USUARIO) ---
+  // El PF ahora solo ve ejercicios Físicos y Kinesiológicos
   let availableExercises = []
   if (profileType === "DIRECTOR TECNICO") {
     availableExercises = exercisesFromManagement.filter(ex => ex.type === "Técnico")
   } else if (profileType === "PREPARADOR FISICO") {
     availableExercises = [
       ...exercisesFromPhysical, 
-      ...exercisesFromKinesiology,
-      ...exercisesFromManagement.filter(ex => ex.type === "Técnico") // <-- PF PUEDE VER TÉCNICOS
+      ...exercisesFromKinesiology
+      // --- LÍNEA ELIMINADA ---
+      // ...exercisesFromManagement.filter(ex => ex.type === "Técnico") 
     ]
   } else if (profileType === "KINESIOLOGO") {
     availableExercises = exercisesFromKinesiology.filter(ex => ex.type === "Kinesiológico")
@@ -740,13 +771,13 @@ export function TrainingPlannerSection() {
   // Filtramos las sesiones que se mostrarán en la UI
   const filteredProgrammedSessions = trainingSessions.filter(
     (session) =>
-      session.categoryId === profileCategory && // Coincide la categoría (ej: "primera")
+      session.categoryId === mockCategoryId && // Coincide la categoría (ej: "primera")
       session.createdBy === profileType // Coincide el ROL (ej: "PREPARADOR FISICO")
   );
 
   const filteredRecentSessions = previousSessions.filter(
     (session) =>
-      session.categoryId === profileCategory && // Coincide la categoría
+      session.categoryId === mockCategoryId && // Coincide la categoría
       session.createdBy === profileType // Coincide el ROL
   );
   // #######################################################################

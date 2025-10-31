@@ -94,7 +94,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
 
-    // Sección TORNEOS (ex-PARTIDOS)
+    // --- MODIFICACIÓN AQUÍ ---
+    // Sección TORNEOS (No visible para PREPARADOR FISICO)
     baseItems.push({
       id: "torneos",
       label: "TORNEOS",
@@ -104,8 +105,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { label: "Partidos", href: "/dashboard/torneos/partidos" },
         { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
       ],
-      show: true,
+      show: profileType !== "PREPARADOR FISICO", // <-- Se oculta si es PF
     })
+    // --- FIN DE LA MODIFICACIÓN ---
 
     // Sección ESTADÍSTICAS - Solo para DIRECTOR TECNICO y DIRECTIVO
     if (profileType === "DIRECTOR TECNICO" || profileType === "DIRECTIVO") {

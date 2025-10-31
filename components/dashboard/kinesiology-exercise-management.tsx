@@ -84,7 +84,7 @@ const INITIAL_MOCK_EXERCISES_LIST: KinesiologyExercise[] = [
     duration: 30,
     difficulty: "Media",
     materials: "Banda elástica, pelota",
-    description: "Ejercicios isométricos de cuádriceps 4x15seg. Movilidad pasiva de rodilla hasta 90 grados.",
+    description: "Ejercicios isométricos de cuáiceps 4x15seg. Movilidad pasiva de rodilla hasta 90 grados.",
     createdBy: "Kinesiólogo", // <--- Creado por Kine
     playerId: 1, // ID de Juan Pérez
     playerName: "Juan Pérez",
@@ -126,7 +126,7 @@ const INITIAL_MOCK_EXERCISES_LIST: KinesiologyExercise[] = [
     duration: 15,
     difficulty: "Fácil",
     materials: "Foam roller, colchoneta",
-    description: "Rodillo en cuádriceps, isquios y glúteos (2 min por grupo). Elongación suave general.",
+    description: "Rodillo en cuáiceps, isquios y glúteos (2 min por grupo). Elongación suave general.",
     createdBy: "Preparador Físico",
     playerId: 5, // ID de Miguel Torres
     playerName: "Miguel Torres",
@@ -224,10 +224,25 @@ const INITIAL_MOCK_EXERCISES_LIST: KinesiologyExercise[] = [
 // Tipos de ejercicios Kine (para el Select del formulario)
 const KINESIOLOGY_TYPES = ["Rehabilitación", "Prevención", "Fortalecimiento", "Movilidad", "Recuperación"];
 
+// --- ARREGLO: Función Helper para mapear Nombres de Categoría a IDs de Mocks ---
+const getMockIdFromName = (name: string | undefined) => {
+  if (!name) return "";
+  if (name.toLowerCase().includes("primera")) return "primera";
+  if (name.toLowerCase().includes("juveniles")) return "juveniles";
+  if (name.toLowerCase().includes("tercera")) return "tercera";
+  // Añade más mapeos si tus mocks usan otros IDs
+  return name.toLowerCase(); // Fallback
+};
+// ------------------------------------------------------------------
+
+
 // --- COMPONENTE ---
 
 export function KinesiologyExerciseManagement() {
-  const { selectedCategory: currentGlobalCategory } = useProfile(); // Categoría global
+  // --- ARREGLO: Usamos el hook useProfile para obtener la categoría seleccionada ---
+  const { selectedCategory: currentGlobalCategory } = useProfile(); // Categoría global (ej: { id: "cat_123", name: "Primera División" })
+  // --------------------------------------------------------------------------
+  
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null) // Jugador seleccionado
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newExercise, setNewExercise] = useState<any>(INITIAL_KINE_EXERCISE_STATE)
@@ -248,11 +263,23 @@ export function KinesiologyExerciseManagement() {
   // --- Cargar Jugadores de la Categoría Global ---
   useEffect(() => {
     if (currentGlobalCategory) {
+      
+      // --- ARREGLO: Mapear el nombre de la categoría global (ej: "Primera División") al ID estático del mock (ej: "primera") ---
+      const mockCategoryId = getMockIdFromName(currentGlobalCategory.name);
+      // -----------------------------------------------------------------------------------------------------------
+
       // Simula la carga de jugadores (en tu caso, esto vendría de tu hook o DB)
-      const filtered = MOCK_PLAYERS_KINE.filter(p => p.category === currentGlobalCategory.id);
+      // --- ARREGLO: Usar el mockCategoryId para filtrar ---
+      const filtered = MOCK_PLAYERS_KINE.filter(p => p.category === mockCategoryId);
+      // ---------------------------------------------------
+
       setPlayersInCategory(filtered);
       setSelectedPlayerId(null); // Deseleccionar jugador
-      setNewExercise((prev: any) => ({ ...prev, playerId: null, playerName: null, category: currentGlobalCategory.id }));
+      
+      // --- ARREGLO: Usar el ID estático del mock para el estado inicial del formulario ---
+      setNewExercise((prev: any) => ({ ...prev, playerId: null, playerName: null, category: mockCategoryId }));
+      // --------------------------------------------------------------------------
+
     } else {
       setPlayersInCategory([]);
       setSelectedPlayerId(null);
@@ -293,12 +320,16 @@ export function KinesiologyExerciseManagement() {
 
     const selectedPlayer = playersInCategory.find(p => p.id === newExercise.playerId);
 
+    // --- ARREGLO: Guardar el ID estático ("primera") en lugar del dinámico ("cat_123") ---
+    const mockCategoryId = getMockIdFromName(currentGlobalCategory.name);
+    // ------------------------------------------------------------------------------------
+
     const exerciseToAdd: KinesiologyExercise = {
       ...newExercise,
       id: Date.now(),
       createdAt: new Date().toISOString().split('T')[0],
       playerName: selectedPlayer?.name || null,
-      category: currentGlobalCategory.id, // Guardar la categoría global
+      category: mockCategoryId, // <-- Usar el ID estático del mock
       createdBy: "Preparador Físico", // Creado desde esta vista (PF)
     };
 
@@ -327,10 +358,14 @@ export function KinesiologyExerciseManagement() {
 
     const selectedPlayer = playersInCategory.find(p => p.id === newExercise.playerId);
 
+    // --- ARREGLO: Guardar el ID estático ("primera") en lugar del dinámico ("cat_123") ---
+    const mockCategoryId = getMockIdFromName(currentGlobalCategory.name);
+    // ------------------------------------------------------------------------------------
+
     const updatedExerciseData: KinesiologyExercise = {
       ...newExercise,
       playerName: selectedPlayer?.name || null,
-      category: currentGlobalCategory.id, // Actualizar la categoría global
+      category: mockCategoryId, // <-- Usar el ID estático del mock
     };
 
     const updatedExercises = allExercises.map(ex =>
@@ -370,9 +405,13 @@ export function KinesiologyExerciseManagement() {
   };
 
   // 1. Filtra por Categoría Global
+  // --- ARREGLO: Mapear el nombre de la categoría global (ej: "Primera División") al ID estático del mock (ej: "primera") ---
+  const mockCategoryId = currentGlobalCategory ? getMockIdFromName(currentGlobalCategory.name) : "";
   const exercisesInGlobalCategory = currentGlobalCategory
-     ? allExercises.filter(ex => ex.category === currentGlobalCategory.id)
+     ? allExercises.filter(ex => ex.category === mockCategoryId)
      : [];
+  // -----------------------------------------------------------------------------------------------------------
+
 
   // 2. Filtra por Jugador Seleccionado (y filtros de UI)
   const filteredExercises = exercisesInGlobalCategory
@@ -399,7 +438,6 @@ export function KinesiologyExerciseManagement() {
   const uniqueDurations = [...new Set(exercisesForFilterOptions.map(ex => ex.duration))].sort((a, b) => a - b);
 
   // --- Renderizado ---
-  // CORRECCIÓN: 'retuto (' -> 'return ('
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -638,7 +676,8 @@ export function KinesiologyExerciseManagement() {
                             // Pre-seleccionar jugador si uno está activo en la UI
                             playerId: selectedPlayerId,
                             playerName: selectedPlayerId ? playersInCategory.find(p=>p.id === selectedPlayerId)?.name || null : null,
-                            category: currentGlobalCategory.id, // Asignar categoría global
+                            // ARREGLO: Usar el ID estático del mock al crear
+                            category: mockCategoryId, 
                         });
                         setShowCreateForm(true);
                       }}

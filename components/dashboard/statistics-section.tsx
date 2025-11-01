@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, TrendingUp, Users, Target, Eye, Goal, Clock, Trophy, ShieldOff, AlertTriangle, ChevronDown, Calendar } from "lucide-react"
+// --- MODIFICACIÓN: Iconos añadidos ---
+import { BarChart3, TrendingUp, Users, Target, Eye, Goal, Clock, Trophy, ShieldOff, AlertTriangle, ChevronDown, Calendar, Dumbbell, PieChart } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -25,6 +26,96 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+// --- MODIFICACIÓN: Constantes de color para el gráfico de entrenamiento ---
+const NOTE_TYPE = "Note";
+const NOTE_CATEGORY_NAME = "Nota de Sesión";
+const NOTE_NEUTRAL_COLOR = "#7c7c7c";
+
+const getCategoryColors = (category: string) => {
+  switch (category) {
+      case 'Ataque': return '#ea3498';
+      case 'Defensa': return '#33d9f6';
+      case 'Transiciones': return '#f4c11a';
+      case 'Balón Parado': return '#8a46c5';
+      case 'Resistencia': return '#25d03f';
+      case 'Fuerza': return '#ff6b35';
+      case 'Rehabilitación': return '#4ecdc4';
+      case 'Prevención': return '#45b7d1';
+      case 'Técnico': return '#aff606';
+      case 'Kinesiológico': return '#4ecdc4';
+      case 'Físico': return '#25d03f';
+      case NOTE_CATEGORY_NAME: return NOTE_NEUTRAL_COLOR;
+      default: return '#aff606';
+  }
+};
+// -----------------------------------------------------------------
+
+// --- MODIFICACIÓN: Datos de Entrenamiento (copiados de training-planner) ---
+// (En una app real, esto vendría de una API)
+const trainingSessions = [
+  {
+    id: 1, name: "Entrenamiento Táctico - Ataque", date: "2025-11-08", time: "10:00", duration: 90,
+    exercises: [
+      { id:1, name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
+      { id:2, name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
+      { id:3, name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Táctico" },
+      { id:4, name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
+      { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Táctico" },
+    ],
+    category: "Primera División", categoryId: "primera", createdBy: "DIRECTOR TECNICO", attendance: "0/25",
+  },
+  {
+    id: 2, name: "Preparación Física - Resistencia", date: "2025-11-10", time: "15:00", duration: 75,
+    exercises: [
+      { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 30, type: "Físico" },
+      { id:102, name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico" },
+      { id:103, name: "Trabajo aeróbico", category: "Resistencia", duration: 25, type: "Físico" },
+    ],
+    category: "Primera División", categoryId: "primera", createdBy: "PREPARADOR FISICO", attendance: "0/25",
+  },
+];
+
+const previousSessions = [
+  {
+    id: 3, name: "Entrenamiento Técnico", date: "2024-01-10", duration: 60,
+    exercises: [
+      { id:1, name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico" },
+      { id:2, name: "Definición", category: "Ataque", duration: 25, type: "Técnico" },
+      { id:3, name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico" },
+    ],
+    category: "Juveniles", categoryId: "juveniles", createdBy: "DIRECTOR TECNICO", attendance: "19/22"
+  },
+  {
+    id: 4, name: "Trabajo Defensivo", date: "2024-01-08", duration: 80,
+    exercises: [
+      { id:1, name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico" },
+      { id:2, name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico" },
+      { id:3, name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico" },
+    ],
+    category: "Primera División", categoryId: "primera", createdBy: "DIRECTOR TECNICO", attendance: "20/22"
+  },
+  {
+    id: 5, name: "Sesión Física Juveniles", date: "2024-01-07", duration: 40,
+    exercises: [ 
+      { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 40, type: "Físico" },
+    ],
+    category: "Juveniles", categoryId: "juveniles", createdBy: "PREPARADOR FISICO", attendance: "15/15"
+  },
+  {
+    id: 6, name: "Fuerza y Potencia", date: "2024-01-06", duration: 65,
+    exercises: [ 
+      { id:102, name: "Fuerza", category: "Fuerza", duration: 40, type: "Físico" },
+      { id:103, name: "Prevención", category: "Prevención", duration: 25, type: "Kinesiológico" },
+    ],
+    category: "Primera División", categoryId: "primera", createdBy: "PREPARADOR FISICO", attendance: "22/22"
+  }
+];
+
+// Combinamos todas las sesiones
+const allMockSessions = [...trainingSessions, ...previousSessions];
+// -------------------------------------------------------------------------
+
+
 export function StatisticsSection() {
   const [showMatchDetailModal, setShowMatchDetailModal] = useState<any>(null)
   const [showPlayerDetailModal, setShowPlayerDetailModal] = useState<any>(null)
@@ -34,6 +125,13 @@ export function StatisticsSection() {
   const [filterLocation, setFilterLocation] = useState("all");
   const [filterTournament, setFilterTournament] = useState("all");
   const [filterCategoryList, setFilterCategoryList] = useState("all");
+
+  // --- MODIFICACIÓN: Filtrar entrenamientos por categoría seleccionada ---
+  const filteredTrainings = useMemo(() => {
+    return allMockSessions.filter(s => filterCategoryList === "all" || s.categoryId === filterCategoryList);
+  }, [filterCategoryList]);
+  // ------------------------------------------------------------------
+
   const [activeMatchDetailView, setActiveMatchDetailView] = useState<'general' | 'player'>('general');
 
   // --- DATOS MOCK DE CATEGORÍAS ---
@@ -486,6 +584,16 @@ export function StatisticsSection() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* --- MODIFICACIÓN: Nuevo Cuadrante de Estadísticas de Entrenamiento --- */}
+      {/* Se mostrará solo si hay datos de entrenamiento para esa categoría */}
+      {filteredTrainings.length > 0 && (
+        <TrainingStatistics 
+          sessions={filteredTrainings} 
+          categoryName={filterCategoryList === 'all' ? 'Todas las Categorías' : categories.find(c => c.id === filterCategoryList)?.name || ''}
+        />
+      )}
+      {/* --- FIN DE LA MODIFICACIÓN --- */}
 
 
       {/* Rendimiento por Categoría y Entrenamientos (Resto de Tarjetas) */}
@@ -1066,266 +1174,206 @@ export function StatisticsSection() {
           </div>
         </DialogContent>
       </Dialog>
-      
-      {/* Modal para ver todos los partidos (Filtros sin posesión/asistencias) */}
-      <Dialog open={showAllMatchesModal} onOpenChange={setShowAllMatchesModal}>
-        <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6">
-            <div className="space-y-1">
-              <DialogTitle className="text-white text-2xl font-bold">Todos los Partidos</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Historial completo de partidos jugados.
-              </DialogDescription>
+    </div>
+  )
+}
+
+// --- MODIFICACIÓN: Componente de Estadísticas de Entrenamiento ---
+// (Este es el nuevo cuadrante que solicitaste)
+function TrainingStatistics({ sessions, categoryName }: { sessions: any[], categoryName: string }) {
+  
+  const [showAllStatsModal, setShowAllStatsModal] = useState(false);
+  
+  // 1. Calcular KPIs
+  let totalAttended = 0;
+  let totalPossible = 0;
+  
+  sessions.forEach(s => {
+    // Solo contamos las sesiones pasadas (que tienen asistencia real)
+    if (new Date(s.date) < new Date()) {
+      const [attended, possible] = s.attendance.split('/').map(Number);
+      if (!isNaN(attended) && !isNaN(possible)) {
+        totalAttended += attended;
+        totalPossible += possible;
+      }
+    }
+  });
+
+  const attendancePercentage = totalPossible > 0 ? Math.round((totalAttended / totalPossible) * 100) : 0;
+  const totalSessions = sessions.length;
+  const totalDuration = sessions.reduce((acc, s) => acc + s.duration, 0);
+
+  // 2. Calcular Foco de Entrenamiento (Gráfico)
+  const focusMap = new Map<string, number>();
+
+  sessions.forEach(s => {
+    s.exercises.forEach((ex: any) => {
+      // Ignoramos las notas
+      if (ex.type !== NOTE_TYPE && ex.category !== NOTE_CATEGORY_NAME) {
+        const categoryKey = ex.category || "Sin Categoría";
+        const currentDuration = focusMap.get(categoryKey) || 0;
+        focusMap.set(categoryKey, currentDuration + (ex.duration || 0));
+      }
+    });
+  });
+  
+  // Convertir el Map a un array para el gráfico y ordenarlo
+  const sortedFocusData = Array.from(focusMap.entries()).map(([name, minutos]) => ({
+    name,
+    minutos,
+    fill: getCategoryColors(name) // Asignar color
+  })).sort((a, b) => b.minutos - a.minutos); // Ordenar de mayor a menor
+
+  // Lógica para truncar el gráfico y mostrar el botón "Ver Todas"
+  const isTruncated = sortedFocusData.length > 10;
+  const chartDisplayData = isTruncated ? sortedFocusData.slice(0, 10) : sortedFocusData;
+
+
+  return (
+    <>
+      <Card className="bg-[#213041] border-[#305176]">
+        <CardHeader>
+          {/* --- MODIFICACIÓN: Encabezado con botón condicional --- */}
+          <div className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-white flex items-center">
+                <Dumbbell className="h-5 w-5 mr-2" />
+                Estadísticas de Entrenamiento
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Rendimiento general de: <span className="text-[#aff606] font-medium">{categoryName}</span>
+              </CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterResult} onValueChange={setFilterResult}>
-                <SelectTrigger className="w-full sm:w-32 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Resultado" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#213041] border-[#305176]">
-                  <SelectItem value="all" className="text-white text-xs">Resultado</SelectItem>
-                  <SelectItem value="Victoria" className="text-white text-xs">Victorias</SelectItem>
-                  <SelectItem value="Empate" className="text-white text-xs">Empates</SelectItem>
-                  <SelectItem value="Derrota" className="text-white text-xs">Derrotas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger className="w-full sm:w-32 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Localía" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="all" className="text-white text-xs">Condición</SelectItem>
-                    <SelectItem value="Local" className="text-white text-xs">Local</SelectItem>
-                    <SelectItem value="Visitante" className="text-white text-xs">Visitante</SelectItem>
-                  </SelectContent>
-              </Select>
-              <Select value={filterTournament} onValueChange={setFilterTournament}>
-                <SelectTrigger className="w-full sm:w-32 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Torneo" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#213041] border-[#305176]">
-                  <SelectItem value="all" className="text-white text-xs">Torneo</SelectItem>
-                  {uniqueTournaments.map((tournament: any) => (
-                    <SelectItem key={tournament} value={tournament} className="text-white text-xs">
-                      {tournament}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {isTruncated && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                onClick={() => setShowAllStatsModal(true)}
+              >
+                Ver todas
+              </Button>
+            )}
+          </div>
+          {/* --- FIN MODIFICACIÓN --- */}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div className="bg-[#1d2834] p-4 rounded-lg">
+              <p className="text-sm text-gray-400 flex items-center justify-center"><Users className="h-4 w-4 mr-1"/> Asistencia General</p>
+              <p className={`text-3xl font-bold ${attendancePercentage > 80 ? 'text-[#25d03f]' : 'text-[#f4c11a]'}`}>
+                {attendancePercentage > 0 ? `${attendancePercentage}%` : "N/A"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {totalPossible > 0 ? `${totalAttended} de ${totalPossible} (sesiones pasadas)` : "Sin datos de asistencia"}
+              </p>
+            </div>
+            <div className="bg-[#1d2834] p-4 rounded-lg">
+              <p className="text-sm text-gray-400 flex items-center justify-center"><Dumbbell className="h-4 w-4 mr-1"/> Sesiones Totales</p>
+              <p className="text-3xl font-bold text-white">{totalSessions}</p>
+              <p className="text-xs text-gray-500">Programadas y Recientes</p>
+            </div>
+            <div className="bg-[#1d2834] p-4 rounded-lg">
+              <p className="text-sm text-gray-400 flex items-center justify-center"><Clock className="h-4 w-4 mr-1"/> Tiempo Total Entrenado</p>
+              <p className="text-3xl font-bold text-white">{totalDuration} <span className="text-xl">min</span></p>
+              <p className="text-xs text-gray-500">En todas las sesiones</p>
             </div>
           </div>
-          <ScrollArea className="h-[400px] pr-6">
-            <div className="space-y-4">
-              {filteredMatches.length > 0 ? (
-                filteredMatches.map((match) => (
-                  <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="text-white font-medium">VS {match.opponent}</h3>
-                        <p className="text-gray-400 text-sm">{match.date} - {match.tournament}</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getResultColor(match.status)}>{match.result}</Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                          onClick={() => {
-                            setShowMatchDetailModal(match);
-                            setActiveMatchDetailView('general'); 
-                            setShowAllMatchesModal(false);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver
-                        </Button>
-                      </div>
-                    </div>
+
+          {/* Gráfico de Foco */}
+          <Card className="bg-[#1d2834] border-[#305176] pt-4">
+            <CardHeader className="pt-0">
+               <CardTitle className="text-white text-lg flex items-center">
+                  <PieChart className="h-5 w-5 mr-2" />
+                  Foco de Entrenamiento (Top {chartDisplayData.length} por Minutos)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {chartDisplayData.length > 0 ? (
+                  <div style={{ width: '100%', height: 250 }}>
+                    <ResponsiveContainer>
+                      <BarChart data={chartDisplayData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#888888" 
+                          fontSize={12} 
+                          tickLine={false} 
+                          axisLine={false} 
+                        />
+                        <YAxis 
+                          stroke="#888888" 
+                          fontSize={12} 
+                          tickLine={false} 
+                          axisLine={false} 
+                          label={{ value: 'min', angle: -90, position: 'insideLeft', fill: '#888888' }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: '#305176' }}
+                          contentStyle={{ backgroundColor: '#213041', border: '1px solid #305176', borderRadius: '8px' }}
+                          labelStyle={{ color: '#fff' }}
+                          itemStyle={{ fontWeight: 'bold' }}
+                          formatter={(value: number, name: string) => [`${value} min`, name]}
+                        />
+                        <Bar dataKey="minutos" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                ))
               ) : (
-                <p className="text-center text-gray-400">No se encontraron partidos con estos filtros.</p>
+                <p className="text-gray-500 text-center py-10">No hay datos de ejercicios para mostrar en esta categoría.</p>
               )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Modal de Estadísticas por Jugador (INTERFAZ CONSERVADA) */}
-      <Dialog open={!!showPlayerDetailModal} onOpenChange={setShowPlayerDetailModal}>
-        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">
-              Estadísticas de {showPlayerDetailModal?.name}
-            </DialogTitle>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
+
+      {/* --- MODIFICACIÓN: Modal para "Ver Todas" las estadísticas de entrenamiento --- */}
+      <Dialog open={showAllStatsModal} onOpenChange={setShowAllStatsModal}>
+        <DialogContent className="sm:max-w-lg bg-[#213041] border-[#305176] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white text-2xl font-bold">Distribución Total de Entrenamiento</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Análisis de rendimiento a lo largo de los partidos.
+              Todas las categorías de ejercicios para <span className="text-[#aff606] font-medium">{categoryName}</span>, ordenadas por tiempo.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            <Card className="bg-[#1d2834] border-[#305176] lg:col-span-1 h-fit">
-              <CardHeader>
-                <CardTitle className="text-white text-lg flex items-center"> 
-                   <Users className="h-5 w-5 mr-2 text-[#33d9f6]" /> Información de Jugador
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 flex flex-col items-center p-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={showPlayerDetailModal?.photo} alt={showPlayerDetailModal?.name} />
-                  <AvatarFallback className="bg-[#305176] text-white text-2xl">
-                    {showPlayerDetailModal?.name?.split(" ").map((n: string) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-center">
-                  <h3 className="text-white font-bold text-xl">{showPlayerDetailModal?.name}</h3>
-                </div>
-                
-                <div className="w-full space-y-2 text-sm pt-4 border-t border-[#305176]">
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Apodo</span>
-                        <span className="text-white font-medium">"{showPlayerDetailModal?.nickname || 'N/A'}"</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Pierna Hábil</span>
-                        <span className="text-white font-medium">{showPlayerDetailModal?.foot}</span>
-                    </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="lg:col-span-2">
-              <ScrollArea className="h-[500px] pr-6 space-y-6">
-                
-                <Card className="bg-[#1d2834] border-[#305176]">
-                  <CardHeader>
-                    <CardTitle className="text-white text-lg">Historial Acumulado</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                    
-                    <div className="space-y-2">
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Tiempo Jugado</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Goles</span>
-                            <span className="text-[#25d03f] font-bold">{showPlayerDetailModal?.generalStats?.goals}</span>
-                        </div>
-                        {/* <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Asistencias</span>
-                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.assists}</span>
-                        </div> <-- ELIMINADO */}
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Remate</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remate}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">Tiro al Arco</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remateAlArco}</span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Pelota Recuperada</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Pelota Perdida</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.perdioPelota}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Falta Recibida</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaRecibida}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Falta Cometida</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaCometida}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">T. Amarilla</span>
-                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.yellowCards}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">T. Roja</span>
-                            <span className="text-[#ea3498] font-bold">{showPlayerDetailModal?.generalStats?.redCards}</span>
-                        </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">Historial Partido a Partido</h3>
-                    {showPlayerDetailModal?.matchHistory?.map((match: any) => (
-                        <Card key={match.matchId} className="bg-[#1d2834] border-[#305176] p-0">
-                            <CardHeader className="py-2 px-4 bg-[#305176]/50 rounded-t-lg">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-white text-sm font-bold">VS {match.opponent} ({match.date})</CardTitle>
-                                    <Badge className={getResultColor(match.status)}>{match.result}</Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-y-1 gap-x-4 p-4 text-sm">
-                                
-                                <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Minutos</span>
-                                    <span className="text-white font-bold">{match.minutes} min</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Goles</span>
-                                    <span className="text-[#25d03f] font-bold">{match.goles}</span>
-                                </div>
-                                {/* <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Asistencias</span>
-                                    <span className="text-[#f4c11a] font-bold">{match.asistencias || 0}</span>
-                                </div> <-- ELIMINADO */}
-                                
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">Recuperada</span>
-                                    <span className="text-white font-bold">{match.recupero}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">Perdida</span>
-                                    <span className="text-white font-bold">{match.perdida}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">Remates</span>
-                                    <span className="text-white font-bold">{match.remate}</span>
-                                </div>
-                                
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">R. al Arco</span>
-                                    <span className="text-white font-bold">{match.tiroAlArco}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">F. Recibida</span>
-                                    <span className="text-white font-bold">{match.faltaRecibida}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">F. Cometida</span>
-                                    <span className="text-white font-bold">{match.faltaCometida}</span>
-                                </div>
-
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">T. Amarilla</span>
-                                    <span className="text-[#f4c11a] font-bold">{match.tAmarilla}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">T. Roja</span>
-                                    <span className="text-[#ea3498] font-bold">{match.tRoja}</span>
-                                </div>
-                                
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-              </ScrollArea>
+          <div className="py-4">
+            <ScrollArea className="h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-[#305176]">
+                    <TableHead className="text-white">Categoría</TableHead>
+                    <TableHead className="text-white text-right">Minutos Totales</TableHead>
+                    <TableHead className="text-white text-right">Porcentaje</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedFocusData.map((data) => {
+                    const percentage = totalDuration > 0 ? ((data.minutos / totalDuration) * 100).toFixed(1) : 0;
+                    return (
+                      <TableRow key={data.name} className="border-b-[#305176]">
+                        <TableCell className="font-medium">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.fill }} />
+                            <span className="text-white">{data.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-white font-bold text-right">{data.minutos} min</TableCell>
+                        <TableCell className="text-gray-400 text-right">{percentage}%</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+            <div className="mt-4 pt-4 border-t border-[#305176] flex justify-between">
+              <span className="text-gray-400">Tiempo Total (Solo Ejercicios):</span>
+              <span className="text-white font-bold">{totalDuration} minutos</span>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      {/* --- FIN DE LA MODIFICACIÓN --- */}
+
+    </>
   )
 }

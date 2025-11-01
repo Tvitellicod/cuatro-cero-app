@@ -82,20 +82,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         })
       }
 
-      trainingItems.push({ label: "Planificar Entrenamiento", href: "/dashboard/entrenamiento/planificar" })
+      // --- MODIFICACIÓN AQUÍ ---
+      // Solo añadir "Planificar Entrenamiento" si el perfil NO es KINESIOLOGO
+      if (profileType !== "KINESIOLOGO") {
+        trainingItems.push({ label: "Planificar Entrenamiento", href: "/dashboard/entrenamiento/planificar" })
+      }
+      // --- FIN DE LA MODIFICACIÓN ---
+
 
       baseItems.push({
         id: "entrenamiento",
         label: "ENTRENAMIENTO",
         icon: Dumbbell,
-        href: "/dashboard/entrenamiento",
+        // --- MODIFICACIÓN AQUÍ ---
+        // Si es Kine, el enlace principal va directo a su única sección
+        href: profileType === "KINESIOLOGO" ? "/dashboard/entrenamiento/ejercicios-kinesiologia" : "/dashboard/entrenamiento",
         items: trainingItems,
         show: true,
       })
     }
 
-    // --- MODIFICACIÓN AQUÍ ---
-    // Sección TORNEOS (No visible para PREPARADOR FISICO)
+    // Sección TORNEOS (No visible para PREPARADOR FISICO ni KINESIOLOGO)
     baseItems.push({
       id: "torneos",
       label: "TORNEOS",
@@ -105,9 +112,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { label: "Partidos", href: "/dashboard/torneos/partidos" },
         { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
       ],
-      show: profileType !== "PREPARADOR FISICO", // <-- Se oculta si es PF
+      show: profileType !== "PREPARADOR FISICO" && profileType !== "KINESIOLOGO", // <-- Se oculta si es PF o KINE
     })
-    // --- FIN DE LA MODIFICACIÓN ---
 
     // Sección ESTADÍSTICAS - Solo para DIRECTOR TECNICO y DIRECTIVO
     if (profileType === "DIRECTOR TECNICO" || profileType === "DIRECTIVO") {

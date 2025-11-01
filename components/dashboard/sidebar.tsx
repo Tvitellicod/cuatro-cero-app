@@ -40,7 +40,31 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
     // --- FIN LÓGICA PUBLICADOR ---
 
+    // --- MODIFICACIÓN: LÓGICA EXCLUSIVA PARA ROL DIRECTIVO ---
+    if (profileType === "DIRECTIVO") {
+      return [
+        {
+          id: "inicio",
+          label: "INICIO",
+          icon: Home,
+          href: "/dashboard",
+          items: [],
+          show: true,
+        },
+        {
+          id: "estadisticas",
+          label: "ESTADÍSTICAS",
+          icon: BarChart3,
+          href: "/dashboard/estadisticas",
+          items: [],
+          show: true,
+        }
+      ]
+    }
+    // --- FIN LÓGICA DIRECTIVO ---
 
+
+    // --- LÓGICA PARA TODOS LOS DEMÁS ROLES (DT, PF, KINE, NUTRI) ---
     const baseItems = [
       {
         id: "inicio",
@@ -59,8 +83,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         show: true,
       },
     ]
-
-    // ... (El resto de la lógica de roles de gestión permanece sin cambios) ...
 
     if (profileType !== "NUTRICIONISTA") {
       const trainingItems = []
@@ -82,19 +104,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         })
       }
 
-      // --- MODIFICACIÓN AQUÍ ---
       // Solo añadir "Planificar Entrenamiento" si el perfil NO es KINESIOLOGO
       if (profileType !== "KINESIOLOGO") {
         trainingItems.push({ label: "Planificar Entrenamiento", href: "/dashboard/entrenamiento/planificar" })
       }
-      // --- FIN DE LA MODIFICACIÓN ---
 
 
       baseItems.push({
         id: "entrenamiento",
         label: "ENTRENAMIENTO",
         icon: Dumbbell,
-        // --- MODIFICACIÓN AQUÍ ---
         // Si es Kine, el enlace principal va directo a su única sección
         href: profileType === "KINESIOLOGO" ? "/dashboard/entrenamiento/ejercicios-kinesiologia" : "/dashboard/entrenamiento",
         items: trainingItems,
@@ -112,11 +131,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { label: "Partidos", href: "/dashboard/torneos/partidos" },
         { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
       ],
-      show: profileType !== "PREPARADOR FISICO" && profileType !== "KINESIOLOGO", // <-- Se oculta si es PF o KINE
+      show: profileType !== "PREPARADOR FISICO" && profileType !== "KINESIOLOGO",
     })
 
-    // Sección ESTADÍSTICAS - Solo para DIRECTOR TECNICO y DIRECTIVO
-    if (profileType === "DIRECTOR TECNICO" || profileType === "DIRECTIVO") {
+    // Sección ESTADÍSTICAS - (DIRECTIVO ya fue manejado, solo entra DT)
+    if (profileType === "DIRECTOR TECNICO") {
       baseItems.push({
         id: "estadisticas",
         label: "ESTADÍSTICAS",

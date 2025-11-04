@@ -11,20 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { User, Apple, FileText, Plus, Eye, Calendar, ArrowLeft, Trash2 } from "lucide-react" // Importar Trash2
+import { User, Apple, FileText, Plus, Eye, Calendar, ArrowLeft } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area" 
 import { Separator } from "@/components/ui/separator" 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-
 
 // --- Interfaces ---
 interface Player {
@@ -49,7 +38,7 @@ interface NutritionReport {
   diagMasaMuscular: Diagnosis; 
   supplementation: string;
   objective: string;
-  observations: string; 
+  observations: string; // <-- Campo añadido
 }
 
 const INITIAL_FORM_DATA: NutritionReport = {
@@ -64,7 +53,7 @@ const INITIAL_FORM_DATA: NutritionReport = {
   diagMasaMuscular: "NORMAL",
   supplementation: "",
   objective: "",
-  observations: "", 
+  observations: "", // <-- Campo añadido
 };
 
 const NUTRITION_REPORTS_KEY = "nutritionReports";
@@ -151,8 +140,6 @@ export function NutritionSection() {
   const [newReportData, setNewReportData] = useState<NutritionReport>(INITIAL_FORM_DATA);
   const [reports, setReports] = useState<Record<number, NutritionReport[]>>({});
   
-  const [reportToDelete, setReportToDelete] = useState<NutritionReport | null>(null);
-  
   const playerReports = useMemo(() => {
     if (selectedPlayer) {
       return (reports[selectedPlayer.id] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -200,7 +187,7 @@ export function NutritionSection() {
     const newReport: NutritionReport = {
       ...newReportData,
       id: `report_${Date.now()}`, 
-      date: new Date().toISOString().split('T')[0] 
+      date: new Date().toISOString().split('T')[0] // La fecha se guarda automáticamente
     };
 
     const existingReports = reports[selectedPlayer.id] || [];
@@ -224,36 +211,6 @@ export function NutritionSection() {
     
     setNewReportData(INITIAL_FORM_DATA);
     setActiveReportId(newReport.id); 
-  };
-
-  const handleDeleteReport = () => {
-    if (!reportToDelete || !selectedPlayer) return;
-
-    const updatedPlayerReports = (reports[selectedPlayer.id] || []).filter(
-      report => report.id !== reportToDelete.id
-    );
-
-    const newAllReports = {
-      ...reports,
-      [selectedPlayer.id]: updatedPlayerReports
-    };
-
-    setReports(newAllReports);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(NUTRITION_REPORTS_KEY, JSON.stringify(newAllReports));
-    }
-
-    toast({
-      title: "Informe Eliminado",
-      description: `El informe del ${formatDate(reportToDelete.date)} fue eliminado.`,
-      variant: "destructive",
-    });
-
-    if (activeReportId === reportToDelete.id) {
-      setActiveReportId(null);
-    }
-    
-    setReportToDelete(null); 
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -329,7 +286,6 @@ export function NutritionSection() {
             </DialogDescription>
           </DialogHeader>
           
-          {/* --- ARREGLO: Contenedor del Grid con min-h-0 --- */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
 
             {/* Columna Izquierda: Historial */}
@@ -350,32 +306,19 @@ export function NutritionSection() {
                     playerReports.map(report => (
                       <div 
                         key={report.id} 
-                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                           activeReportId === report.id
                             ? "bg-[#305176]"
                             : "bg-[#213041] hover:bg-[#305176]/50"
                         }`}
+                        onClick={() => setActiveReportId(report.id)} 
                       >
-                        <div 
-                          className="flex items-center space-x-3 overflow-hidden flex-1"
-                          onClick={() => setActiveReportId(report.id)} 
-                        >
+                        <div className="flex items-center space-x-3 overflow-hidden">
                           <Calendar className={`h-5 w-5 ${activeReportId === report.id ? 'text-[#aff606]' : 'text-gray-400'}`} />
                           <div>
                             <p className="text-white font-medium">{formatDate(report.date)}</p>
                           </div>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-red-500/60 hover:text-red-500 hover:bg-red-500/10 h-8 w-8 ml-2"
-                          onClick={(e) => {
-                            e.stopPropagation(); 
-                            setReportToDelete(report);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))
                   ) : (
@@ -388,12 +331,14 @@ export function NutritionSection() {
               </ScrollArea>
             </div>
 
-            {/* --- ARREGLO: Columna Derecha: Formulario + Botón --- */}
+            {/* Columna Derecha: Formulario (CON ARREGLO DE SCROLL) */}
             <div className="md:col-span-2 h-full flex flex-col overflow-hidden min-h-0"> 
               
-              {/* 1. Área de Scroll (solo para el formulario) */}
+              {/* --- ARREGLO: Mover el ScrollArea para que envuelva el form Y el botón --- */}
               <ScrollArea className="flex-1 pr-6"> 
+                
                 <form className="space-y-6 p-1">
+                  {/* --- Fecha movida aquí --- */}
                   <div className="flex justify-end -mb-4">
                     <p className="text-sm text-gray-400">
                       Fecha del Informe: 
@@ -460,50 +405,25 @@ export function NutritionSection() {
                       />
                     </div>
                   </div>
+                  
+                  {/* --- ARREGLO: Botón de Guardar movido DENTRO del ScrollArea --- */}
+                  {/* (Para que se pueda llegar a él haciendo scroll) */}
+                  {!isReadOnly && (
+                    <div className="flex justify-end pt-4">
+                      <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
+                        Guardar Informe
+                      </Button>
+                    </div>
+                  )}
+
                 </form>
               </ScrollArea>
-              
-              {/* --- ARREGLO: Botón de Guardar movido FUERA del ScrollArea --- */}
-              {!isReadOnly && (
-                <div className="flex-shrink-0 flex justify-end pt-4 mt-4 border-t border-[#305176] pr-6">
-                  <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
-                    Guardar Informe
-                  </Button>
-                </div>
-              )}
               {/* --- FIN DEL ARREGLO --- */}
-
             </div>
+
           </div>
         </DialogContent>
       </Dialog>
-      
-      <AlertDialog open={!!reportToDelete} onOpenChange={() => setReportToDelete(null)}>
-        <AlertDialogContent className="bg-[#213041] border-[#305176]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Esta acción eliminará permanentemente el informe del{" "}
-              <span className="font-bold text-white">{formatDate(reportToDelete?.date || "")}</span>.
-              No se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel 
-              className="bg-transparent border-[#305176] text-white hover:bg-[#305176]"
-              onClick={() => setReportToDelete(null)}
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-red-500 text-white hover:bg-red-600" 
-              onClick={handleDeleteReport}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

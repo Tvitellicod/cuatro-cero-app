@@ -38,6 +38,7 @@ interface NutritionReport {
   diagMasaMuscular: Diagnosis; 
   supplementation: string;
   objective: string;
+  observations: string; // <-- Campo añadido
 }
 
 const INITIAL_FORM_DATA: NutritionReport = {
@@ -52,6 +53,7 @@ const INITIAL_FORM_DATA: NutritionReport = {
   diagMasaMuscular: "NORMAL",
   supplementation: "",
   objective: "",
+  observations: "", // <-- Campo añadido
 };
 
 const NUTRITION_REPORTS_KEY = "nutritionReports";
@@ -91,6 +93,7 @@ const INITIAL_MOCK_REPORTS: Record<number, NutritionReport[]> = {
       diagMasaAdiposa: "ADECUADA",
       diagMasaMuscular: "ADECUADA",
       supplementation: "Creatina 5g post-entreno. Whey Protein 30g AM.",
+      observations: "Buena adherencia al plan. Reporta más energía.", 
       objective: "Mantener peso, reducir % graso y aumentar masa muscular.",
     },
     {
@@ -104,6 +107,7 @@ const INITIAL_MOCK_REPORTS: Record<number, NutritionReport[]> = {
       diagMasaAdiposa: "PODRIA MEJORAR",
       diagMasaMuscular: "ADECUADA",
       supplementation: "Whey Protein 30g AM.",
+      observations: "Inicio de plan. Ajustar porciones de carbohidratos.", 
       objective: "Evaluación inicial. Objetivo: Reducir % graso.",
     }
   ],
@@ -119,6 +123,7 @@ const INITIAL_MOCK_REPORTS: Record<number, NutritionReport[]> = {
       diagMasaAdiposa: "ADECUADA",
       diagMasaMuscular: "PODRIA MEJORAR",
       supplementation: "Ninguna.",
+      observations: "Jugador juvenil. Foco en hábitos alimenticios.", 
       objective: "Aumentar ingesta calórica saludable. Mejorar timing de comidas.",
     }
   ]
@@ -182,7 +187,7 @@ export function NutritionSection() {
     const newReport: NutritionReport = {
       ...newReportData,
       id: `report_${Date.now()}`, 
-      date: new Date(newReportData.date).toISOString().split('T')[0] 
+      date: new Date().toISOString().split('T')[0] // La fecha se guarda automáticamente
     };
 
     const existingReports = reports[selectedPlayer.id] || [];
@@ -328,13 +333,22 @@ export function NutritionSection() {
 
             {/* Columna Derecha: Formulario (CON ARREGLO DE SCROLL) */}
             <div className="md:col-span-2 h-full flex flex-col overflow-hidden min-h-0"> 
+              
+              {/* --- ARREGLO: Mover el ScrollArea para que envuelva el form Y el botón --- */}
               <ScrollArea className="flex-1 pr-6"> 
                 
                 <form className="space-y-6 p-1">
+                  {/* --- Fecha movida aquí --- */}
+                  <div className="flex justify-end -mb-4">
+                    <p className="text-sm text-gray-400">
+                      Fecha del Informe: 
+                      <span className="font-medium text-white ml-2">{formatDate(displayData.date)}</span>
+                    </p>
+                  </div>
+
                   {/* --- Sección 1: Datos Antropométricos --- */}
                   <SectionTitle title="Datos Antropométricos" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InputGroup label="Fecha del Informe" name="date" type="date" value={displayData.date} onChange={handleInputChange} readOnly={isReadOnly} />
                     <InputGroup label="Edad" name="edad" type="number" placeholder="25" value={displayData.edad} onChange={handleInputChange} readOnly={isReadOnly} />
                     <InputGroup label="Altura (cm)" name="altura" type="number" placeholder="180" value={displayData.altura} onChange={handleInputChange} readOnly={isReadOnly} />
                     <InputGroup label="Peso (kg)" name="peso" type="number" placeholder="80.5" value={displayData.peso} onChange={handleInputChange} readOnly={isReadOnly} />
@@ -380,8 +394,20 @@ export function NutritionSection() {
                       onChange={handleInputChange} 
                       readOnly={isReadOnly} 
                     />
+                     <div className="md:col-span-2">
+                      <TextareaGroup 
+                        label="Observaciones" 
+                        name="observations" 
+                        placeholder="Ej: Jugador reporta buena digestión..." 
+                        value={displayData.observations} 
+                        onChange={handleInputChange} 
+                        readOnly={isReadOnly} 
+                      />
+                    </div>
                   </div>
                   
+                  {/* --- ARREGLO: Botón de Guardar movido DENTRO del ScrollArea --- */}
+                  {/* (Para que se pueda llegar a él haciendo scroll) */}
                   {!isReadOnly && (
                     <div className="flex justify-end pt-4">
                       <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
@@ -392,7 +418,9 @@ export function NutritionSection() {
 
                 </form>
               </ScrollArea>
+              {/* --- FIN DEL ARREGLO --- */}
             </div>
+
           </div>
         </DialogContent>
       </Dialog>

@@ -1,326 +1,527 @@
 "use client"
 
-import { useState } from "react"
-// --- IMPORTACIONES CORREGIDAS ---
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Apple, FileText, Scale, Activity } from "lucide-react"
-// --- FIN IMPORTACIONES CORREGIDAS ---
+import { useProfile } from "@/hooks/use-profile"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/hooks/use-toast"
+import { User, Apple, FileText, Plus, Eye, Calendar, ArrowLeft } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area" 
+import { Separator } from "@/components/ui/separator" 
+
+// --- Interfaces ---
+interface Player {
+  id: number;
+  name: string;
+  category: string; // Este es el ID estático (ej: "primera")
+  photo: string;
+  position: string;
+}
+
+type Diagnosis = "ADECUADA" | "PODRIA MEJORAR" | "AUMENTADA" | "NORMAL"; 
+
+interface NutritionReport {
+  id: string; 
+  date: string;
+  edad: string; 
+  altura: string; 
+  peso: string; 
+  sumatoriaPliegues: string; 
+  imc: string; 
+  diagMasaAdiposa: Diagnosis; 
+  diagMasaMuscular: Diagnosis; 
+  supplementation: string;
+  objective: string;
+}
+
+const INITIAL_FORM_DATA: NutritionReport = {
+  id: "",
+  date: new Date().toISOString().split('T')[0], 
+  edad: "",
+  altura: "",
+  peso: "",
+  sumatoriaPliegues: "",
+  imc: "",
+  diagMasaAdiposa: "NORMAL",
+  diagMasaMuscular: "NORMAL",
+  supplementation: "",
+  objective: "",
+};
+
+const NUTRITION_REPORTS_KEY = "nutritionReports";
+
+// --- DATOS MOCK ---
+const MOCK_PLAYERS_LIST: Player[] = [
+  // Primera
+  { id: 1, name: "Juan C. Pérez", category: "primera", photo: "/placeholder-user.jpg", position: "Pivot" },
+  { id: 2, name: "Miguel A. González", category: "primera", photo: "/placeholder-user.jpg", position: "Ala" },
+  { id: 4, name: "Tomás López", category: "primera", photo: "/placeholder-user.jpg", position: "Arquero" },
+  // Juveniles
+  { id: 3, name: "Roberto Silva", category: "juveniles", photo: "/placeholder-user.jpg", position: "Ultimo" },
+  { id: 7, name: "Martín Palacios", category: "juveniles", photo: "/placeholder-user.jpg", position: "Ultimo" },
+  // Tercera
+  { id: 5, name: "Alejandro Díaz", category: "tercera", photo: "/placeholder-user.jpg", position: "Defensor" },
+  { id: 6, name: "Santiago Giménez", category: "tercera", photo: "/placeholder-user.jpg", position: "Ala" },
+];
+
+const getMockIdFromName = (name: string | undefined) => {
+  if (!name) return "";
+  if (name.toLowerCase().includes("primera")) return "primera";
+  if (name.toLowerCase().includes("juveniles")) return "juveniles";
+  if (name.toLowerCase().includes("tercera")) return "tercera";
+  return name.toLowerCase(); 
+};
+
+const INITIAL_MOCK_REPORTS: Record<number, NutritionReport[]> = {
+  1: [ 
+    {
+      id: "report_1700000000001",
+      date: "2025-10-01",
+      edad: "28",
+      altura: "180",
+      peso: "80.5",
+      sumatoriaPliegues: "67",
+      imc: "24.8",
+      diagMasaAdiposa: "ADECUADA",
+      diagMasaMuscular: "ADECUADA",
+      supplementation: "Creatina 5g post-entreno. Whey Protein 30g AM.",
+      objective: "Mantener peso, reducir % graso y aumentar masa muscular.",
+    },
+    {
+      id: "report_1700000000000",
+      date: "2025-09-01",
+      edad: "28",
+      altura: "180",
+      peso: "81.2",
+      sumatoriaPliegues: "74",
+      imc: "25.1",
+      diagMasaAdiposa: "PODRIA MEJORAR",
+      diagMasaMuscular: "ADECUADA",
+      supplementation: "Whey Protein 30g AM.",
+      objective: "Evaluación inicial. Objetivo: Reducir % graso.",
+    }
+  ],
+  3: [ 
+    {
+      id: "report_1700000000002",
+      date: "2025-10-05",
+      edad: "19",
+      altura: "175",
+      peso: "75.0",
+      sumatoriaPliegues: "60",
+      imc: "24.5",
+      diagMasaAdiposa: "ADECUADA",
+      diagMasaMuscular: "PODRIA MEJORAR",
+      supplementation: "Ninguna.",
+      objective: "Aumentar ingesta calórica saludable. Mejorar timing de comidas.",
+    }
+  ]
+};
+// --- FIN DATOS MOCK ---
+
 
 export function NutritionSection() {
-  // Cambia el estado inicial de selectedCategory a "all"
-  const [selectedCategory, setSelectedCategory] = useState("all") // <-- CAMBIO AQUÍ
-  const [showReportForm, setShowReportForm] = useState(false)
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+  const { selectedCategory: currentGlobalCategory } = useProfile();
+  
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false); 
+  const [activeReportId, setActiveReportId] = useState<string | null>(null); 
+  const [newReportData, setNewReportData] = useState<NutritionReport>(INITIAL_FORM_DATA);
+  const [reports, setReports] = useState<Record<number, NutritionReport[]>>({});
+  
+  const playerReports = useMemo(() => {
+    if (selectedPlayer) {
+      return (reports[selectedPlayer.id] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    return [];
+  }, [selectedPlayer, reports]);
 
-  const categories = [
-    { id: "primera", name: "Primera División", playerCount: 25 },
-    { id: "tercera", name: "Tercera División", playerCount: 18 },
-    { id: "juveniles", name: "Juveniles", playerCount: 22 },
-  ]
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedReports = localStorage.getItem(NUTRITION_REPORTS_KEY);
+      if (storedReports) {
+        setReports(JSON.parse(storedReports));
+      } else {
+        setReports(INITIAL_MOCK_REPORTS);
+        localStorage.setItem(NUTRITION_REPORTS_KEY, JSON.stringify(INITIAL_MOCK_REPORTS));
+      }
+    }
+  }, []);
 
-  const players = [
-    {
-      id: 1,
-      name: "Juan Carlos",
-      surname: "Pérez",
-      position: "Delantero",
-      category: "Primera División",
-      photo: "/placeholder.svg?height=40&width=40",
-      lastReport: "2024-01-10",
-    },
-    {
-      id: 2,
-      name: "Miguel Ángel",
-      surname: "González",
-      position: "Mediocampista",
-      category: "Primera División",
-      photo: "/placeholder.svg?height=40&width=40",
-      lastReport: "2024-01-08",
-    },
-    {
-      id: 3,
-      name: "Roberto",
-      surname: "Silva",
-      position: "Defensor",
-      category: "Tercera División",
-      photo: "/placeholder.svg?height=40&width=40",
-      lastReport: "2024-01-05",
-    },
-  ]
-
-  // Ajusta la lógica de filtrado para usar "all"
-  const filteredPlayers = selectedCategory === "all" // <-- CAMBIO AQUÍ
-    ? players
-    : players.filter((player) => player.category === categories.find((c) => c.id === selectedCategory)?.name)
-
-  const handleCreateReport = (player: any) => {
-    setSelectedPlayer(player)
-    setShowReportForm(true)
-  }
-
+  const mockCategoryId = currentGlobalCategory ? getMockIdFromName(currentGlobalCategory.name) : "";
+  const filteredPlayers = MOCK_PLAYERS_LIST.filter(
+    (player) => player.category === mockCategoryId
+  );
+  
+  const handleOpenReportModal = (player: Player) => {
+    setSelectedPlayer(player);
+    setActiveReportId(null); 
+    setNewReportData({
+      ...INITIAL_FORM_DATA,
+      date: new Date().toISOString().split('T')[0]
+    });
+    setShowReportModal(true);
+  };
+  
   const handleSaveReport = () => {
-    setShowReportForm(false)
-    setSelectedPlayer(null)
-    // Aquí se guardaría el reporte
-  }
+    if (!selectedPlayer || !newReportData.objective || !newReportData.peso || !newReportData.altura || !newReportData.edad) {
+      toast({
+        title: "Error de Validación",
+        description: "Edad, Altura, Peso y Objetivo son campos obligatorios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newReport: NutritionReport = {
+      ...newReportData,
+      id: `report_${Date.now()}`, 
+      date: new Date(newReportData.date).toISOString().split('T')[0] 
+    };
+
+    const existingReports = reports[selectedPlayer.id] || [];
+    const updatedReports = [...existingReports, newReport];
+
+    const newAllReports = {
+      ...reports,
+      [selectedPlayer.id]: updatedReports
+    };
+
+    setReports(newAllReports);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(NUTRITION_REPORTS_KEY, JSON.stringify(newAllReports));
+    }
+
+    toast({
+      title: "Informe Guardado",
+      description: `El informe para ${selectedPlayer.name} fue guardado.`,
+      variant: "default",
+    });
+    
+    setNewReportData(INITIAL_FORM_DATA);
+    setActiveReportId(newReport.id); 
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewReportData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleDiagnosisChange = (name: "diagMasaAdiposa" | "diagMasaMuscular", value: Diagnosis) => {
+    setNewReportData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const viewingReport = useMemo(() => {
+    if (activeReportId && selectedPlayer) {
+      return playerReports.find(r => r.id === activeReportId);
+    }
+    return null;
+  }, [activeReportId, playerReports, selectedPlayer]);
+
+  const isReadOnly = !!viewingReport;
+  const displayData = viewingReport || newReportData;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Nutrición</h2>
-        <p className="text-gray-400">Gestión nutricional de los jugadores</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-2">Seguimiento Nutricional</h2>
+          <p className="text-gray-400">
+            {currentGlobalCategory 
+              ? `Viendo jugadores de ${currentGlobalCategory.name}`
+              : "Gestiona los informes y objetivos nutricionales."
+            }
+          </p>
+        </div>
       </div>
+      
+      {!currentGlobalCategory ? (
+        <Card className="bg-[#213041] border-[#305176] text-center p-8">
+          <CardTitle className="text-white">Selecciona una Categoría</CardTitle>
+          <CardDescription className="text-gray-400 mt-2">
+            Por favor, selecciona una categoría desde el menú superior para ver los jugadores.
+          </CardDescription>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredPlayers.length > 0 ? (
+            filteredPlayers.map(player => (
+              <PlayerCard 
+                key={player.id} 
+                player={player} 
+                onOpenHistory={() => handleOpenReportModal(player)}
+              />
+            ))
+          ) : (
+             <p className="text-gray-500 col-span-full text-center py-8">
+                No hay jugadores de ejemplo para la categoría seleccionada.
+             </p>
+          )}
+        </div>
+      )}
 
-      {!showReportForm ? (
-        <>
-          {/* Selector de Categoría */}
-          <Card className="bg-[#213041] border-[#305176]">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <Label className="text-white">Filtrar por categoría:</Label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full sm:w-64 bg-[#1d2834] border-[#305176] text-white">
-                    <SelectValue placeholder="Todas las categorías" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#213041] border-[#305176]">
-                    {/* Cambia value="" a value="all" */}
-                    <SelectItem value="all" className="text-white"> {/* <-- CAMBIO AQUÍ */}
-                      Todas las categorías
-                    </SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id} className="text-white">
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+      
+      <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
+        <DialogContent className="sm:max-w-6xl h-[90vh] bg-[#213041] border-[#305176] text-white flex flex-col">
+          <DialogHeader className="pr-16"> 
+            <DialogTitle className="text-white text-2xl font-bold">
+              Gestión Nutricional: {selectedPlayer?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {activeReportId === null 
+                ? "Creando un nuevo informe" 
+                : `Viendo informe del ${formatDate(viewingReport?.date || "")}`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
 
-          {/* Lista de Jugadores */}
-          <Card className="bg-[#213041] border-[#305176]">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Apple className="h-5 w-5 mr-2" />
-                Jugadores ({filteredPlayers.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredPlayers.map((player) => (
-                  <div key={player.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.name} />
-                        <AvatarFallback className="bg-[#305176] text-white">
-                          {player.name[0]}
-                          {player.surname[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="text-white font-medium">
-                          {player.name} {player.surname}
-                        </h3>
-                        <p className="text-gray-400 text-sm">
-                          {player.position} • {player.category}
-                        </p>
-                        <p className="text-gray-500 text-xs">Último reporte: {player.lastReport}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Button
-                        size="sm"
-                        className="bg-[#aff606] text-black hover:bg-[#25d03f]"
-                        onClick={() => handleCreateReport(player)}
+            {/* Columna Izquierda: Historial */}
+            <div className="md:col-span-1 flex flex-col h-full bg-[#1d2834] rounded-lg p-4 overflow-hidden min-h-0"> 
+              <h3 className="text-lg font-semibold text-white mb-4">Historial de Informes</h3>
+              <Button
+                size="sm"
+                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] mb-4"
+                onClick={() => setActiveReportId(null)} 
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Informe
+              </Button>
+              <Separator className="bg-[#305176] mb-4" />
+              <ScrollArea className="flex-1 pr-2">
+                <div className="space-y-3">
+                  {playerReports.length > 0 ? (
+                    playerReports.map(report => (
+                      <div 
+                        key={report.id} 
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                          activeReportId === report.id
+                            ? "bg-[#305176]"
+                            : "bg-[#213041] hover:bg-[#305176]/50"
+                        }`}
+                        onClick={() => setActiveReportId(report.id)} 
                       >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Informe
+                        <div className="flex items-center space-x-3 overflow-hidden">
+                          <Calendar className={`h-5 w-5 ${activeReportId === report.id ? 'text-[#aff606]' : 'text-gray-400'}`} />
+                          <div>
+                            <p className="text-white font-medium">{formatDate(report.date)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <FileText className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm">Sin informes previos.</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Columna Derecha: Formulario (CON ARREGLO DE SCROLL) */}
+            <div className="md:col-span-2 h-full flex flex-col overflow-hidden min-h-0"> 
+              <ScrollArea className="flex-1 pr-6"> 
+                
+                <form className="space-y-6 p-1">
+                  {/* --- Sección 1: Datos Antropométricos --- */}
+                  <SectionTitle title="Datos Antropométricos" />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <InputGroup label="Fecha del Informe" name="date" type="date" value={displayData.date} onChange={handleInputChange} readOnly={isReadOnly} />
+                    <InputGroup label="Edad" name="edad" type="number" placeholder="25" value={displayData.edad} onChange={handleInputChange} readOnly={isReadOnly} />
+                    <InputGroup label="Altura (cm)" name="altura" type="number" placeholder="180" value={displayData.altura} onChange={handleInputChange} readOnly={isReadOnly} />
+                    <InputGroup label="Peso (kg)" name="peso" type="number" placeholder="80.5" value={displayData.peso} onChange={handleInputChange} readOnly={isReadOnly} />
+                    <InputGroup label="Sumatoria Pliegues (mm)" name="sumatoriaPliegues" type="number" placeholder="67" value={displayData.sumatoriaPliegues} onChange={handleInputChange} readOnly={isReadOnly} />
+                    <InputGroup label="IMC" name="imc" type="number" placeholder="24.8" value={displayData.imc} onChange={handleInputChange} readOnly={isReadOnly} />
+                  </div>
+
+                  {/* --- Sección 2: Diagnósticos --- */}
+                  <SectionTitle title="Diagnóstico Nutricional" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <SelectGroup
+                      label="Diagnóstico Masa Adiposa"
+                      name="diagMasaAdiposa"
+                      value={displayData.diagMasaAdiposa}
+                      onValueChange={(value: Diagnosis) => handleDiagnosisChange("diagMasaAdiposa", value)}
+                      disabled={isReadOnly}
+                    />
+                    <SelectGroup
+                      label="Diagnóstico Masa Muscular"
+                      name="diagMasaMuscular"
+                      value={displayData.diagMasaMuscular}
+                      onValueChange={(value: Diagnosis) => handleDiagnosisChange("diagMasaMuscular", value)}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+
+                  {/* --- Sección 3: Suplementación y Objetivos --- */}
+                  <SectionTitle title="Plan de Suplementación y Objetivos" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <TextareaGroup 
+                      label="Objetivo Principal (Obligatorio)" 
+                      name="objective" 
+                      placeholder="Ej: Aumentar 2kg de masa muscular..." 
+                      value={displayData.objective} 
+                      onChange={handleInputChange} 
+                      readOnly={isReadOnly} 
+                    />
+                    <TextareaGroup 
+                      label="Plan de Suplementación" 
+                      name="supplementation" 
+                      placeholder="Ej: Creatina 5g post-entreno..." 
+                      value={displayData.supplementation} 
+                      onChange={handleInputChange} 
+                      readOnly={isReadOnly} 
+                    />
+                  </div>
+                  
+                  {!isReadOnly && (
+                    <div className="flex justify-end pt-4">
+                      <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
+                        Guardar Informe
                       </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        /* Formulario de Reporte Nutricional */
-        <Card className="bg-[#213041] border-[#305176]">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Informe Nutricional - {selectedPlayer?.name} {selectedPlayer?.surname}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Datos Antropométricos */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Scale className="h-5 w-5 mr-2" />
-                Datos Antropométricos
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="weight" className="text-white">
-                    Peso (kg)
-                  </Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    placeholder="75.5"
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="height" className="text-white">
-                    Altura (cm)
-                  </Label>
-                  <Input
-                    id="height"
-                    type="number"
-                    placeholder="180"
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="body-fat" className="text-white">
-                    Grasa Corporal (%)
-                  </Label>
-                  <Input
-                    id="body-fat"
-                    type="number"
-                    placeholder="12.5"
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-              </div>
-            </div>
+                  )}
 
-            {/* Composición Corporal */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Activity className="h-5 w-5 mr-2" />
-                Composición Corporal
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="muscle-mass" className="text-white">
-                    Masa Muscular (kg)
-                  </Label>
-                  <Input
-                    id="muscle-mass"
-                    type="number"
-                    placeholder="65.2"
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bmi" className="text-white">
-                    IMC
-                  </Label>
-                  <Input
-                    id="bmi"
-                    type="number"
-                    placeholder="23.3"
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-              </div>
+                </form>
+              </ScrollArea>
             </div>
-
-            {/* Suplementación */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Suplementación</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-white">¿Necesita proteína?</Label>
-                  <Select>
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#213041] border-[#305176]">
-                      <SelectItem value="si" className="text-white">
-                        Sí
-                      </SelectItem>
-                      <SelectItem value="no" className="text-white">
-                        No
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supplements" className="text-white">
-                    Otros suplementos
-                  </Label>
-                  <Input
-                    id="supplements"
-                    placeholder="Creatina, Vitamina D..."
-                    className="bg-[#1d2834] border-[#305176] text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Recomendaciones */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Recomendaciones</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="diet-plan" className="text-white">
-                    Plan Alimentario
-                  </Label>
-                  <Textarea
-                    id="diet-plan"
-                    placeholder="Describe el plan alimentario recomendado..."
-                    className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hydration" className="text-white">
-                    Hidratación
-                  </Label>
-                  <Textarea
-                    id="hydration"
-                    placeholder="Recomendaciones de hidratación..."
-                    className="bg-[#1d2834] border-[#305176] text-white min-h-[80px]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="observations" className="text-white">
-                    Observaciones
-                  </Label>
-                  <Textarea
-                    id="observations"
-                    placeholder="Observaciones adicionales..."
-                    className="bg-[#1d2834] border-[#305176] text-white min-h-[80px]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Botones */}
-            <div className="flex justify-end space-x-4">
-              <Button
-                variant="outline"
-                className="border-[#305176] text-white hover:bg-[#305176] bg-transparent"
-                onClick={() => setShowReportForm(false)}
-              >
-                Cancelar
-              </Button>
-              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport}>
-                Guardar Informe
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+
+// --- Componentes Hijos ---
+
+// Card del Jugador
+const PlayerCard = ({ player, onOpenHistory }: { player: Player; onOpenHistory: () => void; }) => (
+  <Card className="bg-[#1d2834] border-[#305176] flex flex-col">
+    <CardHeader className="flex-row items-center gap-4 space-y-0 pb-4">
+      <Avatar className="h-12 w-12">
+        <AvatarImage src={player.photo} alt={player.name} />
+        <AvatarFallback className="bg-[#305176] text-[#aff606]">
+          {player.name.split(" ").map(n => n[0]).join("")}
+        </AvatarFallback>
+      </Avatar>
+      <div>
+        <CardTitle className="text-white text-lg">{player.name}</CardTitle>
+        <CardDescription className="text-gray-400">{player.position}</CardDescription>
+      </div>
+    </CardHeader>
+    <CardContent className="flex-grow"></CardContent>
+    <Button
+      className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] rounded-t-none"
+      onClick={onOpenHistory} 
+    >
+      <FileText className="h-4 w-4 mr-2" />
+      Ver Informes del Jugador
+    </Button>
+  </Card>
+);
+
+// Título de sección del formulario
+const SectionTitle = ({ title }: { title: string }) => (
+  <h3 className="text-lg font-semibold text-white border-b border-[#305176] pb-2">{title}</h3>
+);
+
+
+// --- MODIFICACIÓN: Inputs y Textareas con color de Label cambiado a text-white ---
+// Grupo de Input
+const InputGroup = ({ label, name, value, onChange, readOnly, placeholder, type = "text" }: any) => (
+  <div className="space-y-2">
+    {/* 1. Label/Título (Blanco) */}
+    <Label htmlFor={name} className="text-white">{label}</Label> 
+    <Input
+      id={name}
+      name={name}
+      type={type}
+      value={value}
+      onChange={onChange}
+      readOnly={readOnly}
+      placeholder={placeholder}
+      // 2. Input (Texto Blanco)
+      className="bg-[#1d2834] border-[#305176] text-white read-only:bg-[#1d2834]/60 read-only:cursor-default"
+    />
+  </div>
+);
+
+// Grupo de Textarea
+const TextareaGroup = ({ label, name, value, onChange, readOnly, placeholder }: any) => (
+  <div className="space-y-2">
+    {/* 1. Label/Título (Blanco) */}
+    <Label htmlFor={name} className="text-white">{label}</Label>
+    <Textarea
+      id={name}
+      name={name}
+      value={value}
+      onChange={onChange}
+      readOnly={readOnly}
+      placeholder={placeholder}
+       // 2. Textarea (Texto Blanco)
+      className="bg-[#1d2834] border-[#305176] text-white min-h-[100px] read-only:bg-[#1d2834]/60 read-only:cursor-default"
+    />
+  </div>
+);
+// -----------------------------------------------------------------
+
+// --- MODIFICACIÓN: Select de Diagnóstico con Label en text-white ---
+const getDiagnosisColor = (value: Diagnosis) => {
+  switch (value) {
+    case "ADECUADA": return "text-[#25d03f]";
+    case "PODRIA MEJORAR": return "text-[#f4c11a]";
+    case "AUMENTADA": return "text-red-500";
+    default: return "text-white"; 
+  }
+}
+
+const SelectGroup = ({ label, name, value, onValueChange, disabled }: any) => (
+  <div className="space-y-2">
+    {/* 1. Label/Título (Blanco) */}
+    <Label htmlFor={name} className="text-white">{label}</Label>
+    <Select
+      value={value || "NORMAL"}
+      onValueChange={onValueChange}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        id={name}
+        className={`bg-[#1d2834] border-[#305176] font-bold ${getDiagnosisColor(value)} disabled:opacity-100 disabled:cursor-default`}
+      >
+        <SelectValue placeholder="Seleccionar..." />
+      </SelectTrigger>
+      <SelectContent className="bg-[#213041] border-[#305176]">
+        <SelectItem value="NORMAL" className="text-gray-400">(Seleccionar...)</SelectItem>
+        <SelectItem value="ADECUADA" className="text-[#25d03f]">ADECUADA</SelectItem>
+        <SelectItem value="PODRIA MEJORAR" className="text-[#f4c11a]">PODRIA MEJORAR</SelectItem>
+        <SelectItem value="AUMENTADA" className="text-red-500">AUMENTADA</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+);
+// --- FIN MODIFICACIÓN ---
+
+// Helper para formatear fecha
+const formatDate = (dateString: string) => {
+  if (!dateString) return "Fecha no disponible";
+  try {
+    const date = new Date(dateString);
+    // Ajustar por zona horaria (sumar un día si es necesario por UTC)
+    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return adjustedDate.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch (error) {
+    return dateString; // Devuelve el string original si falla
+  }
+};

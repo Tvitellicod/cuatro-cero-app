@@ -40,7 +40,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
     // --- FIN LÓGICA PUBLICADOR ---
 
-    // --- MODIFICACIÓN: LÓGICA EXCLUSIVA PARA ROL DIRECTIVO ---
+    // --- LÓGICA EXCLUSIVA PARA ROL DIRECTIVO ---
     if (profileType === "DIRECTIVO") {
       return [
         {
@@ -121,7 +121,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
 
-    // Sección TORNEOS (No visible para PREPARADOR FISICO ni KINESIOLOGO)
+    // --- MODIFICACIÓN AQUÍ ---
+    // Sección TORNEOS (No visible para PF, KINE ni NUTRICIONISTA)
     baseItems.push({
       id: "torneos",
       label: "TORNEOS",
@@ -131,8 +132,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { label: "Partidos", href: "/dashboard/torneos/partidos" },
         { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
       ],
-      show: profileType !== "PREPARADOR FISICO" && profileType !== "KINESIOLOGO",
+      show: profileType !== "PREPARADOR FISICO" && 
+            profileType !== "KINESIOLOGO" && 
+            profileType !== "NUTRICIONISTA", // <-- Se oculta si es PF, KINE o NUTRI
     })
+    // --- FIN DE LA MODIFICACIÓN ---
 
     // Sección ESTADÍSTICAS - (DIRECTIVO ya fue manejado, solo entra DT)
     if (profileType === "DIRECTOR TECNICO") {

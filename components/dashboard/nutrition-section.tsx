@@ -38,7 +38,7 @@ interface NutritionReport {
   diagMasaMuscular: Diagnosis; 
   supplementation: string;
   objective: string;
-  observations: string; // <-- Campo añadido
+  observations: string; 
 }
 
 const INITIAL_FORM_DATA: NutritionReport = {
@@ -53,7 +53,7 @@ const INITIAL_FORM_DATA: NutritionReport = {
   diagMasaMuscular: "NORMAL",
   supplementation: "",
   objective: "",
-  observations: "", // <-- Campo añadido
+  observations: "", 
 };
 
 const NUTRITION_REPORTS_KEY = "nutritionReports";
@@ -331,14 +331,12 @@ export function NutritionSection() {
               </ScrollArea>
             </div>
 
-            {/* Columna Derecha: Formulario (CON ARREGLO DE SCROLL) */}
+            {/* --- ARREGLO: Columna Derecha: Formulario + Botón --- */}
             <div className="md:col-span-2 h-full flex flex-col overflow-hidden min-h-0"> 
               
-              {/* --- ARREGLO: Mover el ScrollArea para que envuelva el form Y el botón --- */}
+              {/* 1. Área de Scroll (solo para el formulario) */}
               <ScrollArea className="flex-1 pr-6"> 
-                
                 <form className="space-y-6 p-1">
-                  {/* --- Fecha movida aquí --- */}
                   <div className="flex justify-end -mb-4">
                     <p className="text-sm text-gray-400">
                       Fecha del Informe: 
@@ -405,22 +403,20 @@ export function NutritionSection() {
                       />
                     </div>
                   </div>
-                  
-                  {/* --- ARREGLO: Botón de Guardar movido DENTRO del ScrollArea --- */}
-                  {/* (Para que se pueda llegar a él haciendo scroll) */}
-                  {!isReadOnly && (
-                    <div className="flex justify-end pt-4">
-                      <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
-                        Guardar Informe
-                      </Button>
-                    </div>
-                  )}
-
                 </form>
               </ScrollArea>
+              
+              {/* 2. Área del Botón (FUERA del scroll) */}
+              {!isReadOnly && (
+                <div className="flex justify-end pt-4 mt-4 border-t border-[#305176] pr-6">
+                  <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
+                    Guardar Informe
+                  </Button>
+                </div>
+              )}
               {/* --- FIN DEL ARREGLO --- */}
-            </div>
 
+            </div>
           </div>
         </DialogContent>
       </Dialog>

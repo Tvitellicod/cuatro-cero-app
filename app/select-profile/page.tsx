@@ -1,3 +1,5 @@
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-25e7c300f59a63d0b84e5a78001da1ba456ebcac/app/select-profile/page.tsx
+
 "use client"
 
 import type React from "react"
@@ -31,7 +33,7 @@ interface UserProfile {
 }
 
 // Opciones de roles
-const profileTypes = ["DIRECTOR TECNICO", "PREPARADOR FISICO", "KINESIOLOGO", "DIRECTIVO", "EXTRA", "NUTRICIONISTA", "PUBLICADOR"];
+const profileTypes = ["DIRECTOR TECNICO", "PREPARADOR FISICO", "KINESIOLOGO", "DIRECTIVO", "ANALISTA", "NUTRICIONISTA", "PUBLICADOR"];
 
 // Claves de LocalStorage
 const SELECTED_CATEGORY_KEY = "selectedCategory";

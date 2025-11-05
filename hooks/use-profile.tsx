@@ -1,3 +1,5 @@
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-25e7c300f59a63d0b84e5a78001da1ba456ebcac/hooks/use-profile.tsx
+
 "use client"
 
 import type React from "react"
@@ -128,7 +130,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const isPhysicalTrainer = profileType?.includes("PREPARADOR FISICO");
     const isKinesiologist = profileType === "KINESIOLOGO";
     const isNutritionist = profileType === "NUTRICIONISTA";
-    const isDirective = profileType?.includes("DIRECTIVO") || profileType?.includes("EXTRA");
+    const isDirective = profileType?.includes("DIRECTIVO") || profileType?.includes("ANALISTA");
     const isPublisher = profileType === "PUBLICADOR";
 
      return {
@@ -177,7 +179,7 @@ function getSectionsForProfile(profileType: string | null): string[] {
   const isPhysicalTrainer = profileType.includes("PREPARADOR FISICO");
   const isKinesiologist = profileType === "KINESIOLOGO";
   const isNutritionist = profileType === "NUTRICIONISTA";
-  const isDirective = profileType.includes("DIRECTIVO") || profileType.includes("EXTRA");
+  const isDirective = profileType.includes("DIRECTIVO") || profileType.includes("ANALISTA");
   const isPublisher = profileType === "PUBLICADOR";
 
   const sections = ["INICIO"];

@@ -1,3 +1,5 @@
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-25e7c300f59a63d0b84e5a78001da1ba456ebcac/components/dashboard/sidebar.tsx
+
 "use client"
 
 import Link from "next/link"
@@ -87,7 +89,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (profileType !== "NUTRICIONISTA") {
       const trainingItems = []
 
-      if (profileType === "DIRECTOR TECNICO") {
+      // [MODIFICADO] Incluido "ANALISTA" para ver Ejercicios Tácticos
+      if (profileType === "DIRECTOR TECNICO" || profileType === "ANALISTA") {
         trainingItems.push({ label: "Ejercicios", href: "/dashboard/entrenamiento/ejercicios" })
       }
       if (profileType === "PREPARADOR FISICO") {
@@ -139,7 +142,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     // --- FIN DE LA MODIFICACIÓN ---
 
     // Sección ESTADÍSTICAS - (DIRECTIVO ya fue manejado, solo entra DT)
-    if (profileType === "DIRECTOR TECNICO") {
+    // [MODIFICADO] Incluido "ANALISTA" para acceder a las estadísticas
+    if (profileType === "DIRECTOR TECNICO" || profileType === "ANALISTA") {
       baseItems.push({
         id: "estadisticas",
         label: "ESTADÍSTICAS",

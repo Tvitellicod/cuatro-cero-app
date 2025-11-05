@@ -1,3 +1,5 @@
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-25e7c300f59a63d0b84e5a78001da1ba456ebcac/components/profile-selector.tsx
+
 "use client"
 
 import { useState } from "react"
@@ -29,11 +31,11 @@ export function ProfileSelector({ userPlan, onProfileSelect }: ProfileSelectorPr
           "DIRECTIVO N1",
           "DIRECTIVO N2",
           "DIRECTIVO N3",
-          "EXTRA 1",
-          "EXTRA 2",
+          "ANALISTA 1",
+          "ANALISTA 2",
         ]
       case "cuerpo_tecnico":
-        return ["TECNICO PRINCIPAL", "SEGUNDO TECNICO", "PREPARADOR FISICO", "EXTRA 1", "EXTRA 2"]
+        return ["TECNICO PRINCIPAL", "SEGUNDO TECNICO", "PREPARADOR FISICO", "ANALISTA 1", "ANALISTA 2"]
       default:
         return ["TECNICO PRINCIPAL"]
     }

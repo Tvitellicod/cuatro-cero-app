@@ -59,10 +59,17 @@ export function ProfileSettingsForm() {
       displayName: `${formData.firstName.trim()} ${formData.lastName.trim()} - ${localProfile.profileType} (${localProfile.category})`,
     };
 
-    // 2. Actualizar LocalStorage
-    localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+    // 2. Obtener lista completa y actualizar
+    const savedProfilesJson = localStorage.getItem("allUserProfiles");
+    const allProfiles: UserProfile[] = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
     
-    // 3. Actualizar el contexto global
+    const updatedAllProfiles = allProfiles.map(p => 
+        p.id === updatedProfile.id ? updatedProfile : p
+    );
+    localStorage.setItem("allUserProfiles", JSON.stringify(updatedAllProfiles));
+
+    // 3. Actualizar LocalStorage y contexto de perfil activo
+    localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
     setCurrentProfile(updatedProfile.displayName);
     setLocalProfile(updatedProfile);
 
@@ -73,6 +80,44 @@ export function ProfileSettingsForm() {
     });
 
     setIsLoading(false);
+  }
+
+  // Lógica de ELIMINACIÓN de Perfil
+  const handleDeleteProfile = () => {
+    if (!localProfile) return;
+
+    if (!confirm(`¿Estás seguro de que quieres eliminar el perfil "${localProfile.displayName}"? Esta acción es irreversible.`)) {
+        return;
+    }
+    
+    setIsLoading(true);
+
+    // 1. Obtener la lista completa de perfiles
+    const savedProfilesJson = localStorage.getItem("allUserProfiles");
+    const allProfiles: UserProfile[] = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
+
+    // 2. Filtrar y eliminar el perfil actual
+    const updatedAllProfiles = allProfiles.filter(p => 
+        p.id !== localProfile.id
+    );
+
+    // 3. Actualizar LocalStorage con la lista sin el perfil eliminado
+    localStorage.setItem("allUserProfiles", JSON.stringify(updatedAllProfiles));
+    
+    // 4. Limpiar sesión actual
+    setCurrentProfile(null);
+    localStorage.removeItem("userProfile");
+    
+    toast({
+        title: "Perfil Eliminado",
+        description: `El perfil "${localProfile.firstName} ${localProfile.lastName}" ha sido eliminado.`,
+        variant: "destructive"
+    });
+
+    setIsLoading(false);
+
+    // 5. Redirigir a la selección de perfil (requiere una nueva selección)
+    window.location.href = "/select-profile"; 
   }
 
 
@@ -122,8 +167,8 @@ export function ProfileSettingsForm() {
       <p className="text-sm text-gray-400">
         Eliminará este perfil de la lista de selección.
       </p>
-      {/* Lógica de Eliminación (Requiere más cambios en use-profile y select-profile para ser completamente funcional, aquí solo se deja la interfaz) */}
       <Button 
+        onClick={handleDeleteProfile} 
         variant="destructive" 
         disabled={isLoading}
         className="w-full bg-red-600 hover:bg-red-700"

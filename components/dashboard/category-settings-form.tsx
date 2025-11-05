@@ -25,6 +25,15 @@ interface UserCategory {
     color: string;
 }
 
+interface UserProfile {
+    id: number;
+    firstName: string;
+    lastName: string;
+    profileType: string;
+    category: string;
+    displayName: string;
+}
+
 export function CategorySettingsForm() {
   const { selectedCategory, setSelectedCategory, allCategories } = useProfile()
   const { toast } = useToast()
@@ -74,26 +83,42 @@ export function CategorySettingsForm() {
     setIsLoading(false);
   }
   
+  // Lógica de ELIMINACIÓN de Categoría
   const handleDelete = () => {
       if (!selectedCategory) return;
       
+      if (!confirm(`¿Estás seguro de que quieres eliminar la categoría "${selectedCategory.name}"? Esto también eliminará TODOS los perfiles creados dentro de ella. Esta acción es irreversible.`)) {
+        return;
+      }
+      
       const categoryIdToDelete = selectedCategory.id;
+      setIsLoading(true);
 
       // 1. Eliminar de todas las categorías
       const updatedAllCategories = allCategories.filter(cat => cat.id !== categoryIdToDelete);
       localStorage.setItem("allUserCategories", JSON.stringify(updatedAllCategories));
 
-      // 2. Borrar la categoría activa
+      // 2. ELIMINAR TODOS LOS PERFILES ASOCIADOS A ESTA CATEGORÍA
+      const savedProfilesJson = localStorage.getItem("allUserProfiles");
+      const allProfiles: UserProfile[] = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
+      
+      const updatedAllProfiles = allProfiles.filter(p => p.category !== categoryIdToDelete);
+      localStorage.setItem("allUserProfiles", JSON.stringify(updatedAllProfiles));
+
+      // 3. Borrar la categoría y perfil activos
       setSelectedCategory(null);
       localStorage.removeItem("selectedCategory");
-      localStorage.removeItem("userProfile"); // Forzamos re-selección de perfil
+      localStorage.removeItem("userProfile"); 
 
       toast({
         title: "Categoría Eliminada",
-        description: `La categoría "${selectedCategory.name}" ha sido eliminada.`,
+        description: `La categoría "${selectedCategory.name}" y sus perfiles asociados han sido eliminados.`,
+        variant: "destructive"
       });
+      
+      setIsLoading(false);
 
-      // 3. Redirigir a la selección de Categoría
+      // 4. Redirigir a la selección de Categoría
       router.push("/select-category");
   }
 

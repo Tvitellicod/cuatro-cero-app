@@ -1,122 +1,123 @@
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-60479741c8ea2ca449bfcef814f36d999ab6ab01/components/dashboard/dashboard-header.tsx
+
 "use client"
 
-import type React from "react"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
-import { useProfile } from "@/hooks/use-profile"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Menu, LogOut, Settings, User as UserIcon } from "lucide-react"
-import { Sidebar as SidebarNav } from "./sidebar" // Renombrado para evitar conflicto
+import { Menu, User } from "lucide-react"
+import { useProfile } from "@/hooks/use-profile"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useRouter } from "next/navigation"
 
-export function DashboardHeader() {
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const { signOut } = useAuth()
-  const { currentProfile } = useProfile() // Obtener el nombre completo del perfil y rol
+// [MODIFICACIÓN] Importar el nuevo componente
+import { ConfigurationModal } from "./configuration-modal" 
+
+interface DashboardHeaderProps {
+  onMenuToggle: () => void
+}
+
+export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
+  const { currentProfile, selectedCategory, setCurrentProfile } = useProfile()
   const router = useRouter()
-
-  const handleSignOut = async () => {
-    await signOut()
-    // Limpiar localStorage al cerrar sesión
+  
+  const handleLogout = () => {
+    // 1. Limpiar localStorage de sesión y perfil
+    localStorage.removeItem("authStatus");
     localStorage.removeItem("userProfile");
     localStorage.removeItem("selectedCategory");
+    localStorage.removeItem("clubData");
     localStorage.removeItem("allUserCategories");
     localStorage.removeItem("allUserProfiles");
-    // Se mantiene el club (clubData) para que pueda volver a iniciar sesión en el mismo club.
-    router.push("/app") // Redirigir a la página de login
+
+    // 2. Limpiar contexto (opcional, pero buena práctica)
+    setCurrentProfile(null);
+    
+    // 3. Redirigir a la página de inicio de sesión
+    router.push("/");
+  }
+
+  // Obtener iniciales para el Avatar
+  const getInitials = (fullName: string | null) => {
+    if (!fullName) return "CU";
+    // Extrae las iniciales del nombre y apellido (la primera parte del displayName)
+    const parts = fullName.split(' - ')[0].split(' ');
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
   }
   
-  // Extraer iniciales del nombre del perfil (Se mantiene igual)
-  const getInitials = (name: string | null) => {
-    if (!name) return "4C"
-    const parts = name.split(" - ")[0]?.split(" ");
-    if (!parts) return "4C";
-    const firstNameInitial = parts[0] ? parts[0][0] : "";
-    const lastNameInitial = parts[1] ? parts[1][0] : "";
-    return (firstNameInitial + lastNameInitial).toUpperCase() || "4C";
-  }
+  const profileName = currentProfile ? currentProfile.split(' - ')[0] : 'Usuario';
+  const profileRole = currentProfile ? currentProfile.split(' - ')[1] : 'No asignado';
+  const initials = getInitials(currentProfile);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[#305176] bg-[#213041] px-4 md:px-6">
-      
-      {/* --- Lado Izquierdo: Texto del Perfil y Menú Móvil --- */}
-      <div className="flex items-center gap-4">
-        {/* Menú Hamburguesa (Móvil) */}
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0 md:hidden bg-transparent border-none text-white hover:bg-[#305176] hover:text-[#aff606]"
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle navigation menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="bg-[#1d2834] border-r-[#305176] text-white w-[280px]">
-            {/* El contenido del Sidebar para móvil */}
-            <SidebarNav isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} /> 
-          </SheetContent>
-        </Sheet>
-        
-        {/* --- Texto del Perfil/Rol/Categoría (Visible en Desktop) --- */}
-        <div className="hidden md:flex items-center space-x-2">
-          <UserIcon className="h-5 w-5 text-[#aff606]" /> {/* Ícono de usuario */}
-          <span className="text-white text-sm font-semibold truncate max-w-xs lg:max-w-md">
-            {currentProfile || "Cargando perfil..."} {/* Muestra el texto directamente */}
-          </span>
-        </div>
+    <header className="flex h-16 items-center justify-between border-b border-[#305176] bg-[#213041] px-4 md:px-6">
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden text-white hover:bg-[#305176] mr-4"
+          onClick={onMenuToggle}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl font-semibold text-white hidden sm:block">Dashboard</h1>
       </div>
 
-      {/* --- Lado Derecho: Perfil de Usuario --- */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="rounded-full bg-transparent border border-[#305176] text-white hover:bg-[#305176]"
-          >
-            <Avatar className="h-8 w-8">
-              {/* Se eliminó AvatarImage ya que no estaba en el código original */}
-              <AvatarFallback className="bg-[#305176] text-[#aff606] text-sm font-bold">
-                {getInitials(currentProfile)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="sr-only">Toggle user menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-[#213041] border-[#305176] text-white">
-          <DropdownMenuLabel className="font-normal">
-             <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Mi Cuenta</p>
-                <p className="text-xs leading-none text-gray-400 truncate max-w-[200px]">
-                  {currentProfile || "Cargando..."}
-                </p>
-             </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-[#305176]" />
-          <DropdownMenuItem className="focus:bg-[#305176]">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Configuración</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className="focus:bg-[#305176]"
-            // Redirige al inicio del flujo de selección de perfil/categoría
-            onClick={() => router.push('/select-category')} 
-          >
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Cambiar Categoría/Perfil</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-[#305176]" />
-          <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:bg-red-500 focus:text-white">
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Cerrar Sesión</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center space-x-3">
+        
+        {/* [MODIFICACIÓN] Agregar el botón de CONFIGURACIÓN */}
+        <ConfigurationModal />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="relative h-9 w-9 rounded-full p-0 flex items-center justify-center bg-[#305176] hover:bg-[#406186]"
+            >
+              <Avatar className="h-9 w-9 border-2 border-[#aff606]">
+                <AvatarImage src="/placeholder-user.jpg" alt="User Avatar" />
+                <AvatarFallback className="bg-transparent text-[#aff606] font-bold text-sm">
+                    {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64 bg-[#213041] border-[#305176] text-white" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none text-white">{profileName}</p>
+                <p className="text-xs leading-none text-[#aff606]">{profileRole}</p>
+                {selectedCategory && (
+                    <p className="text-xs leading-none text-gray-400">Categoría: {selectedCategory.name}</p>
+                )}
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-[#305176]" />
+            <DropdownMenuItem 
+              onClick={() => router.push("/select-category")}
+              className="cursor-pointer hover:bg-[#305176] focus:bg-[#305176]"
+            >
+              Cambiar Categoría/Club
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="cursor-pointer text-red-400 hover:bg-[#305176] focus:bg-[#305176] focus:text-red-400 hover:text-red-40ER0"
+            >
+              Cerrar Sesión
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }

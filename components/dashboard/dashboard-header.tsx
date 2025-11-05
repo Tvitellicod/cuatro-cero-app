@@ -8,13 +8,9 @@ import { useProfile } from "@/hooks/use-profile"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-// Eliminada la importación de Select ya que no se usa más en esta parte
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-// Eliminada la importación de Tag
-import { Menu, LogOut, Settings, User as UserIcon } from "lucide-react" // Se mantiene UserIcon
-import { SidebarNav } from "./sidebar"
-
-// --- COMPONENTE CategorySwitcher ELIMINADO ---
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Menu, LogOut, Settings, User as UserIcon } from "lucide-react"
+import { Sidebar as SidebarNav } from "./sidebar" // Renombrado para evitar conflicto
 
 export function DashboardHeader() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -29,6 +25,7 @@ export function DashboardHeader() {
     localStorage.removeItem("selectedCategory");
     localStorage.removeItem("allUserCategories");
     localStorage.removeItem("allUserProfiles");
+    // Se mantiene el club (clubData) para que pueda volver a iniciar sesión en el mismo club.
     router.push("/app") // Redirigir a la página de login
   }
   
@@ -61,12 +58,11 @@ export function DashboardHeader() {
           </SheetTrigger>
           <SheetContent side="left" className="bg-[#1d2834] border-r-[#305176] text-white w-[280px]">
             {/* El contenido del Sidebar para móvil */}
-            <SidebarNav onLinkClick={() => setIsSheetOpen(false)} /> 
+            <SidebarNav isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} /> 
           </SheetContent>
         </Sheet>
         
         {/* --- Texto del Perfil/Rol/Categoría (Visible en Desktop) --- */}
-        {/* Se reemplaza CategorySwitcher por un div simple */}
         <div className="hidden md:flex items-center space-x-2">
           <UserIcon className="h-5 w-5 text-[#aff606]" /> {/* Ícono de usuario */}
           <span className="text-white text-sm font-semibold truncate max-w-xs lg:max-w-md">
@@ -75,7 +71,7 @@ export function DashboardHeader() {
         </div>
       </div>
 
-      {/* --- Lado Derecho: Perfil de Usuario (Se mantiene igual) --- */}
+      {/* --- Lado Derecho: Perfil de Usuario --- */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -84,7 +80,7 @@ export function DashboardHeader() {
             className="rounded-full bg-transparent border border-[#305176] text-white hover:bg-[#305176]"
           >
             <Avatar className="h-8 w-8">
-              {/* <AvatarImage src="/path-to-user-image.jpg" alt="@username" /> */}
+              {/* Se eliminó AvatarImage ya que no estaba en el código original */}
               <AvatarFallback className="bg-[#305176] text-[#aff606] text-sm font-bold">
                 {getInitials(currentProfile)}
               </AvatarFallback>
@@ -108,11 +104,11 @@ export function DashboardHeader() {
           </DropdownMenuItem>
           <DropdownMenuItem 
             className="focus:bg-[#305176]"
-            // Ahora redirige a seleccionar categoría, que es el inicio del flujo
+            // Redirige al inicio del flujo de selección de perfil/categoría
             onClick={() => router.push('/select-category')} 
           >
             <UserIcon className="mr-2 h-4 w-4" />
-            <span>Cambiar Categoría/Perfil</span> {/* Texto actualizado */}
+            <span>Cambiar Categoría/Perfil</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-[#305176]" />
           <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:bg-red-500 focus:text-white">

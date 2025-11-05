@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Plus, Tag } from "lucide-react"
+import { Plus, Tag, ArrowLeft } from "lucide-react" 
 import { toast } from "@/hooks/use-toast"
 
 // Definición de tipo para Categoría
@@ -27,6 +27,7 @@ const categoryColors = [
 // Claves de LocalStorage
 const ALL_CATEGORIES_KEY = "allUserCategories";
 const SELECTED_CATEGORY_KEY = "selectedCategory";
+const CLUB_DATA_KEY = "clubData"; 
 
 export default function SelectCategoryPage() {
   const router = useRouter()
@@ -36,16 +37,29 @@ export default function SelectCategoryPage() {
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newCategoryColor, setNewCategoryColor] = useState(categoryColors[0])
 
-  // Cargar categorías guardadas
+  // Cargar categorías guardadas y verificar el club
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedCategories = localStorage.getItem(ALL_CATEGORIES_KEY);
-      if (savedCategories) {
-        setCategories(JSON.parse(savedCategories));
+      // ** 1. Verificar Club **
+      const savedClub = localStorage.getItem(CLUB_DATA_KEY);
+      if (!savedClub) {
+        // Si no hay club, redirigir a crearlo
+        router.replace("/create-club");
+        return; 
       }
+      
+      // ** 2. Cargar Categorías **
+      const savedCategories = localStorage.getItem(ALL_CATEGORIES_KEY);
+      
+      let initialCategories: UserCategory[] = [];
+      if (savedCategories) {
+        initialCategories = JSON.parse(savedCategories);
+      } 
+      
+      setCategories(initialCategories);
       setIsLoading(false);
     }
-  }, []);
+  }, [router]);
 
   // Guardar nueva categoría
   const handleCreateCategory = () => {
@@ -57,9 +71,20 @@ export default function SelectCategoryPage() {
       });
       return;
     }
+    
+    // Evitar duplicados por nombre
+    if(categories.some(cat => cat.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
+         toast({
+            title: "Error",
+            description: "Ya existe una categoría con ese nombre.",
+            variant: "destructive",
+        });
+        return;
+    }
+
 
     const newCategory: UserCategory = {
-      id: `cat_${Date.now()}`,
+      id: newCategoryName.toLowerCase().replace(/\s/g, '_'), // Usar nombre como ID base
       name: newCategoryName,
       color: newCategoryColor,
     };
@@ -81,7 +106,9 @@ export default function SelectCategoryPage() {
   // Seleccionar categoría y avanzar
   const handleSelectCategory = (category: UserCategory) => {
     localStorage.setItem(SELECTED_CATEGORY_KEY, JSON.stringify(category));
-    router.push("/select-profile"); // Avanza a la selección de perfil
+    // Limpiar el perfil activo para forzar la selección del rol en la siguiente pantalla (Paso 3)
+    localStorage.removeItem("userProfile"); 
+    router.push("/select-profile"); 
   };
 
   if (isLoading) {
@@ -91,9 +118,21 @@ export default function SelectCategoryPage() {
       </div>
     );
   }
+  
+  const hasCategories = categories.length > 0;
 
   return (
     <div className="min-h-screen bg-[#1d2834] flex flex-col items-center justify-center p-4">
+      {/* Botón para volver al Club (por si se equivocó) */}
+      <Button
+          variant="ghost" 
+          className="absolute text-white hover:text-[#aff606] top-8 left-4"
+          onClick={() => router.push("/create-club")}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver a Club
+        </Button>
+        
       <img
         src="/images/cuatro-cero-logo.png"
         alt="CUATRO CERO"
@@ -102,8 +141,11 @@ export default function SelectCategoryPage() {
       <Card className="w-full max-w-2xl bg-[#213041] border-[#305176]">
         <CardHeader className="text-center">
           <CardTitle className="text-white text-xl">
-            Selecciona una Categoría
+            Paso 2: Selecciona una Categoría
           </CardTitle>
+           <p className="text-gray-400 text-sm">
+            {hasCategories ? "Selecciona o crea una nueva categoría." : "Debes crear al menos una categoría para continuar."}
+          </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

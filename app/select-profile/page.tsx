@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Plus, User, ArrowLeft } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import { useProfile } from "@/hooks/use-profile" // Importamos el hook
+import { useProfile } from "@/hooks/use-profile" 
 
 // Definición de tipo para Categoría
 interface UserCategory {
@@ -31,17 +31,17 @@ interface UserProfile {
 }
 
 // Opciones de roles
-const profileTypes = ["DIRECTOR TECNICO", "PREPARADOR FISICO", "KINESIOLOGO", "DIRECTIVO", "EXTRA", "NUTRICIONISTA"];
+const profileTypes = ["DIRECTOR TECNICO", "PREPARADOR FISICO", "KINESIOLOGO", "DIRECTIVO", "EXTRA", "NUTRICIONISTA", "PUBLICADOR"];
 
 // Claves de LocalStorage
-const ALL_CATEGORIES_KEY = "allUserCategories";
 const SELECTED_CATEGORY_KEY = "selectedCategory";
 const ALL_PROFILES_KEY = "allUserProfiles";
 const ACTIVE_PROFILE_KEY = "userProfile"; // Perfil activo final
+const CLUB_DATA_KEY = "clubData"; 
 
 export default function SelectProfilePage() {
   const router = useRouter()
-  const { setCurrentProfile } = useProfile() // Hook para la redirección final
+  const { setCurrentProfile } = useProfile() 
   const [selectedCategory, setSelectedCategory] = useState<UserCategory | null>(null)
   const [allProfiles, setAllProfiles] = useState<UserProfile[]>([])
   const [profilesForCategory, setProfilesForCategory] = useState<UserProfile[]>([])
@@ -55,19 +55,31 @@ export default function SelectProfilePage() {
     profileType: "",
   })
 
-  // Cargar categoría seleccionada y perfiles
+  // Cargar categoría seleccionada, perfiles y verificar el club
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      
+      // ** 1. Verificar Club **
+      const savedClub = localStorage.getItem(CLUB_DATA_KEY);
+      if (!savedClub) {
+        // Redirigir al Paso 1
+        router.replace("/create-club");
+        return; 
+      }
+      
+      // ** 2. Cargar Categoría **
       const savedCategory = localStorage.getItem(SELECTED_CATEGORY_KEY);
       if (!savedCategory) {
-        // Si no hay categoría, no debería estar aquí. Vuelve atrás.
-        router.push("/select-category");
+        // Redirigir al Paso 2
+        router.replace("/select-category");
         return;
       }
       const category: UserCategory = JSON.parse(savedCategory);
       setSelectedCategory(category);
 
+      // ** 3. Cargar Perfiles **
       const savedProfiles = localStorage.getItem(ALL_PROFILES_KEY);
+      // NO USAMOS MOCK INICIAL DE PERFILES
       const allProfilesList: UserProfile[] = savedProfiles ? JSON.parse(savedProfiles) : [];
       setAllProfiles(allProfilesList);
 
@@ -89,6 +101,17 @@ export default function SelectProfilePage() {
       });
       return;
     }
+    
+    // Evitar duplicados simples (Misma persona, mismo rol, misma categoría)
+    if(profilesForCategory.some(p => p.firstName === formData.firstName && p.lastName === formData.lastName && p.profileType === formData.profileType)) {
+         toast({
+            title: "Error",
+            description: "Ya existe un perfil idéntico en esta categoría.",
+            variant: "destructive",
+        });
+        return;
+    }
+
 
     const newProfile: UserProfile = {
       id: Date.now(),
@@ -109,6 +132,9 @@ export default function SelectProfilePage() {
       description: `¡Perfil "${newProfile.displayName}" creado!`,
     });
 
+    // Se selecciona automáticamente el nuevo perfil creado
+    handleSelectProfile(newProfile);
+
     setFormData({ firstName: "", lastName: "", profileType: "" });
     setIsModalOpen(false);
   };
@@ -117,7 +143,7 @@ export default function SelectProfilePage() {
   const handleSelectProfile = (profile: UserProfile) => {
     // 1. Guardar como perfil activo
     localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(profile));
-    // 2. Actualizar el contexto (¡LA CLAVE PARA QUE NO SE CUELGUE!)
+    // 2. Actualizar el contexto 
     setCurrentProfile(profile.displayName);
     // 3. Ir al Dashboard
     router.push("/dashboard");
@@ -130,26 +156,35 @@ export default function SelectProfilePage() {
       </div>
     );
   }
+  
+  const hasProfiles = profilesForCategory.length > 0;
 
   return (
     <div className="min-h-screen bg-[#1d2834] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl relative">
         <Button
           variant="ghost" 
-          className="absolute -top-12 left-0 text-white hover:text-[#aff606]"
+          className="absolute text-white hover:text-[#aff606] top-8 left-4"
           onClick={() => router.push("/select-category")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver a Categorías
         </Button>
         
+      <img
+        src="/images/cuatro-cero-logo.png"
+        alt="CUATRO CERO"
+        className="h-16 w-auto mb-8 mx-auto"
+      />
+        
         <Card className="w-full bg-[#213041] border-[#305176]">
           <CardHeader className="text-center">
-            {/* --- CORRECCIÓN AQUÍ --- */}
             <CardTitle className="text-white text-xl">
-              Selecciona tu Perfil para: <span className="text-[#aff606] font-semibold">{selectedCategory.name}</span>
+              Paso 3: Selecciona tu Perfil para: <span className="text-[#aff606] font-semibold">{selectedCategory.name}</span>
             </CardTitle>
-            {/* --- FIN CORRECCIÓN --- */}
+            <p className="text-gray-400 text-sm">
+                {hasProfiles ? "Selecciona o crea tu perfil con tu rol." : "Debes crear tu primer perfil (Rol) para esta categoría."}
+            </p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -231,7 +266,7 @@ export default function SelectProfilePage() {
                       onClick={handleCreateProfile}
                       className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea]"
                     >
-                      Guardar
+                      Guardar y Acceder
                     </Button>
                   </DialogFooter>
                 </DialogContent>

@@ -9,6 +9,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Trash2 } from "lucide-react" 
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface UserProfile {
     id: number;
@@ -24,9 +36,9 @@ export function ProfileSettingsForm() {
   const { toast } = useToast()
   const [localProfile, setLocalProfile] = React.useState<UserProfile | null>(null)
   const [formData, setFormData] = React.useState({ firstName: "", lastName: "" })
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [isSaving, setIsSaving] = React.useState(false) 
+  const [isDeleting, setIsDeleting] = React.useState(false)
 
-  // Cargar perfil actual desde LocalStorage
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
         const savedProfileJson = localStorage.getItem("userProfile");
@@ -49,9 +61,8 @@ export function ProfileSettingsForm() {
       return;
     }
     
-    setIsLoading(true);
+    setIsSaving(true);
 
-    // 1. Crear el perfil actualizado
     const updatedProfile: UserProfile = {
       ...localProfile,
       firstName: formData.firstName.trim(),
@@ -59,7 +70,6 @@ export function ProfileSettingsForm() {
       displayName: `${formData.firstName.trim()} ${formData.lastName.trim()} - ${localProfile.profileType} (${localProfile.category})`,
     };
 
-    // 2. Obtener lista completa y actualizar
     const savedProfilesJson = localStorage.getItem("allUserProfiles");
     const allProfiles: UserProfile[] = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
     
@@ -68,7 +78,6 @@ export function ProfileSettingsForm() {
     );
     localStorage.setItem("allUserProfiles", JSON.stringify(updatedAllProfiles));
 
-    // 3. Actualizar LocalStorage y contexto de perfil activo
     localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
     setCurrentProfile(updatedProfile.displayName);
     setLocalProfile(updatedProfile);
@@ -79,32 +88,23 @@ export function ProfileSettingsForm() {
       description: `Nombre cambiado a: ${updatedProfile.firstName} ${updatedProfile.lastName}`,
     });
 
-    setIsLoading(false);
+    setIsSaving(false);
   }
 
-  // Lógica de ELIMINACIÓN de Perfil
   const handleDeleteProfile = () => {
     if (!localProfile) return;
-
-    if (!confirm(`¿Estás seguro de que quieres eliminar el perfil "${localProfile.displayName}"? Esta acción es irreversible.`)) {
-        return;
-    }
     
-    setIsLoading(true);
+    setIsDeleting(true);
 
-    // 1. Obtener la lista completa de perfiles
     const savedProfilesJson = localStorage.getItem("allUserProfiles");
     const allProfiles: UserProfile[] = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
 
-    // 2. Filtrar y eliminar el perfil actual
     const updatedAllProfiles = allProfiles.filter(p => 
         p.id !== localProfile.id
     );
 
-    // 3. Actualizar LocalStorage con la lista sin el perfil eliminado
     localStorage.setItem("allUserProfiles", JSON.stringify(updatedAllProfiles));
     
-    // 4. Limpiar sesión actual
     setCurrentProfile(null);
     localStorage.removeItem("userProfile");
     
@@ -114,9 +114,8 @@ export function ProfileSettingsForm() {
         variant: "destructive"
     });
 
-    setIsLoading(false);
+    setIsDeleting(false);
 
-    // 5. Redirigir a la selección de perfil (requiere una nueva selección)
     window.location.href = "/select-profile"; 
   }
 
@@ -155,26 +154,57 @@ export function ProfileSettingsForm() {
       
       <Button 
         onClick={handleSave} 
-        disabled={isLoading}
+        disabled={isSaving}
         className="bg-[#aff606] hover:bg-[#99db05] text-black w-full"
       >
-        {isLoading ? "Guardando..." : "Guardar Cambios"}
+        {isSaving ? "Guardando..." : "Guardar Cambios"}
       </Button>
 
       <Separator className="bg-[#305176]" />
 
       <h3 className="text-lg font-semibold text-white">Eliminar Perfil</h3>
       <p className="text-sm text-gray-400">
-        Eliminará este perfil de la lista de selección.
+        Eliminará este perfil de la lista de selección y cerrará tu sesión.
       </p>
-      <Button 
-        onClick={handleDeleteProfile} 
-        variant="destructive" 
-        disabled={isLoading}
-        className="w-full bg-red-600 hover:bg-red-700"
-      >
-        Eliminar este Perfil
-      </Button>
+      
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant="destructive" 
+            disabled={isDeleting}
+            className="w-full bg-red-600 hover:bg-red-700"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar este Perfil
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="bg-[#213041] border-[#305176] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-500 flex items-center">
+                <Trash2 className="h-5 w-5 mr-2" />
+                Confirmar Eliminación de Perfil
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Esta acción es irreversible. Estás a punto de eliminar tu perfil 
+              "{localProfile.displayName}". Deberás seleccionar un perfil nuevo 
+              o crearlo la próxima vez que inicies sesión.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-white bg-[#3363f6] hover:bg-[#2a50c8] border-none"> {/* Color azul para Cancelar */}
+                Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+                onClick={handleDeleteProfile} 
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={isDeleting}
+            >
+                {isDeleting ? "Eliminando..." : "Confirmar Eliminación"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
     </div>
   )
 }

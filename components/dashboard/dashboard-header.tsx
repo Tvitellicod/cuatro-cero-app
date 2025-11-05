@@ -4,7 +4,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Menu, User } from "lucide-react"
+import { Menu, User, Settings } from "lucide-react" 
 import { useProfile } from "@/hooks/use-profile"
 import {
   DropdownMenu,
@@ -17,7 +17,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 
-// [MODIFICACIÓN] Importar el nuevo componente
 import { ConfigurationModal } from "./configuration-modal" 
 
 interface DashboardHeaderProps {
@@ -75,9 +74,6 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
 
       <div className="flex items-center space-x-3">
         
-        {/* [MODIFICACIÓN] Agregar el botón de CONFIGURACIÓN */}
-        <ConfigurationModal />
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -102,16 +98,34 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
                 )}
               </div>
             </DropdownMenuLabel>
+            
             <DropdownMenuSeparator className="bg-[#305176]" />
+            
+            {/* INICIO DE MODIFICACIÓN: Configuración como ítem de menú */}
+            <ConfigurationModal>
+                <DropdownMenuItem 
+                    // onSelect={(e) => e.preventDefault()} está ahora en el componente ConfigurationModal
+                    className="cursor-pointer hover:bg-[#305176] focus:bg-[#305176]"
+                >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configuración
+                </DropdownMenuItem>
+            </ConfigurationModal>
+            {/* FIN DE MODIFICACIÓN */}
+
+            {/* Opción renombrada */}
             <DropdownMenuItem 
               onClick={() => router.push("/select-category")}
               className="cursor-pointer hover:bg-[#305176] focus:bg-[#305176]"
             >
-              Cambiar Categoría/Club
+              Cambiar Perfil / Categoría
             </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="bg-[#305176]" /> 
+            
             <DropdownMenuItem 
               onClick={handleLogout}
-              className="cursor-pointer text-red-400 hover:bg-[#305176] focus:bg-[#305176] focus:text-red-400 hover:text-red-40ER0"
+              className="cursor-pointer text-red-400 hover:bg-[#305176] focus:bg-[#305176] focus:text-red-400 hover:text-red-400"
             >
               Cerrar Sesión
             </DropdownMenuItem>

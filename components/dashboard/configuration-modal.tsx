@@ -3,7 +3,7 @@
 "use client"
 
 import * as React from "react"
-import { Settings } from "lucide-react"
+import { Settings } from "lucide-react" // Se mantiene Settings importado aunque no se use en el título por si se usa en otro lado.
 import {
   Dialog,
   DialogContent,
@@ -18,24 +18,17 @@ import { ProfileSettingsForm } from "./profile-settings-form"
 import { CategorySettingsForm } from "./category-settings-form"
 
 
-export function ConfigurationModal() {
+// Modificación clave: Aseguramos que el children pueda ser usado como trigger.
+export function ConfigurationModal({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = React.useState(false);
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-white hover:bg-[#305176] hover:text-[#aff606] transition-colors"
-        >
-          <Settings className="h-5 w-5" />
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger> 
       <DialogContent className="bg-[#213041] border-[#305176] text-white sm:max-w-[425px]">
         <DialogHeader>
+          {/* [MODIFICADO] Eliminado el ícono Settings del título del modal */}
           <DialogTitle className="text-white text-xl flex items-center">
-            <Settings className="h-5 w-5 mr-2 text-[#aff606]" />
             Configuración del Espacio
           </DialogTitle>
         </DialogHeader>

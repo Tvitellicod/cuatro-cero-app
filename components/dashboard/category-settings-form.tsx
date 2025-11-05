@@ -12,6 +12,17 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { PaintBucket, Trash2 } from "lucide-react"
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 const COLORS = [
@@ -39,7 +50,8 @@ export function CategorySettingsForm() {
   const { toast } = useToast()
   const router = useRouter()
   const [formData, setFormData] = React.useState({ name: "", color: "" })
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [isDeleting, setIsDeleting] = React.useState(false)
 
   React.useEffect(() => {
     if (selectedCategory) {
@@ -54,25 +66,21 @@ export function CategorySettingsForm() {
       return;
     }
     
-    setIsLoading(true);
+    setIsSaving(true);
 
-    // 1. Crear la categoría actualizada
     const updatedCategory: UserCategory = {
       ...selectedCategory,
       name: formData.name.trim(),
       color: formData.color,
     };
 
-    // 2. Actualizar localStorage (categories)
     const updatedAllCategories = allCategories.map(cat => 
         cat.id === updatedCategory.id ? updatedCategory : cat
     );
     localStorage.setItem("allUserCategories", JSON.stringify(updatedAllCategories));
 
-    // 3. Actualizar localStorage (selectedCategory)
     localStorage.setItem("selectedCategory", JSON.stringify(updatedCategory));
     
-    // 4. Actualizar el contexto
     setSelectedCategory(updatedCategory);
 
     toast({
@@ -80,32 +88,24 @@ export function CategorySettingsForm() {
       description: `Categoría "${updatedCategory.name}" modificada.`,
     });
 
-    setIsLoading(false);
+    setIsSaving(false);
   }
   
-  // Lógica de ELIMINACIÓN de Categoría
   const handleDelete = () => {
       if (!selectedCategory) return;
       
-      if (!confirm(`¿Estás seguro de que quieres eliminar la categoría "${selectedCategory.name}"? Esto también eliminará TODOS los perfiles creados dentro de ella. Esta acción es irreversible.`)) {
-        return;
-      }
-      
       const categoryIdToDelete = selectedCategory.id;
-      setIsLoading(true);
+      setIsDeleting(true);
 
-      // 1. Eliminar de todas las categorías
       const updatedAllCategories = allCategories.filter(cat => cat.id !== categoryIdToDelete);
       localStorage.setItem("allUserCategories", JSON.stringify(updatedAllCategories));
 
-      // 2. ELIMINAR TODOS LOS PERFILES ASOCIADOS A ESTA CATEGORÍA
       const savedProfilesJson = localStorage.getItem("allUserProfiles");
       const allProfiles: UserProfile[] = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
       
       const updatedAllProfiles = allProfiles.filter(p => p.category !== categoryIdToDelete);
       localStorage.setItem("allUserProfiles", JSON.stringify(updatedAllProfiles));
 
-      // 3. Borrar la categoría y perfil activos
       setSelectedCategory(null);
       localStorage.removeItem("selectedCategory");
       localStorage.removeItem("userProfile"); 
@@ -116,9 +116,8 @@ export function CategorySettingsForm() {
         variant: "destructive"
       });
       
-      setIsLoading(false);
+      setIsDeleting(false);
 
-      // 4. Redirigir a la selección de Categoría
       router.push("/select-category");
   }
 
@@ -172,10 +171,10 @@ export function CategorySettingsForm() {
       
       <Button 
         onClick={handleSave} 
-        disabled={isLoading}
+        disabled={isSaving}
         className="bg-[#aff606] hover:bg-[#99db05] text-black w-full"
       >
-        {isLoading ? "Guardando..." : "Guardar Cambios"}
+        {isSaving ? "Guardando..." : "Guardar Cambios"}
       </Button>
 
       <Separator className="bg-[#305176]" />
@@ -184,15 +183,44 @@ export function CategorySettingsForm() {
       <p className="text-sm text-gray-400">
         Eliminará esta categoría y forzará la re-selección de categoría y perfil a todos los usuarios que la usen.
       </p>
-      <Button 
-        onClick={handleDelete}
-        variant="destructive" 
-        disabled={isLoading}
-        className="w-full bg-red-600 hover:bg-red-700"
-      >
-        <Trash2 className="h-4 w-4 mr-2" />
-        Eliminar Categoría
-      </Button>
+      
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant="destructive" 
+            disabled={isDeleting}
+            className="w-full bg-red-600 hover:bg-red-700"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar Categoría
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="bg-[#213041] border-[#305176] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-500 flex items-center">
+                <Trash2 className="h-5 w-5 mr-2" />
+                Confirmar Eliminación de Categoría
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Esta acción es irreversible y crítica. Estás a punto de eliminar la categoría 
+              "{selectedCategory.name}" y todos los perfiles asociados a ella.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-white bg-[#3363f6] hover:bg-[#2a50c8] border-none"> {/* Color azul para Cancelar */}
+                Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={isDeleting}
+            >
+                {isDeleting ? "Eliminando..." : "Confirmar Eliminación"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
     </div>
   )
 }

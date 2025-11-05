@@ -1,4 +1,4 @@
-// tvitellicod/cuatro-cero-app/cuatro-cero-app-25e7c300f59a63d0b84e5a78001da1ba456ebcac/components/dashboard/sidebar.tsx
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-60479741c8ea2ca449bfcef814f36d999ab6ab01/components/dashboard/sidebar.tsx
 
 "use client"
 
@@ -64,6 +64,33 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       ]
     }
     // --- FIN LÓGICA DIRECTIVO ---
+    
+    // --- LÓGICA EXCLUSIVA PARA ROL ANALISTA ---
+    if (profileType === "ANALISTA") {
+      const analistaItems = [
+        {
+          id: "inicio",
+          label: "INICIO",
+          icon: Home,
+          href: "/dashboard",
+          items: [],
+          show: true,
+        },
+        {
+          id: "torneos",
+          label: "TORNEOS",
+          icon: Trophy,
+          href: "/dashboard/torneos",
+          items: [
+            { label: "Partidos", href: "/dashboard/torneos/partidos" },
+            { label: "Próximos Partidos", href: "/dashboard/torneos/proximos" },
+          ],
+          show: true,
+        },
+      ];
+      return analistaItems;
+    }
+    // --- FIN LÓGICA ANALISTA ---
 
 
     // --- LÓGICA PARA TODOS LOS DEMÁS ROLES (DT, PF, KINE, NUTRI) ---
@@ -89,8 +116,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (profileType !== "NUTRICIONISTA") {
       const trainingItems = []
 
-      // [MODIFICADO] Incluido "ANALISTA" para ver Ejercicios Tácticos
-      if (profileType === "DIRECTOR TECNICO" || profileType === "ANALISTA") {
+      if (profileType === "DIRECTOR TECNICO") {
         trainingItems.push({ label: "Ejercicios", href: "/dashboard/entrenamiento/ejercicios" })
       }
       if (profileType === "PREPARADOR FISICO") {
@@ -124,7 +150,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       })
     }
 
-    // --- MODIFICACIÓN AQUÍ ---
     // Sección TORNEOS (No visible para PF, KINE ni NUTRICIONISTA)
     baseItems.push({
       id: "torneos",
@@ -139,11 +164,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             profileType !== "KINESIOLOGO" && 
             profileType !== "NUTRICIONISTA", // <-- Se oculta si es PF, KINE o NUTRI
     })
-    // --- FIN DE LA MODIFICACIÓN ---
 
-    // Sección ESTADÍSTICAS - (DIRECTIVO ya fue manejado, solo entra DT)
-    // [MODIFICADO] Incluido "ANALISTA" para acceder a las estadísticas
-    if (profileType === "DIRECTOR TECNICO" || profileType === "ANALISTA") {
+    // Sección ESTADÍSTICAS - Solo para DT
+    if (profileType === "DIRECTOR TECNICO" || profileType === "DIRECTIVO") {
       baseItems.push({
         id: "estadisticas",
         label: "ESTADÍSTICAS",

@@ -1,4 +1,4 @@
-// tvitellicod/cuatro-cero-app/cuatro-cero-app-25e7c300f59a63d0b84e5a78001da1ba456ebcac/hooks/use-profile.tsx
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-60479741c8ea2ca449bfcef814f36d999ab6ab01/hooks/use-profile.tsx
 
 "use client"
 
@@ -171,7 +171,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-// --- Función para Secciones (sin cambios) ---
+// --- Función para Secciones (para construir el Sidebar) ---
 function getSectionsForProfile(profileType: string | null): string[] {
   if (!profileType) return [];
 
@@ -179,7 +179,7 @@ function getSectionsForProfile(profileType: string | null): string[] {
   const isPhysicalTrainer = profileType.includes("PREPARADOR FISICO");
   const isKinesiologist = profileType === "KINESIOLOGO";
   const isNutritionist = profileType === "NUTRICIONISTA";
-  const isDirective = profileType.includes("DIRECTIVO") || profileType.includes("ANALISTA");
+  const isDirective = profileType.includes("DIRECTIVO") || profileType.includes("ANALISTA"); 
   const isPublisher = profileType === "PUBLICADOR";
 
   const sections = ["INICIO"];
@@ -188,7 +188,14 @@ function getSectionsForProfile(profileType: string | null): string[] {
     sections.push("PUBLICAR");
     return sections;
   }
+  
+  // [MODIFICACIÓN CLAVE]: Lógica específica para el Analista
+  if (profileType === "ANALISTA") {
+      sections.push("TORNEOS"); // Acceso al menú Torneos
+      return sections;
+  }
 
+  // --- Lógica para todos los demás (DT, PF, KINE, NUTRI, Directivo)
   sections.push("CLUB");
 
   if (!isNutritionist) {

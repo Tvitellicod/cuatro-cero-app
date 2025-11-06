@@ -1,4 +1,4 @@
-// tvitellicod/cuatro-cero-app/cuatro-cero-app-60479741c8ea2ca449bfcef814f36d999ab6ab01/components/dashboard/dashboard-header.tsx
+// tvitellicod/cuatro-cero-app/cuatro-cero-app-02dc91cb8697f7842c0382cd6eb47962b822935d/components/dashboard/dashboard-header.tsx
 
 "use client"
 
@@ -58,9 +58,14 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
   const profileRole = currentProfile ? currentProfile.split(' - ')[1] : 'No asignado';
   const initials = getInitials(currentProfile);
 
+  // [MODIFICACIÓN] Variable para el nuevo título
+  const headerTitle = selectedCategory 
+    ? `${profileName} - ${profileRole} - ${selectedCategory.name}`
+    : `${profileName} - ${profileRole}`;
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-[#305176] bg-[#213041] px-4 md:px-6">
-      <div className="flex items-center">
+      <div className="flex items-center min-w-0"> {/* Añadido min-w-0 para que funcione truncate */}
         <Button
           variant="ghost"
           size="icon"
@@ -69,7 +74,14 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-semibold text-white hidden sm:block">Dashboard</h1>
+        
+        {/* [MODIFICACIÓN] Título del encabezado reemplazado */}
+        <h1 
+          className="text-lg font-semibold text-white hidden sm:block truncate"
+          title={headerTitle} // Muestra el texto completo al pasar el ratón
+        >
+          {headerTitle}
+        </h1>
       </div>
 
       <div className="flex items-center space-x-3">
@@ -101,10 +113,8 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
             
             <DropdownMenuSeparator className="bg-[#305176]" />
             
-            {/* INICIO DE MODIFICACIÓN: Aplicación del fix onSelect */}
             <ConfigurationModal>
                 <DropdownMenuItem 
-                    // FIX: Previene el cierre inmediato del DropdownMenu al hacer click en el DialogTrigger
                     onSelect={(e) => e.preventDefault()} 
                     className="cursor-pointer hover:bg-[#305176] focus:bg-[#305176]"
                 >
@@ -112,9 +122,7 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
                     Configuración
                 </DropdownMenuItem>
             </ConfigurationModal>
-            {/* FIN DE MODIFICACIÓN */}
 
-            {/* Opción renombrada */}
             <DropdownMenuItem 
               onClick={() => router.push("/select-category")}
               className="cursor-pointer hover:bg-[#305176] focus:bg-[#305176]"

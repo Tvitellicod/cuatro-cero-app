@@ -101,10 +101,11 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
             
             <DropdownMenuSeparator className="bg-[#305176]" />
             
-            {/* INICIO DE MODIFICACIÓN: Configuración como ítem de menú */}
+            {/* INICIO DE MODIFICACIÓN: Aplicación del fix onSelect */}
             <ConfigurationModal>
                 <DropdownMenuItem 
-                    // onSelect={(e) => e.preventDefault()} está ahora en el componente ConfigurationModal
+                    // FIX: Previene el cierre inmediato del DropdownMenu al hacer click en el DialogTrigger
+                    onSelect={(e) => e.preventDefault()} 
                     className="cursor-pointer hover:bg-[#305176] focus:bg-[#305176]"
                 >
                     <Settings className="h-4 w-4 mr-2" />

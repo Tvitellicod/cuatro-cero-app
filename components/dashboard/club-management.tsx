@@ -1,6 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+// Importaciones añadidas para el rol y la fecha
+import { useProfile } from "@/hooks/use-profile"
+import { toast } from "@/hooks/use-toast"
+import { format } from "date-fns"
+import { es } from "date-fns/locale/es"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,10 +14,11 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Plus, Search, Edit, Trash2, Users, FileText, Eye } from "lucide-react"
+// Icono 'HeartPulse' (Botiquín) añadido
+import { Upload, Plus, Search, Edit, Trash2, Users, FileText, Eye, HeartPulse } from "lucide-react"
 import Image from 'next/image'
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +33,13 @@ import {
 // Opcional: Define un tipo para Player (Mantenido al final del archivo para coherencia)
 
 export function ClubManagement() {
+  // --- AÑADIDO: Hook de perfil para verificar el rol ---
+  const { currentProfile } = useProfile()
+  const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
+  const profileData = savedProfile ? JSON.parse(savedProfile) : null
+  const isKinesiologo = profileData?.profileType === "KINESIOLOGO";
+  // --- FIN AÑADIDO ---
+
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -59,6 +73,14 @@ export function ClubManagement() {
   })
   const [tempClubInfo, setTempClubInfo] = useState(clubInfo)
 
+  // --- AÑADIDO: Estado para el nuevo modal de reporte de lesión ---
+  const [injuryReportModalOpen, setInjuryReportModalOpen] = useState<Player | null>(null);
+  const [newInjury, setNewInjury] = useState({
+    name: "",
+    recoveryTime: "", // Ej: "3-4 semanas"
+  });
+  // --- FIN AÑADIDO ---
+
 
   const colorsOption = [
     "#aff606", "#33d9f6", "#f4c11a", "#ea3498", "#25d03f",
@@ -87,14 +109,14 @@ export function ClubManagement() {
     const players = []
     let playerId = 1
 
-    const categoryMap = {
+    const categoryMap: Record<string, { name: string; count: number }> = {
       "primera": { name: "Primera División", count: 25 },
       "tercera": { name: "Tercera División", count: 18 },
       "juveniles": { name: "Juveniles", count: 22 },
     }
 
     for (const categoryId in categoryMap) {
-      for (let i = 0; i < categoryMap[categoryId].count; i++) {
+      for (let i = 0; i < categoryMap[categoryId as keyof typeof categoryMap].count; i++) {
         const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
         const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
         const randomNickname = nicknames[Math.floor(Math.random() * nicknames.length)]
@@ -131,7 +153,8 @@ export function ClubManagement() {
     return players
   }
   
-  const [players, setPlayers] = useState(generatePlayers())
+  const [players, setPlayers] = useState<Player[]>(generatePlayers()) // Especificar tipo
+  
   const filteredPlayers = players.filter((player) => {
     const matchesSearch =
       player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -262,9 +285,77 @@ export function ClubManagement() {
     }
   }
 
+  // --- MODIFICADO: Esta función AHORA abre el modal de lesión para Kine, o el de detalle para otros ---
   const handleViewMedicalReport = (player: Player) => {
-    setShowMedicalReport(player)
+    // Si es Kinesiologo, abre el modal de reporte de lesión (que tiene el botón de recuperar)
+    if (isKinesiologo) {
+      setShowMedicalReport(player);
+    } else {
+      // Si es otro rol, solo muestra el reporte (comportamiento anterior)
+      setShowMedicalReport(player);
+    }
   }
+  // --- FIN MODIFICACIÓN ---
+
+  // --- AÑADIDO: Handler para abrir el modal de reporte (botiquín) ---
+  const handleOpenInjuryModal = (player: Player) => {
+    setInjuryReportModalOpen(player);
+    setNewInjury({ name: "", recoveryTime: "" }); // Resetea el form
+  };
+  // --- FIN AÑADIDO ---
+
+  // --- AÑADIDO: Handler para GUARDAR la lesión (Kine) ---
+  const handleSaveInjury = () => {
+    if (!injuryReportModalOpen || !newInjury.name || !newInjury.recoveryTime) {
+      toast({
+        title: "Campos Incompletos",
+        description: "Debe ingresar el nombre de la lesión y el tiempo de recuperación.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const playerId = injuryReportModalOpen.id;
+    const injuryData = {
+      type: newInjury.name,
+      date: new Date().toISOString().split('T')[0], // Fecha de hoy
+      recovery: newInjury.recoveryTime,
+    };
+
+    setPlayers(players.map(p => 
+      p.id === playerId 
+        ? { ...p, status: "LESIONADO", injury: injuryData } 
+        : p
+    ));
+
+    toast({
+      title: "Jugador Lesionado",
+      description: `Se reportó la lesión de ${injuryReportModalOpen.firstName} ${injuryReportModalOpen.lastName}.`,
+    });
+
+    setInjuryReportModalOpen(null);
+    setNewInjury({ name: "", recoveryTime: "" });
+  };
+  // --- FIN AÑADIDO ---
+  
+  // --- AÑADIDO: Handler para MARCAR COMO RECUPERADO (Kine) ---
+  const handleRecoverPlayer = (playerId: number) => {
+    setPlayers(players.map(p =>
+      p.id === playerId
+        ? { ...p, status: "DISPONIBLE", injury: null }
+        : p
+    ));
+    
+    toast({
+      title: "Jugador Recuperado",
+      description: "El jugador ha sido marcado como DISPONIBLE.",
+    });
+
+    setInjuryReportModalOpen(null); // Cierra el modal de lesión
+    setShowMedicalReport(null); // Cierra el modal de reporte (si estaba abierto)
+  };
+  // --- FIN AÑADIDO ---
+
 
   const handleDeleteCategory = () => {
     if (categoryToDelete) {
@@ -307,22 +398,19 @@ export function ClubManagement() {
     setShowEditClub(false); // Cierra el modal
   }
 
-  const getEstimatedEndDate = (startDate: string, recoveryString: string) => {
-    const recoveryWeeks = recoveryString.match(/\d+/g);
-    if (!recoveryWeeks || recoveryWeeks.length === 0) return "N/A";
-  
-    const weeks = Math.max(...recoveryWeeks.map(Number));
-    const injuryDate = new Date(startDate);
-    
-    // Add weeks to the injury date
-    injuryDate.setDate(injuryDate.getDate() + weeks * 7);
-  
-    const day = String(injuryDate.getDate()).padStart(2, '0');
-    const month = String(injuryDate.getMonth() + 1).padStart(2, '0');
-    const year = injuryDate.getFullYear();
-    
-    return `${day}-${month}-${year}`;
+  // --- MODIFICADO: getEstimatedEndDate ahora es calculateRecoveryDate ---
+  const calculateRecoveryDate = (recoveryString: string): string => {
+    // Extraer el primer número del string (ej: "3-4 semanas" -> 3)
+    const match = recoveryString.match(/(\d+)/);
+    if (!match) return "N/A";
+
+    const weeks = parseInt(match[0], 10);
+    const recoveryDate = new Date();
+    recoveryDate.setDate(recoveryDate.getDate() + weeks * 7);
+
+    return format(recoveryDate, "dd-MM-yyyy");
   };
+  // --- FIN MODIFICACIÓN ---
 
   // Helper para mostrar la fecha de nacimiento en el input DD/MM/AAAA
   const displayBirthDate = newPlayer.birthDate?.length === 10 && newPlayer.birthDate.includes('-')
@@ -346,9 +434,12 @@ export function ClubManagement() {
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-white">Información del Club</CardTitle>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:text-[#aff606]">
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+                  {!isKinesiologo && (
+                    <Button variant="ghost" size="icon" className="text-white hover:text-[#aff606]">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                 </DialogTrigger>
               </CardHeader>
               <CardContent>
@@ -466,7 +557,8 @@ export function ClubManagement() {
                     <span className="text-white font-medium">{category.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {selectedCategory === category.id && category.id !== "all" ? (
+                    {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+                    {selectedCategory === category.id && category.id !== "all" && !isKinesiologo ? (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -486,7 +578,8 @@ export function ClubManagement() {
                   </div>
                 </div>
               ))}
-              {!showCreateCategory ? (
+              {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+              {!showCreateCategory && !isKinesiologo && (
                 <Button
                   className="w-full bg-[#305176] text-white hover:bg-[#aff606] hover:text-black"
                   onClick={() => setShowCreateCategory(true)}
@@ -494,7 +587,8 @@ export function ClubManagement() {
                   <Plus className="h-4 w-4 mr-2" />
                   Nueva Categoría
                 </Button>
-              ) : (
+              )}
+              {showCreateCategory && (
                 <div className="space-y-3 p-3 bg-[#1d2834] rounded-lg">
                   <Input
                     placeholder="Nombre de la categoría"
@@ -704,7 +798,7 @@ export function ClubManagement() {
                             ? "bg-[#25d03f] text-black hover:bg-[#20b136]"
                             : "border-[#25d03f] text-[#25d03f] hover:bg-[#25d03f] hover:text-black bg-transparent"
                         }
-                        onClick={() => setNewPlayer({ ...newPlayer, status: "DISPONIBLE" })}
+                        onClick={() => setNewPlayer({ ...newPlayer, status: "DISPONIBLE", injury: null })} // Limpia lesión al poner disponible
                       >
                         DISPONIBLE
                       </Button>
@@ -750,17 +844,20 @@ export function ClubManagement() {
                         : "Todas las categorías"}{" "}
                       - Jugadores ({filteredPlayers.length})
                     </CardTitle>
-                    <Button
-                      size="default"
-                      className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
-                      onClick={() => {
-                        setEditingPlayer(null);
-                        setShowCreateForm(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Nuevo Jugador
-                    </Button>
+                    {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+                    {!isKinesiologo && (
+                      <Button
+                        size="default"
+                        className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
+                        onClick={() => {
+                          setEditingPlayer(null);
+                          setShowCreateForm(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Nuevo Jugador
+                      </Button>
+                    )}
                 </div>
                 <div className="flex-1 flex items-center space-x-2 mt-4">
                     <div className="relative flex-1">
@@ -807,16 +904,30 @@ export function ClubManagement() {
                         >
                           {player.status}
                         </Badge>
+                        {/* --- INICIO DE MODIFICACIONES KINESIOLOGO --- */}
                         {player.status === "LESIONADO" && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="text-white hover:bg-white/10"
-                            onClick={() => handleViewMedicalReport(player)}
+                            onClick={() => handleViewMedicalReport(player)} // Esta función ahora es inteligente
                           >
                             <FileText className="h-4 w-4 text-orange-500" />
                           </Button>
                         )}
+                        {/* Botón de Botiquín (Solo para Kine y jugadores DISPONIBLES) */}
+                        {isKinesiologo && player.status === "DISPONIBLE" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:text-orange-500"
+                            onClick={() => handleOpenInjuryModal(player)}
+                          >
+                            <HeartPulse className="h-5 w-5" />
+                          </Button>
+                        )}
+                        {/* --- FIN DE MODIFICACIONES KINESIOLOGO --- */}
+                        
                         <Button
                           variant="ghost"
                           size="icon"
@@ -825,14 +936,18 @@ export function ClubManagement() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-white hover:text-red-400"
-                          onClick={() => setPlayerToDelete(player.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        
+                        {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+                        {!isKinesiologo && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:text-red-400"
+                            onClick={() => setPlayerToDelete(player.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -926,24 +1041,27 @@ export function ClubManagement() {
               </div>
             </div>
           </div>
-          <div className="flex justify-between space-x-4">
-            <Button
-              variant="default"
-              className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]"
-              onClick={() => {
-                handleEditPlayer(showPlayerDetail!);
-                setShowPlayerDetail(null);
-              }}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar Jugador
-            </Button>
-          </div>
+          {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+          {!isKinesiologo && (
+            <div className="flex justify-between space-x-4">
+              <Button
+                variant="default"
+                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]"
+                onClick={() => {
+                  handleEditPlayer(showPlayerDetail!);
+                  setShowPlayerDetail(null);
+                }}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Jugador
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
 
-      {/* Medical Report Dialog */}
+      {/* Medical Report Dialog (MODIFICADO PARA KINE) */}
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -988,19 +1106,99 @@ export function ClubManagement() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="injury-end-date" className="text-right text-white">
-                Fecha Estimada de Recuperación
+                Fecha Estimada
               </Label>
+              {/* --- MODIFICADO: usa la nueva función --- */}
               <Input
                 id="injury-end-date"
-                value={getEstimatedEndDate(showMedicalReport?.injury?.date || '', showMedicalReport?.injury?.recovery || '')}
+                value={calculateRecoveryDate(showMedicalReport?.injury?.recovery || '')}
                 readOnly
                 className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
               />
             </div>
           </div>
+          {/* --- AÑADIDO: Botón de Recuperar Jugador (Solo Kine) --- */}
+          {isKinesiologo && (
+            <DialogFooter>
+              <Button
+                className="w-full bg-[#25d03f] text-black hover:bg-[#20b136]"
+                onClick={() => handleRecoverPlayer(showMedicalReport!.id)}
+              >
+                Marcar como Jugador Recuperado
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
       
+      {/* --- AÑADIDO: Nuevo Modal para Reportar Lesión (Kine) --- */}
+      <Dialog open={!!injuryReportModalOpen} onOpenChange={() => setInjuryReportModalOpen(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-white text-2xl font-bold">Reportar Lesión</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Registrar nueva lesión para {injuryReportModalOpen?.firstName} {injuryReportModalOpen?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="injury-date-new" className="text-white">Fecha Actual</Label>
+              <Input
+                id="injury-date-new"
+                value={format(new Date(), "dd-MM-yyyy")}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="injury-name" className="text-white">Nombre de la Lesión *</Label>
+              <Input
+                id="injury-name"
+                value={newInjury.name}
+                onChange={(e) => setNewInjury(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ej: Desgarro isquiotibial"
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="injury-recovery-time" className="text-white">Tiempo de Recuperación *</Label>
+              <Input
+                id="injury-recovery-time"
+                value={newInjury.recoveryTime}
+                onChange={(e) => setNewInjury(prev => ({ ...prev, recoveryTime: e.target.value }))}
+                placeholder="Ej: 3-4 semanas"
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="injury-estimated-date" className="text-white">Fecha Estimada de Recuperación</Label>
+              <Input
+                id="injury-estimated-date"
+                value={calculateRecoveryDate(newInjury.recoveryTime)}
+                readOnly
+                className="bg-[#1d2834] border-[#305176] text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              onClick={() => setInjuryReportModalOpen(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+              onClick={handleSaveInjury}
+            >
+              Guardar Reporte
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* --- FIN AÑADIDO --- */}
+
       {/* Alert Dialog for Delete Confirmation */}
       <AlertDialog open={!!playerToDelete} onOpenChange={() => setPlayerToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
@@ -1060,7 +1258,7 @@ type Player = {
   phoneNumber: string;
   position: string;
   foot: string;
-  status: string;
+  status: string; // "DISPONIBLE", "LESIONADO", "NO DISPONIBLE"
   category: string;
   photo: string;
   injury?: {

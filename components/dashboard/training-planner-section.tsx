@@ -55,8 +55,8 @@ const getInitialCategory = (): string => {
     if (profileJson) {
       try {
         const profile = JSON.parse(profileJson);
-        // CORRECCIÓN: La categoría está anidada
-        return profile?.category?.id || ""; 
+        // CORRECCIÓN: Se lee 'profile.category' (el ID) directamente.
+        return profile?.category || ""; 
       } catch (e) {
         console.error("Error parsing user profile from localStorage", e);
         return "";
@@ -161,31 +161,26 @@ export function TrainingPlannerSection() {
   // 1. Lectura corregida de localStorage
   const profileType = profileData?.profileType; // Ej: "PREPARADOR FISICO"
   
-  // 2. Extraer el NOMBRE de la categoría del displayName
-  // (El displayName es "Nombre Apellido - ROL (Nombre Categoria)")
-  const getCategoryNameFromProfile = (data: any) => {
-    if (!data?.displayName) return null;
-    const match = data.displayName.match(/\(([^)]+)\)/);
-    return match ? match[1] : null; // Ej: "Primera División"
-  };
-  const profileCategoryName = getCategoryNameFromProfile(profileData);
+  // 2. Extraer el ID de la categoría (ej: "primera_division")
+  // Esta es la forma correcta de leerlo, no desde el displayName
+  const profileCategoryId = profileData?.category;
 
-  // 3. Función helper para convertir el Nombre de Categoría al ID estático de los Mocks
-  const getMockIdFromName = (name: string | null) => {
-    if (!name) return "";
-    if (name.toLowerCase().includes("primera")) return "primera";
-    if (name.toLowerCase().includes("juveniles")) return "juveniles";
-    if (name.toLowerCase().includes("tercera")) return "tercera";
-    if (name.toLowerCase().includes("cuarta")) return "cuarta";
-    if (name.toLowerCase().includes("quinta")) return "quinta";
-    if (name.toLowerCase().includes("sexta")) return "sexta";
-    if (name.toLowerCase().includes("septima")) return "septima";
-    if (name.toLowerCase().includes("infantiles")) return "infantiles";
-    return name; // fallback
+  // 3. Función helper para convertir el ID de Categoría (ej: "primera_division") al ID estático de los Mocks (ej: "primera")
+  const getMockIdFromProfileId = (id: string | null) => {
+    if (!id) return "";
+    if (id.toLowerCase().includes("primera")) return "primera";
+    if (id.toLowerCase().includes("juveniles")) return "juveniles";
+    if (id.toLowerCase().includes("tercera")) return "tercera";
+    if (id.toLowerCase().includes("cuarta")) return "cuarta";
+    if (id.toLowerCase().includes("quinta")) return "quinta";
+    if (id.toLowerCase().includes("sexta")) return "sexta";
+    if (id.toLowerCase().includes("septima")) return "septima";
+    if (id.toLowerCase().includes("infantiles")) return "infantiles";
+    return id; // fallback
   };
 
   // 4. Obtener el ID estático (ej: "primera") que coincide con los mocks
-  const mockCategoryId = getMockIdFromName(profileCategoryName);
+  const mockCategoryId = getMockIdFromProfileId(profileCategoryId);
 
   // #######################################################################
   // ###                   FIN DE LA CORRECCIÓN                          ###
@@ -220,7 +215,7 @@ export function TrainingPlannerSection() {
     const players = []
     let playerId = 1
 
-    const categoryMap = {
+    const categoryMap: Record<string, { name: string; count: number }> = {
       "primera": { name: "Primera División", count: 25 },
       "tercera": { name: "Tercera División", count: 18 },
       "juveniles": { name: "Juveniles", count: 22 },
@@ -232,7 +227,7 @@ export function TrainingPlannerSection() {
     }
 
     for (const categoryId in categoryMap) {
-      for (let i = 0; i < categoryMap[categoryId].count; i++) {
+      for (let i = 0; i < categoryMap[categoryId as keyof typeof categoryMap].count; i++) {
         const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
         const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
         const randomNickname = nicknames[Math.floor(Math.random() * nicknames.length)]
@@ -462,7 +457,7 @@ export function TrainingPlannerSection() {
 
   // --- LÓGICA DE EJERCICIOS DISPONIBLES MODIFICADA (PETICIÓN DEL USUARIO) ---
   // El PF ahora solo ve ejercicios Físicos y Kinesiológicos
-  let availableExercises = []
+  let availableExercises: any[] = []
   if (profileType === "DIRECTOR TECNICO") {
     availableExercises = exercisesFromManagement.filter(ex => ex.type === "Técnico")
   } else if (profileType === "PREPARADOR FISICO") {
@@ -552,7 +547,7 @@ export function TrainingPlannerSection() {
   };
   // ------------------------------
 
-  const removeExercise = (exerciseId: number) => {
+  const removeExercise = (exerciseId: number | string) => {
     setSelectedExercises(selectedExercises.filter((e) => e.id !== exerciseId))
   }
 
@@ -606,7 +601,7 @@ export function TrainingPlannerSection() {
   const getCategoriesInTraining = (exercises: any[]) => {
     // Esta función se utiliza para los puntos de color en el resumen de la sesión
     const categories = [...new Set(exercises.map((ex) => ex.category))]
-    const colors = {
+    const colors: Record<string, string> = {
       Ataque: "#ea3498",
       Defensa: "#33d9f6",
       Transiciones: "#f4c11a",
@@ -771,13 +766,13 @@ export function TrainingPlannerSection() {
   // Filtramos las sesiones que se mostrarán en la UI
   const filteredProgrammedSessions = trainingSessions.filter(
     (session) =>
-      session.categoryId === mockCategoryId && // Coincide la categoría (ej: "primera")
+      // session.categoryId === mockCategoryId && // <-- FILTRO DE CATEGORÍA ELIMINADO PARA DEMO
       session.createdBy === profileType // Coincide el ROL (ej: "PREPARADOR FISICO")
   );
 
   const filteredRecentSessions = previousSessions.filter(
     (session) =>
-      session.categoryId === mockCategoryId && // Coincide la categoría
+      // session.categoryId === mockCategoryId && // <-- FILTRO DE CATEGORÍA ELIMINADO PARA DEMO
       session.createdBy === profileType // Coincide el ROL
   );
   // #######################################################################

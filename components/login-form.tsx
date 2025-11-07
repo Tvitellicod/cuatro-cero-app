@@ -25,6 +25,22 @@ const PUBLISHER_PROFILE = {
     displayName: "Cuatro Cero - Publicador",
 };
 
+// --- MOCK DATA NECESARIA PARA SALTAR EL PROFILE GUARD (Paso 1 y 2) ---
+const MOCK_CLUB_DATA = {
+    id: "mock_club_pub", 
+    name: "Cuatro Cero Admin Club",
+    abbreviation: "4C",
+    logoUrl: "/images/cuatro-cero-logo.png",
+    createdAt: new Date().toISOString(),
+};
+
+const MOCK_CATEGORY_DATA = {
+    id: "mock_category_pub",
+    name: "Publicador",
+    color: "bg-gray-500",
+};
+// --------------------------------------------------------------------
+
 // --- CORRECCIÓN: Clave correcta de localStorage ---
 // Esta clave debe coincidir con ACTIVE_PROFILE_KEY en use-profile.tsx
 const ACTIVE_PROFILE_KEY = "userProfile"; 
@@ -37,12 +53,14 @@ export function LoginForm() {
 
   // --- FUNCIÓN CLAVE: FORZAR CIERRE DE SESIÓN EN MODO DEMO ---
   const clearDemoSession = () => {
+      // Importante: Eliminar TODAS las claves de flujo de configuración
       localStorage.removeItem("userProfile"); 
       localStorage.removeItem("selectedProfile"); 
       localStorage.removeItem("activeProfile"); 
-      localStorage.removeItem("selectedCategory"); // Limpiamos la categoría
-      localStorage.removeItem("allUserCategories"); // Limpiamos las categorías
-      localStorage.removeItem("allUserProfiles"); // Limpiamos los perfiles
+      localStorage.removeItem("selectedCategory"); 
+      localStorage.removeItem("allUserCategories"); 
+      localStorage.removeItem("allUserProfiles"); 
+      localStorage.removeItem("clubData"); // Limpiamos el club
   };
 
 
@@ -56,23 +74,8 @@ export function LoginForm() {
       setTimeout(() => {
         setIsLoading(false)
 
-        // 2. Verificar si es el usuario publicador
-        if (email === PUBLISHER_EMAIL) {
-            
-            // --- CORRECCIÓN ---
-            // Guardamos el perfil del publicador en la clave correcta "userProfile"
-            localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(PUBLISHER_PROFILE));
-            // ------------------
-
-            // Redirige al dashboard directamente
-            router.push("/dashboard");
-            return;
-        }
-
-        // --- CORRECCIÓN: REDIRIGIR A /select-category ---
-        // Cualquier otro usuario demo va a seleccionar categoría
-        router.push("/select-category"); // <-- ¡CAMBIO AQUÍ!
-        // ------------------------------------
+        // 2. Redirige a /select-category para cualquier usuario que no sea el publicador
+        router.push("/select-category"); 
 
       }, 1000);
       return true; // Indica que manejamos el login demo
@@ -98,18 +101,34 @@ export function LoginForm() {
       return
     }
 
-    // --- Lógica de Modo Demo ---
+    // --- Lógica de Modo Demo (MODIFICADA) ---
     if (!isSupabaseConfigured()) {
-        // Manejo del usuario publicador en modo demo
-        if (email === PUBLISHER_EMAIL) {
+        // Manejo del usuario publicador en modo demo:
+        if (!isSignUp && email === PUBLISHER_EMAIL) {
             if (password !== PUBLISHER_PASSWORD) {
                 setError("Contraseña incorrecta para el usuario publicador demo.");
                 setIsLoading(false);
                 return;
             }
-             handleDemoLogin(email, isSignUp); // Llama a la lógica demo del publicador
+            
+            // Éxito de login Publicador (salta todos los pasos)
+            clearDemoSession(); // Limpiar cualquier sesión antigua
+            setTimeout(() => {
+                setIsLoading(false);
+                
+                // 1. Guardamos el perfil del publicador
+                localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(PUBLISHER_PROFILE));
+                
+                // 2. Mockear datos de Club y Categoría para satisfacer el ProfileGuard
+                localStorage.setItem("clubData", JSON.stringify(MOCK_CLUB_DATA));
+                localStorage.setItem("selectedCategory", JSON.stringify(MOCK_CATEGORY_DATA));
+                
+                // 3. Redirigimos directamente al dashboard
+                router.push("/dashboard");
+            }, 1000);
+            return; // Detiene la ejecución aquí
         } else {
-             // Cualquier otro login/signup en modo demo va directo a handleDemoLogin
+             // Cualquier otro login/signup en modo demo va directo al flujo de configuración
              handleDemoLogin(email, isSignUp);
         }
         return; // Detiene la ejecución aquí para el modo demo
@@ -127,10 +146,8 @@ export function LoginForm() {
       if (result.error) {
         setError(result.error.message)
       } else {
-        // --- CORRECCIÓN: REDIRIGIR A /select-category ---
         // Siempre ir a seleccionar categoría después de login/signup exitoso
-        router.push("/select-category"); // <-- ¡CAMBIO AQUÍ!
-        // -----------------------------
+        router.push("/select-category"); 
       }
     } catch (err) {
       setError("Ha ocurrido un error inesperado")
@@ -278,6 +295,33 @@ export function LoginForm() {
                   disabled={isLoading}
                 >
                   {isLoading ? "Registrando..." : "Registrarse"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="forgot-password">
+              <form className="space-y-4">
+                <p className="text-gray-400 text-sm">
+                  Ingresa tu correo para recibir un enlace de restablecimiento.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email" className="text-white text-sm">
+                    Correo electrónico
+                  </Label>
+                  <Input
+                    id="reset-email"
+                    name="email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    className="bg-[#1d2834] border-[#305176] text-white h-11"
+                    required
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-11"
+                >
+                  Enviar Enlace
                 </Button>
               </form>
             </TabsContent>

@@ -33,7 +33,9 @@ interface UserProfile {
 }
 
 // Opciones de roles
-const profileTypes = ["DIRECTOR TECNICO", "PREPARADOR FISICO", "KINESIOLOGO", "DIRECTIVO", "ANALISTA", "NUTRICIONISTA", "PUBLICADOR"];
+const ALL_PROFILE_TYPES = ["DIRECTOR TECNICO", "PREPARADOR FISICO", "KINESIOLOGO", "DIRECTIVO", "ANALISTA", "NUTRICIONISTA", "PUBLICADOR"];
+// FILTRAMOS el rol PUBLICADOR para los usuarios que crean perfiles
+const profileTypes = ALL_PROFILE_TYPES.filter(type => type !== "PUBLICADOR");
 
 // Claves de LocalStorage
 const SELECTED_CATEGORY_KEY = "selectedCategory";
@@ -247,6 +249,7 @@ export default function SelectProfilePage() {
                           <SelectValue placeholder="Selecciona tu función" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
+                          {/* FILTRADO CLAVE: Usamos la lista 'profileTypes' que excluye "PUBLICADOR" */}
                           {profileTypes.map((type) => (
                             <SelectItem key={type} value={type} className="text-white">
                               {type}

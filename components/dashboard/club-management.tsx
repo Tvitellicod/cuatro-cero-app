@@ -29,10 +29,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useIsMobile } from "@/hooks/use-mobile" // <-- Importado useIsMobile
 
-// Opcional: Define un tipo para Player (Mantenido al final del archivo para coherencia)
+// Opcional: Define un tipo para Player
 
 export function ClubManagement() {
+  const isMobile = useIsMobile(); // <-- Uso de useIsMobile
   // --- AÑADIDO: Hook de perfil para verificar el rol ---
   const { currentProfile } = useProfile()
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
@@ -83,7 +85,7 @@ export function ClubManagement() {
 
 
   const colorsOption = [
-    "#aff606", "#33d9f6", "#f4c11a", "#ea3498", "#25d03f",
+    "#aff606", "#33d9f6", "#f4c11a", "#ea3498", "#25d03f", 
     "#8a46c5", "#ff6b35", "#4ecdc4", "#45b7d1", "#96ceb4",
     "#609966", "#c37a6b", "#77c4e4", "#f1a85f", "#d64b5e",
     "#6d89ff", "#ff8a65", "#b478d1", "#e69138", "#4e7c8e",
@@ -201,10 +203,9 @@ export function ClubManagement() {
         }
     }
 
-    // 5. Actualizar el estado: guardamos la fecha en YYYY-MM-DD si está completa, sino guardamos el texto con máscara para mostrar
+    // 5. Actualizar el estado: guardamos la fecha en YYYY-MM-DD si está completa, sino guardamos el texto formateado.
     setNewPlayer({ 
         ...newPlayer, 
-        // Si hay una fecha válida para almacenar, la guardamos. Si no, guardamos el texto formateado.
         birthDate: storedDate || formattedValue 
     });
   };
@@ -295,7 +296,7 @@ export function ClubManagement() {
       setShowMedicalReport(player);
     }
   }
-  // --- FIN MODIFICACIÓN ---
+  // --- FIN MODIFICADO ---
 
   // --- AÑADIDO: Handler para abrir el modal de reporte (botiquín) ---
   const handleOpenInjuryModal = (player: Player) => {
@@ -351,8 +352,8 @@ export function ClubManagement() {
       description: "El jugador ha sido marcado como DISPONIBLE.",
     });
 
-    setInjuryReportModalOpen(null); // Cierra el modal de lesión
-    setShowMedicalReport(null); // Cierra el modal de reporte (si estaba abierto)
+    setInjuryReportModalOpen(null);
+    setShowMedicalReport(null);
   };
   // --- FIN AÑADIDO ---
 
@@ -400,7 +401,6 @@ export function ClubManagement() {
 
   // --- MODIFICADO: getEstimatedEndDate ahora es calculateRecoveryDate ---
   const calculateRecoveryDate = (recoveryString: string): string => {
-    // Extraer el primer número del string (ej: "3-4 semanas" -> 3)
     const match = recoveryString.match(/(\d+)/);
     if (!match) return "N/A";
 
@@ -874,7 +874,13 @@ export function ClubManagement() {
               <CardContent>
                 <div className="space-y-4">
                   {filteredPlayers.map((player) => (
-                    <div key={player.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
+                    // INICIO MODIFICACIÓN CLAVE DE RESPONSIVE
+                    <div 
+                      key={player.id} 
+                      className={`flex items-center justify-between p-4 bg-[#1d2834] rounded-lg group ${isMobile ? 'cursor-pointer' : ''}`}
+                      // Si es móvil, la tarjeta entera abre el detalle (Eye y Trash2 se eliminan abajo)
+                      onClick={isMobile ? () => setShowPlayerDetail(player) : undefined} 
+                    >
                       <div className="flex items-center space-x-4">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.firstName} />
@@ -909,8 +915,12 @@ export function ClubManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-white hover:bg-white/10"
-                            onClick={() => handleViewMedicalReport(player)} // Esta función ahora es inteligente
+                            // OCULTAR en móvil, solo se usa el click en la tarjeta.
+                            className={`text-white hover:bg-white/10 ${isMobile ? 'hidden lg:flex' : ''}`} 
+                            onClick={(e) => {
+                                e.stopPropagation(); // Evita que se active el click de la tarjeta si es móvil
+                                handleViewMedicalReport(player);
+                            }} 
                           >
                             <FileText className="h-4 w-4 text-orange-500" />
                           </Button>
@@ -920,36 +930,48 @@ export function ClubManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-white hover:text-orange-500"
-                            onClick={() => handleOpenInjuryModal(player)}
+                            // OCULTAR en móvil, se espera que el Kine vaya al módulo Kinesiólogo para reportar.
+                            className={`text-white hover:text-orange-500 ${isMobile ? 'hidden lg:flex' : ''}`} 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInjuryModal(player);
+                            }}
                           >
                             <HeartPulse className="h-5 w-5" />
                           </Button>
                         )}
                         {/* --- FIN DE MODIFICACIONES KINESIOLOGO --- */}
                         
+                        {/* Botón Eye (Ver Detalles) */}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-white hover:text-[#aff606]"
-                          onClick={() => setShowPlayerDetail(player)}
+                          className={`text-white hover:text-[#aff606] ${isMobile ? 'hidden lg:flex' : ''}`} // <-- OCULTAR en móvil
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPlayerDetail(player);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         
-                        {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+                        {/* Botón Trash2 (Eliminar) */}
                         {!isKinesiologo && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-white hover:text-red-400"
-                            onClick={() => setPlayerToDelete(player.id)}
+                            className={`text-white hover:text-red-400 ${isMobile ? 'hidden lg:flex' : ''}`} // <-- OCULTAR en móvil
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPlayerToDelete(player.id);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
                     </div>
+                    // FIN MODIFICACIÓN CLAVE DE RESPONSIVE
                   ))}
                 </div>
               </CardContent>
@@ -958,7 +980,7 @@ export function ClubManagement() {
         </div>
       </div>
       
-      {/* Player Detail Dialog */}
+      {/* Player Detail Dialog (No modificado, se abre con el nuevo click) */}
       <Dialog open={!!showPlayerDetail} onOpenChange={() => setShowPlayerDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1022,7 +1044,6 @@ export function ClubManagement() {
               </div>
               <div className="space-y-2">
                 <Label className="text-white">Fecha Nacimiento</Label>
-                {/* Mostrar la fecha en formato DD/MM/AAAA */}
                 <Input
                   value={showPlayerDetail?.birthDate?.length === 10 && showPlayerDetail.birthDate.includes('-')
                     ? showPlayerDetail.birthDate.split('-').reverse().join('/') 
@@ -1061,7 +1082,7 @@ export function ClubManagement() {
       </Dialog>
 
 
-      {/* Medical Report Dialog (MODIFICADO PARA KINE) */}
+      {/* Medical Report Dialog (No modificado) */}
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1108,7 +1129,6 @@ export function ClubManagement() {
               <Label htmlFor="injury-end-date" className="text-right text-white">
                 Fecha Estimada
               </Label>
-              {/* --- MODIFICADO: usa la nueva función --- */}
               <Input
                 id="injury-end-date"
                 value={calculateRecoveryDate(showMedicalReport?.injury?.recovery || '')}
@@ -1131,7 +1151,7 @@ export function ClubManagement() {
         </DialogContent>
       </Dialog>
       
-      {/* --- AÑADIDO: Nuevo Modal para Reportar Lesión (Kine) --- */}
+      {/* --- AÑADIDO: Nuevo Modal para Reportar Lesión (No modificado) --- */}
       <Dialog open={!!injuryReportModalOpen} onOpenChange={() => setInjuryReportModalOpen(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1197,9 +1217,8 @@ export function ClubManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* --- FIN AÑADIDO --- */}
 
-      {/* Alert Dialog for Delete Confirmation */}
+      {/* Alert Dialog for Delete Confirmation (No modificado) */}
       <AlertDialog open={!!playerToDelete} onOpenChange={() => setPlayerToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
@@ -1222,7 +1241,7 @@ export function ClubManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-       {/* Alert Dialog for Category Deletion Confirmation */}
+       {/* Alert Dialog for Category Deletion Confirmation (No modificado) */}
        <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>

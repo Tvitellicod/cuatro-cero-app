@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useMockIntegration } from "@/hooks/use-mock-integration"
+import { useIsMobile } from "@/hooks/use-mobile" // <-- Importado useIsMobile
 
 
 // NUEVA CONSTANTE PARA REINICIAR EL FORMULARIO (MÁS ROBUSTO)
@@ -41,6 +42,7 @@ const INITIAL_EXERCISE_STATE = {
 
 
 export function ExerciseManagement() {
+  const isMobile = useIsMobile(); // <-- Uso de useIsMobile
   const { getIntegratedExercises } = useMockIntegration();
   const [selectedCategory, setSelectedCategory] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -201,7 +203,7 @@ export function ExerciseManagement() {
       setExerciseCategories(updatedCategories);
     }
 
-  }, [getIntegratedExercises, exercises, exerciseCategories]); // Dependencias actualizadas
+  }, [getIntegratedExercises, exercises, exerciseCategories]);
 
 
   // --- NUEVO useEffect para resetear filtros ---
@@ -211,10 +213,7 @@ export function ExerciseManagement() {
       setFilterGoalkeepers("all");
       setFilterDifficulty("all");
       setFilterTime("all");
-      // Opcionalmente, resetea la búsqueda también
-      // setSearchQuery("");
-      // console.log("Filters reset due to category change:", selectedCategory); // Para depuración
-  }, [selectedCategory]); // <-- El hook depende SOLO de selectedCategory
+  }, [selectedCategory]); 
   // --- FIN NUEVO useEffect ---
 
 
@@ -798,7 +797,11 @@ export function ExerciseManagement() {
                 <div className="space-y-4">
                   {filteredExercises.length > 0 ? (
                     filteredExercises.map((exercise) => (
-                      <div key={exercise.id} className="p-4 bg-[#1d2834] rounded-lg">
+                      <div 
+                        key={exercise.id} 
+                        className={`p-4 bg-[#1d2834] rounded-lg group transition-colors ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                        onClick={isMobile ? () => setShowExerciseDetail(exercise) : undefined} // <-- Click en toda la fila para móvil
+                      >
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="text-white font-medium">{exercise.name}</h3>
                           <Badge className="text-white" style={{ backgroundColor: getCategoryColor(exercise.category) }}>
@@ -827,9 +830,13 @@ export function ExerciseManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                            onClick={() => setShowExerciseDetail(exercise)}
+                            className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`} // <-- OCULTAR BOTÓN EN MÓVIL
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowExerciseDetail(exercise);
+                            }}
                           >
+                             <Eye className="h-4 w-4 mr-2" />
                             Ver Detalles
                           </Button>
                         </div>
@@ -855,20 +862,13 @@ export function ExerciseManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCategory}
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Eliminar
-            </AlertDialogAction>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCategory} className="bg-red-500 text-white hover:bg-red-600">Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog for Exercise Detail */}
+      {/* Dialog for Exercise Detail (No modificado) */}
       <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">

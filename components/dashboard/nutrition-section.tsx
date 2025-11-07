@@ -11,9 +11,21 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { User, Apple, FileText, Plus, Eye, Calendar, ArrowLeft } from "lucide-react"
+// --- MODIFICADO: Iconos 'Users' y 'Trash2' añadidos ---
+import { User, Apple, FileText, Plus, Eye, Calendar, ArrowLeft, Users as UsersIcon, Trash2 } from "lucide-react" 
 import { ScrollArea } from "@/components/ui/scroll-area" 
 import { Separator } from "@/components/ui/separator" 
+// --- MODIFICADO: Imports de AlertDialog añadidos ---
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // --- Interfaces ---
 interface Player {
@@ -68,6 +80,13 @@ const MOCK_PLAYERS_LIST: Player[] = [
   // Tercera
   { id: 5, name: "Alejandro Díaz", category: "tercera", photo: "/placeholder-user.jpg", position: "Defensor" },
   { id: 6, name: "Santiago Giménez", category: "tercera", photo: "/placeholder-user.jpg", position: "Ala" },
+];
+
+const MOCK_CATEGORIES = [
+  { id: "all", name: "Todas las Categorías" },
+  { id: "primera", name: "Primera División" },
+  { id: "tercera", name: "Tercera División" },
+  { id: "juveniles", name: "Juveniles" },
 ];
 
 const getMockIdFromName = (name: string | undefined) => {
@@ -128,12 +147,21 @@ const INITIAL_MOCK_REPORTS: Record<number, NutritionReport[]> = {
 
 export function NutritionSection() {
   const { selectedCategory: currentGlobalCategory } = useProfile();
+  const initialMockId = currentGlobalCategory ? getMockIdFromName(currentGlobalCategory.name) : "all";
+  const [localCategoryId, setLocalCategoryId] = useState<string>(initialMockId);
   
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [showReportModal, setShowReportModal] = useState(false); 
-  const [activeReportId, setActiveReportId] = useState<string | null>(null); 
+  
+  const [activeReportId, setActiveReportId] = useState<string | null>(null); // Para ver uno existente
+  const [isCreatingReport, setIsCreatingReport] = useState(false); // Para mostrar el form vacío
+
   const [newReportData, setNewReportData] = useState<NutritionReport>(INITIAL_FORM_DATA);
   const [reports, setReports] = useState<Record<number, NutritionReport[]>>({});
+
+  // --- MODIFICADO: Estado para controlar el diálogo de eliminación ---
+  const [reportToDelete, setReportToDelete] = useState<NutritionReport | null>(null);
+  // ---------------------------------------------------------------
   
   const playerReports = useMemo(() => {
     if (selectedPlayer) {
@@ -154,15 +182,43 @@ export function NutritionSection() {
     }
   }, []);
 
-  const mockCategoryId = currentGlobalCategory ? getMockIdFromName(currentGlobalCategory.name) : "";
+  useEffect(() => {
+    if (isCreatingReport) {
+      const peso = parseFloat(newReportData.peso);
+      const alturaCm = parseFloat(newReportData.altura);
+
+      if (peso > 0 && alturaCm > 0) {
+        const alturaM = alturaCm / 100;
+        const imcValue = peso / (alturaM * alturaM);
+        setNewReportData(prev => ({
+          ...prev,
+          imc: imcValue.toFixed(1)
+        }));
+      } else {
+        setNewReportData(prev => ({ ...prev, imc: "" }));
+      }
+    }
+  }, [newReportData.peso, newReportData.altura, isCreatingReport]); 
+
+
+  // --- MODIFICADO: Helper para guardar en LS ---
+  const saveReportsToLocalStorage = (updatedReports: Record<number, NutritionReport[]>) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(NUTRITION_REPORTS_KEY, JSON.stringify(updatedReports));
+    }
+  };
+  // ---------------------------------------------
+
+
   const filteredPlayers = MOCK_PLAYERS_LIST.filter(
-    (player) => player.category === mockCategoryId
+    (player) => localCategoryId === "all" || player.category === localCategoryId
   );
   
   const handleOpenReportModal = (player: Player) => {
     setSelectedPlayer(player);
     setActiveReportId(null); 
-    setNewReportData({
+    setIsCreatingReport(false); 
+    setNewReportData({ 
       ...INITIAL_FORM_DATA,
       date: new Date().toISOString().split('T')[0]
     });
@@ -194,9 +250,9 @@ export function NutritionSection() {
     };
 
     setReports(newAllReports);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(NUTRITION_REPORTS_KEY, JSON.stringify(newAllReports));
-    }
+    // --- MODIFICADO: Usa el helper ---
+    saveReportsToLocalStorage(newAllReports);
+    // ----------------------------------
 
     toast({
       title: "Informe Guardado",
@@ -205,8 +261,42 @@ export function NutritionSection() {
     });
     
     setNewReportData(INITIAL_FORM_DATA);
-    setActiveReportId(newReport.id); 
+    setIsCreatingReport(false);
+    setActiveReportId(newReport.id);
   };
+
+  // --- MODIFICADO: Nueva función para manejar la eliminación ---
+  const handleDeleteReport = () => {
+    if (!reportToDelete || !selectedPlayer) return;
+
+    const playerReportsList = reports[selectedPlayer.id] || [];
+    // Filtra el reporte a eliminar
+    const updatedReports = playerReportsList.filter(r => r.id !== reportToDelete.id);
+
+    // Actualiza el estado general
+    const newAllReports = {
+      ...reports,
+      [selectedPlayer.id]: updatedReports
+    };
+
+    setReports(newAllReports);
+    saveReportsToLocalStorage(newAllReports);
+
+    toast({
+      title: "Informe Eliminado",
+      description: `El informe del ${formatDate(reportToDelete.date)} ha sido eliminado.`,
+      variant: "destructive", // Usamos 'destructive' para eliminaciones
+    });
+
+    // Si el informe borrado era el que estábamos viendo, volvemos al placeholder
+    if (activeReportId === reportToDelete.id) {
+      setActiveReportId(null);
+      setIsCreatingReport(false);
+    }
+    
+    setReportToDelete(null); // Cierra el modal de confirmación
+  };
+  // -------------------------------------------------------------
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -224,8 +314,8 @@ export function NutritionSection() {
     return null;
   }, [activeReportId, playerReports, selectedPlayer]);
 
-  const isReadOnly = !!viewingReport;
-  const displayData = viewingReport || newReportData;
+  const isReadOnly = !isCreatingReport; 
+  const displayData = isCreatingReport ? newReportData : (viewingReport || INITIAL_FORM_DATA);
 
   return (
     <div className="space-y-6">
@@ -233,38 +323,44 @@ export function NutritionSection() {
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">Seguimiento Nutricional</h2>
           <p className="text-gray-400">
-            {currentGlobalCategory 
-              ? `Viendo jugadores de ${currentGlobalCategory.name}`
-              : "Gestiona los informes y objetivos nutricionales."
-            }
+            Viendo jugadores de {MOCK_CATEGORIES.find(c => c.id === localCategoryId)?.name || "N/A"}
           </p>
         </div>
+        
+        <div className="w-full sm:w-64">
+            <Select value={localCategoryId} onValueChange={setLocalCategoryId}>
+              <SelectTrigger className="w-full bg-[#1d2834] border-[#305176] text-white h-11">
+                <div className="flex items-center">
+                    <UsersIcon className="h-4 w-4 mr-2 text-gray-400" />
+                    <SelectValue placeholder="Seleccionar categoría" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-[#213041] border-[#305176]">
+                {MOCK_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-white">
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
       </div>
       
-      {!currentGlobalCategory ? (
-        <Card className="bg-[#213041] border-[#305176] text-center p-8">
-          <CardTitle className="text-white">Selecciona una Categoría</CardTitle>
-          <CardDescription className="text-gray-400 mt-2">
-            Por favor, selecciona una categoría desde el menú superior para ver los jugadores.
-          </CardDescription>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredPlayers.length > 0 ? (
-            filteredPlayers.map(player => (
-              <PlayerCard 
-                key={player.id} 
-                player={player} 
-                onOpenHistory={() => handleOpenReportModal(player)}
-              />
-            ))
-          ) : (
-             <p className="text-gray-500 col-span-full text-center py-8">
-                No hay jugadores de ejemplo para la categoría seleccionada.
-             </p>
-          )}
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredPlayers.length > 0 ? (
+          filteredPlayers.map(player => (
+            <PlayerCard 
+              key={player.id} 
+              player={player} 
+              onOpenHistory={() => handleOpenReportModal(player)}
+            />
+          ))
+        ) : (
+           <p className="text-gray-500 col-span-full text-center py-8">
+              No hay jugadores de ejemplo para la categoría seleccionada.
+           </p>
+        )}
+      </div>
 
       
       <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
@@ -274,9 +370,11 @@ export function NutritionSection() {
               Gestión Nutricional: {selectedPlayer?.name}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              {activeReportId === null 
-                ? "Creando un nuevo informe" 
-                : `Viendo informe del ${formatDate(viewingReport?.date || "")}`
+              {isCreatingReport 
+                ? "Creando un nuevo informe..."
+                : activeReportId
+                  ? `Viendo informe del ${formatDate(viewingReport?.date || "")}`
+                  : "Selecciona un informe o crea uno nuevo."
               }
             </DialogDescription>
           </DialogHeader>
@@ -289,7 +387,11 @@ export function NutritionSection() {
               <Button
                 size="sm"
                 className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] mb-4"
-                onClick={() => setActiveReportId(null)} 
+                onClick={() => {
+                  setActiveReportId(null);
+                  setNewReportData({ ...INITIAL_FORM_DATA, date: new Date().toISOString().split('T')[0] });
+                  setIsCreatingReport(true);
+                }}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Informe
@@ -299,22 +401,42 @@ export function NutritionSection() {
                 <div className="space-y-3">
                   {playerReports.length > 0 ? (
                     playerReports.map(report => (
+                      // --- MODIFICADO: Contenedor flex y botón de basura ---
                       <div 
                         key={report.id} 
-                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                          activeReportId === report.id
+                        className={`flex items-center justify-between p-3 rounded-lg transition-colors group ${ // 'group' añadido
+                          activeReportId === report.id && !isCreatingReport 
                             ? "bg-[#305176]"
                             : "bg-[#213041] hover:bg-[#305176]/50"
                         }`}
-                        onClick={() => setActiveReportId(report.id)} 
                       >
-                        <div className="flex items-center space-x-3 overflow-hidden">
-                          <Calendar className={`h-5 w-5 ${activeReportId === report.id ? 'text-[#aff606]' : 'text-gray-400'}`} />
+                        {/* Contenedor principal clickeable para ver */}
+                        <div
+                          className="flex-1 flex items-center space-x-3 overflow-hidden cursor-pointer"
+                          onClick={() => {
+                            setActiveReportId(report.id);
+                            setIsCreatingReport(false);
+                          }}
+                        >
+                          <Calendar className={`h-5 w-5 ${activeReportId === report.id && !isCreatingReport ? 'text-[#aff606]' : 'text-gray-400'}`} />
                           <div>
                             <p className="text-white font-medium">{formatDate(report.date)}</p>
                           </div>
                         </div>
+                        {/* Botón de Borrar (Tacho de basura) */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-500 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita que se active el onClick principal
+                            setReportToDelete(report); // Abre el modal de confirmación
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
+                      // --- FIN DE LA MODIFICACIÓN ---
                     ))
                   ) : (
                     <div className="text-center text-gray-500 py-8">
@@ -328,74 +450,119 @@ export function NutritionSection() {
 
             {/* Columna Derecha: Formulario (CON ARREGLO DE SCROLL) */}
             <div className="md:col-span-2 h-full flex flex-col overflow-hidden min-h-0"> 
-              <ScrollArea className="flex-1 pr-6"> 
-                
-                <form className="space-y-6 p-1">
-                  {/* --- Sección 1: Datos Antropométricos --- */}
-                  <SectionTitle title="Datos Antropométricos" />
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InputGroup label="Fecha del Informe" name="date" type="date" value={displayData.date} onChange={handleInputChange} readOnly={isReadOnly} />
-                    <InputGroup label="Edad" name="edad" type="number" placeholder="25" value={displayData.edad} onChange={handleInputChange} readOnly={isReadOnly} />
-                    <InputGroup label="Altura (cm)" name="altura" type="number" placeholder="180" value={displayData.altura} onChange={handleInputChange} readOnly={isReadOnly} />
-                    <InputGroup label="Peso (kg)" name="peso" type="number" placeholder="80.5" value={displayData.peso} onChange={handleInputChange} readOnly={isReadOnly} />
-                    <InputGroup label="Sumatoria Pliegues (mm)" name="sumatoriaPliegues" type="number" placeholder="67" value={displayData.sumatoriaPliegues} onChange={handleInputChange} readOnly={isReadOnly} />
-                    <InputGroup label="IMC" name="imc" type="number" placeholder="24.8" value={displayData.imc} onChange={handleInputChange} readOnly={isReadOnly} />
-                  </div>
-
-                  {/* --- Sección 2: Diagnósticos --- */}
-                  <SectionTitle title="Diagnóstico Nutricional" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SelectGroup
-                      label="Diagnóstico Masa Adiposa"
-                      name="diagMasaAdiposa"
-                      value={displayData.diagMasaAdiposa}
-                      onValueChange={(value: Diagnosis) => handleDiagnosisChange("diagMasaAdiposa", value)}
-                      disabled={isReadOnly}
-                    />
-                    <SelectGroup
-                      label="Diagnóstico Masa Muscular"
-                      name="diagMasaMuscular"
-                      value={displayData.diagMasaMuscular}
-                      onValueChange={(value: Diagnosis) => handleDiagnosisChange("diagMasaMuscular", value)}
-                      disabled={isReadOnly}
-                    />
-                  </div>
-
-                  {/* --- Sección 3: Suplementación y Objetivos --- */}
-                  <SectionTitle title="Plan de Suplementación y Objetivos" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <TextareaGroup 
-                      label="Objetivo Principal (Obligatorio)" 
-                      name="objective" 
-                      placeholder="Ej: Aumentar 2kg de masa muscular..." 
-                      value={displayData.objective} 
-                      onChange={handleInputChange} 
-                      readOnly={isReadOnly} 
-                    />
-                    <TextareaGroup 
-                      label="Plan de Suplementación" 
-                      name="supplementation" 
-                      placeholder="Ej: Creatina 5g post-entreno..." 
-                      value={displayData.supplementation} 
-                      onChange={handleInputChange} 
-                      readOnly={isReadOnly} 
-                    />
-                  </div>
-                  
-                  {!isReadOnly && (
-                    <div className="flex justify-end pt-4">
-                      <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
-                        Guardar Informe
-                      </Button>
+              
+              {!isCreatingReport && !activeReportId ? (
+                // 1. VISTA PLACEHOLDER (NUEVA)
+                <ReportPlaceholder onNewReportClick={() => {
+                  setActiveReportId(null);
+                  setNewReportData({ ...INITIAL_FORM_DATA, date: new Date().toISOString().split('T')[0] });
+                  setIsCreatingReport(true);
+                }} />
+              ) : (
+                // 2. VISTA DE FORMULARIO (Crear o Ver)
+                <ScrollArea className="flex-1 pr-6"> 
+                  <form className="space-y-6 p-1">
+                    {/* --- Sección 1: Datos Antropométricos --- */}
+                    <SectionTitle title="Datos Antropométricos" />
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <InputGroup label="Fecha del Informe" name="date" type="date" value={displayData.date} onChange={handleInputChange} readOnly={isReadOnly} />
+                      <InputGroup label="Edad *" name="edad" type="number" placeholder="25" value={displayData.edad} onChange={handleInputChange} readOnly={isReadOnly} />
+                      <InputGroup label="Altura (cm) *" name="altura" type="number" placeholder="180" value={displayData.altura} onChange={handleInputChange} readOnly={isReadOnly} />
+                      <InputGroup label="Peso (kg) *" name="peso" type="number" placeholder="80.5" value={displayData.peso} onChange={handleInputChange} readOnly={isReadOnly} />
+                      <InputGroup label="Sumatoria Pliegues (mm)" name="sumatoriaPliegues" type="number" placeholder="67" value={displayData.sumatoriaPliegues} onChange={handleInputChange} readOnly={isReadOnly} />
+                      
+                      <InputGroup 
+                        label="IMC (auto)" 
+                        name="imc" 
+                        type="text" 
+                        placeholder="24.8" 
+                        value={displayData.imc} 
+                        onChange={handleInputChange} 
+                        readOnly={true} 
+                      />
                     </div>
-                  )}
 
-                </form>
-              </ScrollArea>
+                    {/* --- Sección 2: Diagnósticos --- */}
+                    <SectionTitle title="Diagnóstico Nutricional" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <SelectGroup
+                        label="Diagnóstico Masa Adiposa"
+                        name="diagMasaAdiposa"
+                        value={displayData.diagMasaAdiposa}
+                        onValueChange={(value: Diagnosis) => handleDiagnosisChange("diagMasaAdiposa", value)}
+                        disabled={isReadOnly}
+                      />
+                      <SelectGroup
+                        label="Diagnóstico Masa Muscular"
+                        name="diagMasaMuscular"
+                        value={displayData.diagMasaMuscular}
+                        onValueChange={(value: Diagnosis) => handleDiagnosisChange("diagMasaMuscular", value)}
+                        disabled={isReadOnly}
+                      />
+                    </div>
+
+                    {/* --- Sección 3: Suplementación y Objetivos --- */}
+                    <SectionTitle title="Plan de Suplementación y Objetivos" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <TextareaGroup 
+                        label="Objetivo Principal (Obligatorio) *" 
+                        name="objective" 
+                        placeholder="Ej: Aumentar 2kg de masa muscular..." 
+                        value={displayData.objective} 
+                        onChange={handleInputChange} 
+                        readOnly={isReadOnly} 
+                      />
+                      <TextareaGroup 
+                        label="Plan de Suplementación" 
+                        name="supplementation" 
+                        placeholder="Ej: Creatina 5g post-entreno..." 
+                        value={displayData.supplementation} 
+                        onChange={handleInputChange} 
+                        readOnly={isReadOnly} 
+                      />
+                    </div>
+                    
+                    {isCreatingReport && (
+                      <div className="flex justify-end pt-4">
+                        <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={handleSaveReport} type="button">
+                          Guardar Informe
+                        </Button>
+                      </div>
+                    )}
+                  </form>
+                </ScrollArea>
+              )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* --- MODIFICADO: AlertDialog para confirmar eliminación --- */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={() => setReportToDelete(null)}>
+        <AlertDialogContent className="bg-[#213041] border-[#305176]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              ¿Estás seguro de que quieres eliminar el informe del 
+              <span className="font-bold text-white"> {reportToDelete && formatDate(reportToDelete.date)}</span>?
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#305176] text-white hover:bg-[#305176]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteReport}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* --- FIN DE LA MODIFICACIÓN --- */}
+
     </div>
   )
 }
@@ -433,12 +600,23 @@ const SectionTitle = ({ title }: { title: string }) => (
   <h3 className="text-lg font-semibold text-white border-b border-[#305176] pb-2">{title}</h3>
 );
 
+// Componente Placeholder
+const ReportPlaceholder = ({ onNewReportClick }: { onNewReportClick: () => void }) => (
+  <div className="flex flex-col items-center justify-center h-full bg-[#1d2834] rounded-lg p-10 text-center">
+    <Apple className="h-16 w-16 text-gray-500 mb-4" />
+    <h3 className="text-xl font-semibold text-white mb-2">Bienvenido a Nutrición</h3>
+    <p className="text-gray-400 mb-6">Selecciona un informe del historial para verlo en detalle o crea uno nuevo.</p>
+    <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={onNewReportClick}>
+      <Plus className="h-4 w-4 mr-2" />
+      Crear Nuevo Informe
+    </Button>
+  </div>
+);
 
-// --- MODIFICACIÓN: Inputs y Textareas con color de Label cambiado a text-white ---
+
 // Grupo de Input
 const InputGroup = ({ label, name, value, onChange, readOnly, placeholder, type = "text" }: any) => (
   <div className="space-y-2">
-    {/* 1. Label/Título (Blanco) */}
     <Label htmlFor={name} className="text-white">{label}</Label> 
     <Input
       id={name}
@@ -448,7 +626,6 @@ const InputGroup = ({ label, name, value, onChange, readOnly, placeholder, type 
       onChange={onChange}
       readOnly={readOnly}
       placeholder={placeholder}
-      // 2. Input (Texto Blanco)
       className="bg-[#1d2834] border-[#305176] text-white read-only:bg-[#1d2834]/60 read-only:cursor-default"
     />
   </div>
@@ -457,7 +634,6 @@ const InputGroup = ({ label, name, value, onChange, readOnly, placeholder, type 
 // Grupo de Textarea
 const TextareaGroup = ({ label, name, value, onChange, readOnly, placeholder }: any) => (
   <div className="space-y-2">
-    {/* 1. Label/Título (Blanco) */}
     <Label htmlFor={name} className="text-white">{label}</Label>
     <Textarea
       id={name}
@@ -466,14 +642,11 @@ const TextareaGroup = ({ label, name, value, onChange, readOnly, placeholder }: 
       onChange={onChange}
       readOnly={readOnly}
       placeholder={placeholder}
-       // 2. Textarea (Texto Blanco)
       className="bg-[#1d2834] border-[#305176] text-white min-h-[100px] read-only:bg-[#1d2834]/60 read-only:cursor-default"
     />
   </div>
 );
-// -----------------------------------------------------------------
 
-// --- MODIFICACIÓN: Select de Diagnóstico con Label en text-white ---
 const getDiagnosisColor = (value: Diagnosis) => {
   switch (value) {
     case "ADECUADA": return "text-[#25d03f]";
@@ -485,7 +658,6 @@ const getDiagnosisColor = (value: Diagnosis) => {
 
 const SelectGroup = ({ label, name, value, onValueChange, disabled }: any) => (
   <div className="space-y-2">
-    {/* 1. Label/Título (Blanco) */}
     <Label htmlFor={name} className="text-white">{label}</Label>
     <Select
       value={value || "NORMAL"}
@@ -507,7 +679,6 @@ const SelectGroup = ({ label, name, value, onValueChange, disabled }: any) => (
     </Select>
   </div>
 );
-// --- FIN MODIFICACIÓN ---
 
 // Helper para formatear fecha
 const formatDate = (dateString: string) => {

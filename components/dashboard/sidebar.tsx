@@ -196,8 +196,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />}
+      {/* Mobile overlay - ESTA LÍNEA HA SIDO COMENTADA */}
+      {/* {isOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />} */}
 
       {/* Sidebar */}
       <div

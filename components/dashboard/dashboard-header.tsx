@@ -54,14 +54,34 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
     return parts[0][0].toUpperCase();
   }
   
+  // --- INICIO DE MODIFICACIÓN ---
+
   const profileName = currentProfile ? currentProfile.split(' - ')[0] : 'Usuario';
-  const profileRole = currentProfile ? currentProfile.split(' - ')[1] : 'No asignado';
   const initials = getInitials(currentProfile);
 
-  // [MODIFICACIÓN] Variable para el nuevo título
+  // Lógica para extraer el ROL LIMPIO, quitando la categoría (con o sin paréntesis)
+  let profileRole = 'No asignado';
+  if (currentProfile) {
+    const parts = currentProfile.split(' - ');
+    if (parts.length > 1) {
+        profileRole = parts[1]; // Ej: "DIRECTOR TECNICO (Primera División)" O "DIRECTOR TECNICO - Primera División"
+        
+        // Limpiar el rol (eliminar la parte de la categoría)
+        if (profileRole.includes('(')) {
+            profileRole = profileRole.split(' (')[0].trim(); // Ej: "DIRECTOR TECNICO"
+        } else if (selectedCategory && profileRole.includes(selectedCategory.name)) {
+            // Manejar formato nuevo "ROL - CATEGORIA"
+            profileRole = profileRole.replace(selectedCategory.name, '').replace(' - ', '').trim();
+        }
+    }
+  }
+  
+  // Variable para el nuevo título del encabezado (Header)
   const headerTitle = selectedCategory 
     ? `${profileName} - ${profileRole} - ${selectedCategory.name}`
     : `${profileName} - ${profileRole}`;
+
+  // --- FIN DE MODIFICACIÓN ---
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-[#305176] bg-[#213041] px-4 md:px-6">
@@ -75,7 +95,7 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
           <Menu className="h-5 w-5" />
         </Button>
         
-        {/* [MODIFICACIÓN] Título del encabezado reemplazado */}
+        {/* Título del encabezado reemplazado */}
         <h1 
           className="text-lg font-semibold text-white hidden sm:block truncate"
           title={headerTitle} // Muestra el texto completo al pasar el ratón
@@ -104,6 +124,7 @@ export function DashboardHeader({ onMenuToggle }: DashboardHeaderProps) {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none text-white">{profileName}</p>
+                {/* [MODIFICADO] Usar el rol limpio */}
                 <p className="text-xs leading-none text-[#aff606]">{profileRole}</p>
                 {selectedCategory && (
                     <p className="text-xs leading-none text-gray-400">Categoría: {selectedCategory.name}</p>

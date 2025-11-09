@@ -25,7 +25,9 @@ export function TrainingOverview() {
 
   const { currentProfile } = useProfile()
   const { user } = useAuth()
-  const profileType = currentProfile?.profileType
+  const profileData = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null;
+  const profileType = profileData ? JSON.parse(profileData)?.profileType : null;
+
 
   // Helper function to format the date as DD - MM - YYYY
   const formatDate = (dateString: string | undefined) => {
@@ -193,6 +195,7 @@ export function TrainingOverview() {
     const options = []
 
     if (profileType === "DIRECTOR TECNICO") {
+      // CARD DE EJERCICIOS PARA DT (Táctico/General) - REINSERTADA/VERIFICADA
       options.push({
         title: "Ejercicios",
         description: "Gestiona ejercicios reutilizables para entrenamientos",
@@ -454,9 +457,7 @@ export function TrainingOverview() {
                           <p className="text-xs text-gray-500 mt-1">{session.category}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <Badge className="bg-[#aff606] text-black">{session.focus}</Badge>
-                      </div>
+                      {/* Se ha eliminado el badge de focus/etiqueta de este bloque */}
                     </div>
                   </Link>
                 ))
@@ -469,8 +470,29 @@ export function TrainingOverview() {
 
         {/* Columna 2: Contiene las otras dos tarjetas apiladas */}
         <div className="space-y-6">
-          {availableOptions.map((option, index) => (
-            <Card key={index} className="bg-[#213041] border-[#305176]">
+          {/* CUADRO NUEVO: GESTIONAR EJERCICIOS */}
+          {availableOptions.filter(opt => opt.title.includes("Ejercicios")).map((option, index) => (
+            <Card key={option.title} className="bg-[#213041] border-[#305176]">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className={`p-3 rounded-lg ${option.color}/20`}>
+                    <option.icon className={`h-6 w-6 ${option.color}`} />
+                  </div>
+                  <CardTitle className="text-white">{option.title}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">{option.description}</p>
+                <Link href={option.href}>
+                  <Button className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]">Acceder</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {/* CUADRO: PLANIFICAR ENTRENAMIENTO */}
+          {availableOptions.filter(opt => opt.title === "Planificar Entrenamiento").map((option, index) => (
+            <Card key={option.title} className="bg-[#213041] border-[#305176]">
               <CardHeader>
                 <div className="flex items-center space-x-3">
                   <div className={`p-3 rounded-lg ${option.color}/20`}>

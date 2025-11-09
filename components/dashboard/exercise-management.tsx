@@ -681,22 +681,26 @@ export function ExerciseManagement() {
           ) : (
             <Card className="bg-[#213041] border-[#305176]">
               <CardHeader>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
                   <CardTitle className="text-2xl font-bold text-white whitespace-nowrap">
                     {selectedCategory && selectedCategory !== "" ? selectedCategory : "Ejercicios Creados"}
                     {" "}
                     ({filteredExercises.length})
                   </CardTitle>
+                  {/* MODIFICACIÓN FINAL DEL BOTÓN: Uso de isMobile para size y clases responsivas (sm:) para el contenido */}
                   <Button
-                    size="default"
-                    className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
+                    // size: "icon" en móvil, "default" en tablet/PC
+                    size={isMobile ? "icon" : "default"} 
+                    className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 flex-shrink-0 ml-auto"
                     onClick={() => {
                       setNewExercise(INITIAL_EXERCISE_STATE); // Asegura que el form esté vacío
                       setShowCreateForm(true);
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Nuevo Ejercicio
+                    {/* Icon: Siempre visible. sm:mr-1 para dar espacio en desktop */}
+                    <Plus className="h-4 w-4 mr-0 sm:mr-1" />
+                    {/* Text: Oculto en móvil (hidden), visible desde tablet/PC (sm:inline) */}
+                    <span className="hidden sm:inline">Nuevo Ejercicio</span>
                   </Button>
                 </div>
                 <div className="flex items-center flex-wrap gap-2 mt-4">
@@ -868,7 +872,7 @@ export function ExerciseManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog for Exercise Detail (No modificado) */}
+      {/* Dialog for Exercise Detail - Botones Apilados y Centrado */}
       <Dialog open={!!showExerciseDetail} onOpenChange={() => setShowExerciseDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -941,12 +945,12 @@ export function ExerciseManagement() {
               />
             </div>
           </div>
-          {/* Botones de Editar/Eliminar solo si NO es un Ebook */}
+          {/* Contenedor para apilar los botones en móvil */}
           {showExerciseDetail?.category !== "Biblioteca Ebook" && (
-            <div className="flex justify-between space-x-4">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:justify-between sm:space-x-4">
               <Button
                 variant="default"
-                className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
+                className="w-full sm:w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
                 onClick={() => handleEditExercise(showExerciseDetail)} // Llama a la función de edición
               >
                 <Edit className="h-4 w-4 mr-2" />
@@ -954,7 +958,7 @@ export function ExerciseManagement() {
               </Button>
               <Button
                 variant="outline"
-                className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                className="w-full sm:w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
                 onClick={() => setExerciseToDelete(showExerciseDetail?.id)} // Inicia el proceso de borrado
               >
                 <Trash2 className="h-4 w-4 mr-2" />

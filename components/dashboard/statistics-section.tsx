@@ -51,8 +51,7 @@ const getCategoryColors = (category: string) => {
 };
 // -----------------------------------------------------------------
 
-// --- MODIFICACIÓN: Datos de Entrenamiento (copiados de training-planner) ---
-// (En una app real, esto vendría de una API)
+// --- DATOS MOCK DE SESIONES DE ENTRENAMIENTO ---
 const trainingSessions = [
   {
     id: 1, name: "Entrenamiento Táctico - Ataque", date: "2025-11-08", time: "10:00", duration: 90,
@@ -116,9 +115,39 @@ const previousSessions = [
 const allMockSessions = [...trainingSessions, ...previousSessions];
 // -------------------------------------------------------------------------
 
+// --- HELPER FUNCIÓN PARA ELIMINAR LOS DOS PUNTOS DE LA HORA ---
+const formatTimeWithoutColons = (timeString: string | undefined) => {
+    if (!timeString) return 'N/A';
+    return timeString.replace(':', '');
+};
+// -----------------------------------------------------------
+
 
 export function StatisticsSection() {
   const isMobile = useIsMobile(); // <-- Uso del hook
+  
+  // Lógica para obtener la categoría del perfil (ID del equipo)
+  const getProfileCategoryId = () => {
+    if (typeof window !== "undefined") {
+        const profileJson = localStorage.getItem("userProfile");
+        if (profileJson) {
+            try {
+                const profile = JSON.parse(profileJson);
+                // Usamos profile?.category, que se espera que sea el ID de la categoría (ej: "primera")
+                return profile?.category || "all"; 
+            } catch (e) {
+                return "all";
+            }
+        }
+    }
+    return "all";
+  };
+  
+  // --- ESTADO DE FILTRO INICIALIZADO CON LA CATEGORÍA DEL PERFIL ---
+  const [filterCategoryList, setFilterCategoryList] = useState(getProfileCategoryId());
+  // ------------------------------------------------------------------
+
+
   const [showMatchDetailModal, setShowMatchDetailModal] = useState<any>(null)
   const [showPlayerDetailModal, setShowPlayerDetailModal] = useState<any>(null)
   const [showAllMatchesModal, setShowAllMatchesModal] = useState(false);
@@ -126,15 +155,14 @@ export function StatisticsSection() {
   const [filterResult, setFilterResult] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
   const [filterTournament, setFilterTournament] = useState("all");
-  const [filterCategoryList, setFilterCategoryList] = useState("all");
+  
+  const [activeMatchDetailView, setActiveMatchDetailView] = useState<'general' | 'player'>('general');
 
   // --- MODIFICACIÓN: Filtrar entrenamientos por categoría seleccionada ---
   const filteredTrainings = useMemo(() => {
     return allMockSessions.filter(s => filterCategoryList === "all" || s.categoryId === filterCategoryList);
   }, [filterCategoryList]);
   // ------------------------------------------------------------------
-
-  const [activeMatchDetailView, setActiveMatchDetailView] = useState<'general' | 'player'>('general');
 
   // --- DATOS MOCK DE CATEGORÍAS ---
   const categories = [
@@ -157,7 +185,6 @@ export function StatisticsSection() {
       stats: {
         goalsFor: 2,
         goalsAgainst: 1,
-        // possession: "60%", <-- ELIMINADO
         shotsOnTarget: 5,
         totalShots: 8,
         foulsCommitted: 10,
@@ -186,7 +213,6 @@ export function StatisticsSection() {
       stats: {
         goalsFor: 1,
         goalsAgainst: 1,
-        // possession: "55%", <-- ELIMINADO
         shotsOnTarget: 3,
         totalShots: 5,
         foulsCommitted: 15,
@@ -215,7 +241,6 @@ export function StatisticsSection() {
       stats: {
         goalsFor: 3,
         goalsAgainst: 0,
-        // possession: "70%", <-- ELIMINADO
         shotsOnTarget: 8,
         totalShots: 12,
         foulsCommitted: 8,
@@ -244,7 +269,6 @@ export function StatisticsSection() {
       stats: {
         goalsFor: 0,
         goalsAgainst: 2,
-        // possession: "40%", <-- ELIMINADO
         shotsOnTarget: 2,
         totalShots: 6,
         foulsCommitted: 12,
@@ -275,10 +299,10 @@ export function StatisticsSection() {
       category: "primera", 
       generalStats: { matches: 18, goals: 12, yellowCards: 2, redCards: 0, minutesPlayed: 1500, recuperoPelota: 80, perdioPelota: 55, remate: 65, remateAlArco: 30, faltaCometida: 15, faltaRecibida: 25 },
       matchHistory: [ 
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 2, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 1, tRoja: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 1, recupero: 4, perdida: 5, remate: 3, tiroAlArco: 1, faltaRecibida: 4, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 6, perdida: 2, remate: 4, tiroAlArco: 2, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 3, perdida: 6, remate: 2, tiroAlArco: 0, faltaRecibida: 8, faltaCometida: 1, tAmarilla: 1, tRoja: 0 },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 2, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", time: "20:00", result: "1-1", status: "Empate", minutes: 90, goles: 1, recupero: 4, perdida: 5, remate: 3, tiroAlArco: 1, faltaRecibida: 4, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", time: "16:00", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 6, perdida: 2, remate: 4, tiroAlArco: 2, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", time: "19:00", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 3, perdida: 6, remate: 2, tiroAlArco: 0, faltaRecibida: 8, faltaCometida: 1, tAmarilla: 1, tRoja: 0 },
       ],
     },
     {
@@ -291,10 +315,10 @@ export function StatisticsSection() {
       category: "primera", 
       generalStats: { matches: 20, goals: 3, yellowCards: 4, redCards: 1, minutesPlayed: 1650, recuperoPelota: 120, perdioPelota: 70, remate: 40, remateAlArco: 15, faltaCometida: 25, faltaRecibida: 35 },
       matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 8, perdida: 6, remate: 2, tiroAlArco: 1, faltaRecibida: 5, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 6, perdida: 7, remate: 1, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 3, tAmarilla: 0, tRoja: 0 },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 7, perdida: 4, remate: 3, tiroAlArco: 1, faltaRecibida: 2, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 5, perdida: 8, remate: 1, tiroAlArco: 0, faltaRecibida: 5, faltaCometida: 3, tAmarilla: 1, tRoja: 0 },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 8, perdida: 6, remate: 2, tiroAlArco: 1, faltaRecibida: 5, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", time: "20:00", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 6, perdida: 7, remate: 1, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 3, tAmarilla: 0, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", time: "16:00", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 7, perdida: 4, remate: 3, tiroAlArco: 1, faltaRecibida: 2, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", time: "19:00", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 5, perdida: 8, remate: 1, tiroAlArco: 0, faltaRecibida: 5, faltaCometida: 3, tAmarilla: 1, tRoja: 0 },
       ],
     },
     {
@@ -307,16 +331,16 @@ export function StatisticsSection() {
       category: "juveniles", 
       generalStats: { matches: 15, goals: 1, yellowCards: 3, redCards: 0, minutesPlayed: 1200, recuperoPelota: 150, perdioPelota: 40, remate: 10, remateAlArco: 5, faltaCometida: 30, faltaRecibida: 10 },
       matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 75, goles: 0, recupero: 10, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 5, tAmarilla: 1, tRoja: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 12, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 15, perdida: 4, remate: 1, tiroAlArco: 1, faltaRecibida: 1, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", result: "0-2", status: "Derrota", minutes: 60, goles: 0, recupero: 8, perdida: 6, remate: 0, tiroAlArco: 0, faltaRecibida: 3, faltaCometida: 3, tAmarilla: 1, tRoja: 1 },
+        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 75, goles: 0, recupero: 10, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 5, tAmarilla: 1, tRoja: 0 },
+        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", time: "20:00", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 12, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
+        { matchId: 3, opponent: "Independiente", date: "05/01/2024", time: "16:00", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 15, perdida: 4, remate: 1, tiroAlArco: 1, faltaRecibida: 1, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
+        { matchId: 4, opponent: "River Plate", date: "02/01/2024", time: "19:00", result: "0-2", status: "Derrota", minutes: 60, goles: 0, recupero: 8, perdida: 6, remate: 0, tiroAlArco: 0, faltaRecibida: 3, faltaCometida: 3, tAmarilla: 1, tRoja: 1 },
       ],
     },
-    { id: 4, name: "Tomás López", position: "Arquero", photo: "/placeholder-user.jpg", nickname: "Tomi", foot: "Derecho", category: "primera", generalStats: { matches: 15, goals: 0, yellowCards: 1, redCards: 0, minutesPlayed: 1200, recuperoPelota: 50, perdioPelota: 20, remate: 5, remateAlArco: 2, faltaCometida: 10, faltaRecibida: 5 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 1, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
-    { id: 5, name: "Alejandro Díaz", position: "Defensor", photo: "/placeholder-user.jpg", nickname: "Ale", foot: "Izquierdo", category: "tercera", generalStats: { matches: 22, goals: 1, yellowCards: 4, redCards: 0, minutesPlayed: 1900, recuperoPelota: 180, perdioPelota: 60, remate: 15, remateAlArco: 8, faltaCometida: 20, faltaRecibida: 15 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 15, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
-    { id: 6, name: "Santiago Giménez", position: "Ala", photo: "/placeholder-user.jpg", nickname: "Santi", foot: "Derecho", category: "tercera", generalStats: { matches: 10, goals: 5, yellowCards: 0, redCards: 0, minutesPlayed: 900, recuperoPelota: 40, perdioPelota: 30, remate: 25, remateAlArco: 12, faltaCometida: 8, faltaRecibida: 15 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 1, recupero: 5, perdida: 5, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 0, tRoja: 0 }, ] },
-    { id: 7, name: "Martín Palacios", position: "Ultimo", photo: "/placeholder-user.jpg", nickname: "Mar", foot: "Ambidiestro", category: "juveniles", generalStats: { matches: 12, goals: 0, yellowCards: 2, redCards: 0, minutesPlayed: 1000, recuperoPelota: 90, perdioPelota: 35, remate: 5, remateAlArco: 1, faltaCometida: 15, faltaRecibida: 10 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 7, perdida: 2, remate: 1, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
+    { id: 4, name: "Tomás López", position: "Arquero", photo: "/placeholder-user.jpg", nickname: "Tomi", foot: "Derecho", category: "primera", generalStats: { matches: 15, goals: 0, yellowCards: 1, redCards: 0, minutesPlayed: 1200, recuperoPelota: 50, perdioPelota: 20, remate: 5, remateAlArco: 2, faltaCometida: 10, faltaRecibida: 5 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 1, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
+    { id: 5, name: "Alejandro Díaz", position: "Defensor", photo: "/placeholder-user.jpg", nickname: "Ale", foot: "Izquierdo", category: "tercera", generalStats: { matches: 22, goals: 1, yellowCards: 4, redCards: 0, minutesPlayed: 1900, recuperoPelota: 180, perdioPelota: 60, remate: 15, remateAlArco: 8, faltaCometida: 20, faltaRecibida: 15 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 15, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
+    { id: 6, name: "Santiago Giménez", position: "Ala", photo: "/placeholder-user.jpg", nickname: "Santi", foot: "Derecho", category: "tercera", generalStats: { matches: 10, goals: 5, yellowCards: 0, redCards: 0, minutesPlayed: 900, recuperoPelota: 40, perdioPelota: 30, remate: 25, remateAlArco: 12, faltaCometida: 8, faltaRecibida: 15 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 1, recupero: 5, perdida: 5, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 0, tRoja: 0 }, ] },
+    { id: 7, name: "Martín Palacios", position: "Ultimo", photo: "/placeholder-user.jpg", nickname: "Mar", foot: "Ambidiestro", category: "juveniles", generalStats: { matches: 12, goals: 0, yellowCards: 2, redCards: 0, minutesPlayed: 1000, recuperoPelota: 90, perdioPelota: 35, remate: 5, remateAlArco: 1, faltaCometida: 15, faltaRecibida: 10 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 7, perdida: 2, remate: 1, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
   ]
   const players = allPlayersList.slice(0, 3);
   // --- FIN DATOS MOCK ---
@@ -591,7 +615,7 @@ export function StatisticsSection() {
 
         {/* --- MODIFICACIÓN: Modal para "Ver Todas" las estadísticas de entrenamiento --- */}
         <Dialog open={showAllStatsModal} onOpenChange={setShowAllStatsModal}>
-          <DialogContent className="sm:max-w-lg bg-[#213041] border-[#305176] text-white">
+          <DialogContent className="sm:max-w-lg bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-white text-2xl font-bold">Distribución Total de Entrenamiento</DialogTitle>
               <DialogDescription className="text-gray-400">
@@ -692,12 +716,12 @@ export function StatisticsSection() {
             {filteredMatches.slice(0, 3).map((match) => (
               <div 
                 key={match.id} 
-                className={`p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                className={`p-4 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`}
                 // Lógica de clic para abrir el modal de detalles
-                onClick={isMobile ? () => {
+                onClick={() => {
                     setShowMatchDetailModal(match);
                     setActiveMatchDetailView('general');
-                  } : undefined}
+                  }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div>
@@ -707,11 +731,11 @@ export function StatisticsSection() {
                   <div className="flex items-center space-x-2">
                     <Badge className={getResultColor(match.status)}>{match.result}</Badge>
                     
-                    {/* Botón VER ESTADÍSTICAS DEL PARTIDO - OCULTADO EN MÓVIL */}
+                    {/* Botón VER ESTADÍSTICAS DEL PARTIDO - ELIMINADO PARA SIMPLIFICAR EL CLIC EN EL CARD */}
                     <Button
                       size="sm"
                       variant="outline"
-                      className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                      className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent hidden lg:flex`}
                       onClick={(e) => {
                         e.stopPropagation(); // Previene el click de la fila/tarjeta
                         setShowMatchDetailModal(match);
@@ -763,9 +787,9 @@ export function StatisticsSection() {
                     {allPlayersList.slice(0, 3).map((player) => (
                         <TableRow 
                             key={player.id} 
-                            className={`border-[#305176] hover:bg-[#305176]/50 ${isMobile ? 'cursor-pointer' : ''}`}
+                            className={`border-[#305176] hover:bg-[#305176]/50 cursor-pointer`}
                             // Lógica de clic para abrir el modal de detalles del jugador
-                            onClick={isMobile ? () => setShowPlayerDetailModal(player) : undefined} 
+                            onClick={() => setShowPlayerDetailModal(player)} 
                         >
                             <TableCell className="font-medium text-white p-2">
                                 <div className="flex items-center space-x-2">
@@ -890,7 +914,8 @@ export function StatisticsSection() {
           setActiveMatchDetailView('general'); 
         }
       }}>
-        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white">
+        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
+        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">Estadísticas del Partido</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -901,7 +926,7 @@ export function StatisticsSection() {
           {activeMatchDetailView === 'general' && (
             <div className="py-4 space-y-4">
                 <Card className="bg-[#1d2834] border-[#305176] p-6">
-                    <h3 className="text-xl font-bold text-white mb-4 border-b border-[#305176] pb-2">RESUMEN DEL PARTIDO</h3>
+                    <h3 className="text-xl font-bold text-white mb-4 border-b border-[#305176] pb-2 text-center">RESUMEN DEL PARTIDO</h3>
                     <div className="space-y-3">
                         
                         <div className="flex justify-between items-center">
@@ -994,17 +1019,24 @@ export function StatisticsSection() {
             <div className="py-4 space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-white">Estadísticas de Jugadores Citados</h3>
-                {/* BOTÓN ELIMINADO: Volver a Resumen General */}
+                <Button 
+                    variant="link" 
+                    className="text-[#aff606] p-0 h-auto text-sm" 
+                    onClick={() => setActiveMatchDetailView('general')}
+                >
+                    <ChevronDown className="h-4 w-4 mr-1 rotate-90" />
+                    Volver a Resumen General
+                </Button>
               </div>
 
               <ScrollArea className="h-[400px]">
                 <Table className="min-w-[750px] w-full">
                   <TableHeader className="sticky top-0 bg-[#213041] z-10">
                     <TableRow className="border-[#305176] hover:bg-transparent">
-                      <TableHead className="w-[150px] text-[#aff606] border-r border-[#305176]">JUGADOR</TableHead>
-                      <TableHead className="text-center text-[#aff606]">MIN</TableHead>
+                      <TableHead className="w-[150px] text-[#aff606]">JUGADOR</TableHead>
                       <TableHead className="text-center text-[#aff606]"><Goal className="h-4 w-4 mx-auto text-[#25d03f]" title="Goles" /></TableHead>
                       {/* <TableHead className="text-center text-[#aff606]"><TrendingUp className="h-4 w-4 mx-auto text-[#f4c11a]" title="Asistencias" /></TableHead> <-- ELIMINADO */}
+                      <TableHead className="text-center text-[#aff606]">MIN</TableHead>
                       <TableHead className="text-center text-[#aff606]">RECUP.</TableHead>
                       <TableHead className="text-center text-[#aff606]">PERD.</TableHead>
                       <TableHead className="text-center text-[#aff606]">REMATE</TableHead>
@@ -1018,7 +1050,7 @@ export function StatisticsSection() {
                   <TableBody>
                     {showMatchDetailModal && getCitedPlayersFromMatch(showMatchDetailModal).map((player: any) => (
                       <TableRow key={player.id} className="border-[#305176] hover:bg-[#305176]/50">
-                        <TableCell className="font-medium text-white p-2 border-r border-[#305176]">
+                        <TableCell className="font-medium text-white p-2">
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6">
                               <AvatarFallback className="bg-[#305176] text-white text-xs">{player.name.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
@@ -1027,9 +1059,9 @@ export function StatisticsSection() {
                           </div>
                           <p className="text-gray-500 text-xs pl-8">{player.category}</p>
                         </TableCell>
-                        <TableCell className="text-center text-white font-bold">{player.minutes}</TableCell>
                         <TableCell className="text-center text-[#25d03f] font-bold">{player.goals}</TableCell>
                         {/* <TableCell className="text-center text-[#f4c11a] font-bold">{player.assists}</TableCell> <-- ELIMINADO */}
+                        <TableCell className="text-center text-white font-bold">{player.minutes}</TableCell>
                         <TableCell className="text-center text-white">{player.recupero || 0}</TableCell>
                         <TableCell className="text-center text-white">{player.perdida || 0}</TableCell>
                         <TableCell className="text-center text-white">{player.shots || 0}</TableCell>
@@ -1053,7 +1085,8 @@ export function StatisticsSection() {
       
       {/* Modal para ver todos los partidos (Filtros sin posesión/asistencias) */}
       <Dialog open={showAllMatchesModal} onOpenChange={setShowAllMatchesModal}>
-        <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white">
+        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
+        <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6">
             <div className="space-y-1">
               <DialogTitle className="text-white text-2xl font-bold">Todos los Partidos</DialogTitle>
@@ -1104,12 +1137,12 @@ export function StatisticsSection() {
                 filteredMatches.map((match) => (
                   <div 
                     key={match.id} 
-                    className={`p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
-                    onClick={isMobile ? () => {
+                    className={`p-4 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`}
+                    onClick={() => {
                         setShowMatchDetailModal(match);
                         setActiveMatchDetailView('general'); 
                         setShowAllMatchesModal(false);
-                      } : undefined}
+                      }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -1122,7 +1155,7 @@ export function StatisticsSection() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                          className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent hidden lg:flex`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowMatchDetailModal(match);
@@ -1147,7 +1180,8 @@ export function StatisticsSection() {
       
       {/* Modal para ver TODOS LOS JUGADORES */}
       <Dialog open={showAllPlayersModal} onOpenChange={setShowAllPlayersModal}>
-        <DialogContent className="sm:max-w-4xl bg-[#213041] border-[#305176] text-white p-6">
+        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
+        <DialogContent className="sm:max-w-4xl bg-[#213041] border-[#305176] text-white p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white text-2xl font-bold">Lista Completa de Jugadores</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -1158,35 +1192,31 @@ export function StatisticsSection() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             
             {/* COLUMNA 1: Panel de Categorías */}
-            <div className="md:col-span-1 space-y-3 p-3 bg-[#1d2834] rounded-lg h-[400px]">
-                <h4 className="text-white font-semibold mb-3 border-b border-[#305176] pb-2">
-                    Categorías
-                </h4>
-                {/* Botón Todas las Categorías */}
-                <div 
-                    className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                        filterCategoryList === "all"
-                            ? "bg-[#33d9f6] text-black font-bold"
-                            : "text-white hover:bg-[#305176]"
-                    }`}
-                    onClick={() => setFilterCategoryList("all")}
-                >
-                    Todas
-                </div>
-                {/* Lista de Categorías */}
-                {categories.map((cat) => (
-                    <div
-                        key={cat.id}
-                        className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                            filterCategoryList === cat.id
-                                ? "bg-[#aff606] text-black font-bold"
-                                : "text-white hover:bg-[#305176]"
-                        }`}
-                        onClick={() => setFilterCategoryList(cat.id)}
+            <div className="md:col-span-1 space-y-3 p-3 bg-[#1d2834] rounded-lg h-fit"> {/* Cambiado h-[400px] a h-fit para ajustarse */}
+                {/* INICIO MODIFICACIÓN DEL SELECT EN LA MISMA LÍNEA */}
+                <div className="flex items-center justify-between border-b border-[#305176] pb-2">
+                    <h4 className="text-white font-semibold flex-shrink-0">
+                        CATEGORIAS
+                    </h4>
+                    <Select
+                        value={filterCategoryList}
+                        onValueChange={setFilterCategoryList}
                     >
-                        {cat.name}
-                    </div>
-                ))}
+                        <SelectTrigger className="w-auto min-w-[150px] bg-[#305176] border-[#305176] text-white">
+                            <SelectValue placeholder="Seleccionar Categoría" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#213041] border-[#305176]">
+                            <SelectItem value="all" className="text-white">Todas las categorías</SelectItem>
+                            {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id} className="text-white">
+                                    {cat.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                {/* FIN MODIFICACIÓN DEL SELECT EN LA MISMA LÍNEA */}
+
             </div>
 
             {/* COLUMNA 2: Lista de Jugadores */}
@@ -1197,7 +1227,7 @@ export function StatisticsSection() {
                             filteredPlayersList.map((player) => (
                                 <div 
                                     key={player.id} 
-                                    className={`flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`} // <-- Clickable siempre en este modal
+                                    className={`flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`} // <-- Clickable en todo el div
                                     onClick={() => {
                                         setShowPlayerDetailModal(player);
                                         setShowAllPlayersModal(false);
@@ -1213,23 +1243,11 @@ export function StatisticsSection() {
                                         <div>
                                             <h3 className="text-white font-medium">{player.name}</h3>
                                             <p className="text-gray-400 text-xs">
-                                                {player.position} • {categories.find(c => c.id === player.category)?.name}
+                                                {player.position}
                                             </p>
                                         </div>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowPlayerDetailModal(player);
-                                            setShowAllPlayersModal(false);
-                                        }}
-                                    >
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        Ver Estadísticas
-                                    </Button>
+                                    {/* BOTÓN "Ver Estadísticas" ELIMINADO */}
                                 </div>
                             ))
                         ) : (
@@ -1244,7 +1262,8 @@ export function StatisticsSection() {
       
       {/* Modal de Estadísticas por Jugador (INTERFAZ CONSERVADA) */}
       <Dialog open={!!showPlayerDetailModal} onOpenChange={setShowPlayerDetailModal}>
-        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white">
+        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
+        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">
               Estadísticas de {showPlayerDetailModal?.name}
@@ -1258,7 +1277,7 @@ export function StatisticsSection() {
 
             <Card className="bg-[#1d2834] border-[#305176] lg:col-span-1 h-fit">
               <CardHeader>
-                <CardTitle className="text-white text-lg flex items-center"> 
+                <CardTitle className="text-white text-lg flex items-center justify-center"> {/* CENTRADO */}
                    <Users className="h-5 w-5 mr-2 text-[#33d9f6]" /> Información de Jugador
                 </CardTitle>
               </CardHeader>
@@ -1269,21 +1288,13 @@ export function StatisticsSection() {
                     {showPlayerDetailModal?.name?.split(" ").map((n: string) => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
+                {/* MODIFICACIÓN: Solo Nombre y Apodo */}
                 <div className="text-center">
                   <h3 className="text-white font-bold text-xl">{showPlayerDetailModal?.name}</h3>
+                  <p className="text-gray-400 text-sm">"{showPlayerDetailModal?.nickname}"</p>
                 </div>
                 
-                <div className="w-full space-y-2 text-sm pt-4 border-t border-[#305176]">
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Apodo</span>
-                        <span className="text-white font-medium">"{showPlayerDetailModal?.nickname || 'N/A'}"</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Pierna Hábil</span>
-                        <span className="text-white font-medium">{showPlayerDetailModal?.foot}</span>
-                    </div>
-                </div>
+                {/* ESTADÍSTICAS ELIMINADAS/SIMPLIFICADAS DEL BLOQUE LATERAL */}
               </CardContent>
             </Card>
 
@@ -1292,11 +1303,11 @@ export function StatisticsSection() {
                 
                 <Card className="bg-[#1d2834] border-[#305176]">
                   <CardHeader>
-                    <CardTitle className="text-white text-lg">Historial Acumulado</CardTitle>
+                    <CardTitle className="text-white text-lg text-center">Historial Acumulado</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                  <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm text-center"> {/* CENTRADO */}
                     
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-center"> {/* CENTRADO */}
                         <div className="flex justify-between border-b border-white/10 pb-1">
                             <span className="text-gray-400">Tiempo Jugado</span>
                             <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
@@ -1319,7 +1330,7 @@ export function StatisticsSection() {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-center"> {/* CENTRADO */}
                         <div className="flex justify-between border-b border-white/10 pb-1">
                             <span className="text-gray-400">Pelota Recuperada</span>
                             <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
@@ -1368,10 +1379,11 @@ export function StatisticsSection() {
                                     <span className="text-gray-400">Goles</span>
                                     <span className="text-[#25d03f] font-bold">{match.goles}</span>
                                 </div>
-                                {/* <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Asistencias</span>
-                                    <span className="text-[#f4c11a] font-bold">{match.asistencias || 0}</span>
-                                </div> <-- ELIMINADO */}
+                                
+                                <div className="col-span-1 flex justify-between">
+                                    <span className="text-gray-400">Hora</span>
+                                    <span className="text-white font-bold">{formatTimeWithoutColons(match.time)}</span>
+                                </div>
                                 
                                 <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
                                     <span className="text-gray-400">Recuperada</span>
@@ -1397,6 +1409,7 @@ export function StatisticsSection() {
                                 <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
                                     <span className="text-gray-400">F. Cometida</span>
                                     <span className="text-white font-bold">{match.faltaCometida}</span>
+                                
                                 </div>
 
                                 <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">

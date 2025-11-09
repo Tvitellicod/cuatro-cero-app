@@ -156,15 +156,10 @@ export function TrainingPlannerSection() {
   const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
   const profileData = savedProfile ? JSON.parse(savedProfile) : null
   
-  // #######################################################################
-  // ###                  INICIO DE LA CORRECCIÓN                        ###
-  // #######################################################################
-
   // 1. Lectura corregida de localStorage
   const profileType = profileData?.profileType; // Ej: "PREPARADOR FISICO"
   
   // 2. Extraer el ID de la categoría (ej: "primera_division")
-  // Esta es la forma correcta de leerlo, no desde el displayName
   const profileCategoryId = profileData?.category;
 
   // 3. Función helper para convertir el ID de Categoría (ej: "primera_division") al ID estático de los Mocks (ej: "primera")
@@ -184,8 +179,6 @@ export function TrainingPlannerSection() {
   // 4. Obtener el ID estático (ej: "primera") que coincide con los mocks
   const mockCategoryId = getMockIdFromProfileId(profileCategoryId);
 
-  // #######################################################################
-  // ###                   FIN DE LA CORRECCIÓN                          ###
   // #######################################################################
 
 
@@ -792,7 +785,8 @@ export function TrainingPlannerSection() {
 
       {/* Training Detail Modal (COMPARTIDO Y FUNCIONAL) */}
       <Dialog open={!!showTrainingDetail} onOpenChange={() => {setShowTrainingDetail(null); setShowAttendance(false);}}>
-        <DialogContent className="sm:max-w-[700px] bg-[#213041] border-[#305176] text-white">
+        {/* MODIFICACIÓN: Añadir max-h-[90vh] overflow-y-auto para hacerlo scrollable en móvil/tablet */}
+        <DialogContent className="sm:max-w-[700px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">
               {showTrainingDetail?.name}
@@ -840,7 +834,7 @@ export function TrainingPlannerSection() {
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
                       {showTrainingDetail?.exercises?.map((exercise: any, index: number) => (
                         <div 
-                          key={index} 
+                          key={exercise.id} // Usamos exercise.id para las claves, no el index
                           className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176] transition-colors"
                           // Permite abrir el detalle solo si no es una nota
                           onClick={() => exercise.type !== NOTE_TYPE && setShowExerciseDetail(exercise)} 
@@ -971,7 +965,7 @@ export function TrainingPlannerSection() {
                 <div className="w-full space-y-1">
                   {calculatePieData().map((segment, index) => (
                     <div key={index} className="flex items-center justify-between">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: segment.color }}></div>
                       <span className="text-white text-sm">{segment.category}</span>
                       <div className="text-right">
                         <p className="text-white font-bold">{segment.percentage}%</p>
@@ -997,13 +991,15 @@ export function TrainingPlannerSection() {
                 <CalendarIcon className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
               </CardTitle>
+              {/* MODIFICACIÓN: Botón Planificar Responsive */}
               <Button 
-                size="sm"
-                className="bg-[#aff606] text-black hover:bg-[#25d03f] whitespace-nowrap font-semibold" 
+                // size: "icon" en móvil, "sm" en tablet/PC (h-9, px-4)
+                size={isMobile ? "icon" : "sm"}
+                className="bg-[#aff606] text-black hover:bg-[#25d03f] font-semibold h-9 px-2 sm:px-4 ml-auto" 
                 onClick={() => setShowPlannerForm(true)}
               >
-                <Plus className="h-4 w-4 mr-1" />
-                Planificar Próximo Entrenamiento
+                <Plus className="h-4 w-4 mr-0 sm:mr-1" />
+                <span className="hidden sm:inline">Planificar Próximo Entrenamiento</span>
               </Button>
             </CardHeader>
             <CardContent>
@@ -1197,10 +1193,13 @@ export function TrainingPlannerSection() {
                       onChange={(e) => setNewTraining({ ...newTraining, name: e.target.value })}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  
+                  {/* INICIO MODIFICACIÓN FECHA Y HORA */}
+                  {/* En móvil (por defecto), este grid tendrá 1 columna, apilando Fecha y Hora */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> 
                     
-                    {/* CAMPO DE SELECCIÓN DE FECHA (CON POPOVER/CALENDARIO) */}
-                    <div className="space-y-2">
+                    {/* CAMPO DE SELECCIÓN DE FECHA (Ocupa el 100% en móvil, 2/3 en md) */}
+                    <div className="space-y-2 col-span-1 md:col-span-2"> 
                       <Label htmlFor="training-date" className="text-white">
                         Fecha
                       </Label>
@@ -1240,8 +1239,8 @@ export function TrainingPlannerSection() {
                       </Popover>
                     </div>
                     
-                    {/* CAMPO DE HORA (Input simple) */}
-                    <div className="space-y-2">
+                    {/* CAMPO DE HORA (Ocupa el 100% en móvil, 1/3 en md) */}
+                    <div className="space-y-2 col-span-1">
                       <Label htmlFor="training-time" className="text-white">
                         Hora
                       </Label>
@@ -1254,6 +1253,7 @@ export function TrainingPlannerSection() {
                       />
                     </div>
                   </div>
+                  {/* FIN MODIFICACIÓN FECHA Y HORA */}
                 </div>
 
                 <div className="space-y-2">
@@ -1430,17 +1430,18 @@ export function TrainingPlannerSection() {
                   </div>
                 )}
 
-                {/* Bloque modificado: Botones lado a lado */}
-                <div className="flex justify-between space-x-4">
+                {/* MODIFICACIÓN: Bloque de botones para Guardar/Cancelar (Responsive) */}
+                {/* flex-col por defecto (móvil) y sm:flex-row (desktop) */}
+                <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:space-y-0 sm:space-x-4">
                   <Button
-                    className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
+                    className="w-full sm:w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
                     onClick={handleSaveTraining}
                   >
                     Guardar Entrenamiento
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
+                    className="w-full sm:w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
                     onClick={handleCancelForm}
                   >
                     Cancelar

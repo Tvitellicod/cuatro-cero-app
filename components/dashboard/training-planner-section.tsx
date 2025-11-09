@@ -11,6 +11,7 @@ import { Plus, Calendar as CalendarIcon, Clock, Target, PieChart, Users, X, Chec
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns" // Importación necesaria para el formato de fecha
 import { es } from 'date-fns/locale/es'; // Importar locale español
+import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
 
 import {
   AlertDialog,
@@ -69,6 +70,7 @@ const getInitialCategory = (): string => {
 
 
 export function TrainingPlannerSection() {
+  const isMobile = useIsMobile(); // <-- Uso del hook
   const [showPlannerForm, setShowPlannerForm] = useState(false)
   const [selectedExercises, setSelectedExercises] = useState<any[]>([])
   const [showTrainingDetail, setShowTrainingDetail] = useState<any>(null)
@@ -883,7 +885,7 @@ export function TrainingPlannerSection() {
                               ? "bg-red-900/30 border border-red-500"
                               : "bg-[#1d2834] hover:bg-[#305176]"
                           } ${isScheduledSession ? 'cursor-pointer' : 'cursor-default'}`}
-                          // Si la sesión es programada, permite el toggle (aunque el efecto visual se resetea al salir del modal)
+                          // Si la sesión es programada, permite el toggle (aunque solo funciona en el render)
                           onClick={() => {
                             if (isScheduledSession) {
                               handleAttendanceToggle(player.id);
@@ -1012,7 +1014,14 @@ export function TrainingPlannerSection() {
                 {/* ###################################################### */}
                 {filteredProgrammedSessions.length > 0 ? (
                   filteredProgrammedSessions.slice(0, 3).map((session) => (
-                    <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
+                    <div 
+                      key={session.id} 
+                      className={`flex items-center justify-between p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                      onClick={isMobile ? () => {
+                          setShowAttendance(false); 
+                          setShowTrainingDetail(session);
+                      } : undefined}
+                    >
                       <div className="flex items-center space-x-4">
                         <div className="text-center">
                           <CalendarIcon className="h-8 w-8 text-[#aff606] mx-auto mb-1" />
@@ -1045,13 +1054,14 @@ export function TrainingPlannerSection() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        {/* Botón de Programados con Eye icon y estilo outline */}
+                        {/* Botón de Programados con Eye icon y estilo outline - OCULTO EN MÓVIL */}
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                          onClick={() => {
-                              setShowAttendance(false); // <-- Asegura que se abra en vista de detalles
+                          className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                          onClick={(e) => {
+                              e.stopPropagation(); 
+                              setShowAttendance(false); 
                               setShowTrainingDetail(session);
                           }}
                         >
@@ -1062,7 +1072,10 @@ export function TrainingPlannerSection() {
                           size="sm"
                           variant="ghost"
                           className="text-red-400 hover:bg-red-500/20 hover:text-red-300"
-                          onClick={() => setTrainingToDelete(session.id)}
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              setTrainingToDelete(session.id);
+                            }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1096,7 +1109,11 @@ export function TrainingPlannerSection() {
                 {/* ###################################################### */}
                 {filteredRecentSessions.length > 0 ? (
                   filteredRecentSessions.slice(0, 3).map((session) => (
-                    <div key={session.id} className="flex items-center justify-between p-4 bg-[#1d2834] rounded-lg">
+                    <div 
+                        key={session.id} 
+                        className={`flex items-center justify-between p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                        onClick={isMobile ? () => setShowTrainingDetail(session) : undefined}
+                    >
                       <div className="flex items-center space-x-4">
                         <div className="text-center">
                           <CalendarIcon className="h-8 w-8 text-gray-500 mx-auto mb-1" />
@@ -1128,11 +1145,14 @@ export function TrainingPlannerSection() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        {/* Badge de session.focus eliminado */}
+                        {/* Botón VER ENTRENAMIENTO - OCULTO EN MÓVIL */}
                         <Button
                           size="sm"
-                          className="bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold"
-                          onClick={() => setShowTrainingDetail(session)}
+                          className={`bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold ${isMobile ? 'hidden lg:flex' : ''}`}
+                          onClick={(e) => {
+                              e.stopPropagation(); // Previene el click de la fila
+                              setShowTrainingDetail(session);
+                            }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           Ver Entrenamiento

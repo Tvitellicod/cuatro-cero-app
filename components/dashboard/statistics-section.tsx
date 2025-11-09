@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label" 
+import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
 
 // Recharts Components para el gráfico
 import {
@@ -117,6 +118,7 @@ const allMockSessions = [...trainingSessions, ...previousSessions];
 
 
 export function StatisticsSection() {
+  const isMobile = useIsMobile(); // <-- Uso del hook
   const [showMatchDetailModal, setShowMatchDetailModal] = useState<any>(null)
   const [showPlayerDetailModal, setShowPlayerDetailModal] = useState<any>(null)
   const [showAllMatchesModal, setShowAllMatchesModal] = useState(false);
@@ -436,6 +438,209 @@ export function StatisticsSection() {
     return "bg-[#25d03f] text-black";
   }
 
+  // --- Componente auxiliar de Estadísticas de Entrenamiento (copiado de training-planner-section.tsx) ---
+  function TrainingStatistics({ sessions, categoryName }: { sessions: any[], categoryName: string }) {
+  
+    const [showAllStatsModal, setShowAllStatsModal] = useState(false);
+    
+    // 1. Calcular KPIs
+    let totalAttended = 0;
+    let totalPossible = 0;
+    
+    sessions.forEach(s => {
+      // Solo contamos las sesiones pasadas (que tienen asistencia real)
+      if (new Date(s.date) < new Date()) {
+        const [attended, possible] = s.attendance.split('/').map(Number);
+        if (!isNaN(attended) && !isNaN(possible)) {
+          totalAttended += attended;
+          totalPossible += possible;
+        }
+      }
+    });
+
+    const attendancePercentage = totalPossible > 0 ? Math.round((totalAttended / totalPossible) * 100) : 0;
+    const totalSessions = sessions.length;
+    const totalDuration = sessions.reduce((acc, s) => acc + s.duration, 0);
+
+    // 2. Calcular Foco de Entrenamiento (Gráfico)
+    const focusMap = new Map<string, number>();
+
+    sessions.forEach(s => {
+      s.exercises.forEach((ex: any) => {
+        // Ignoramos las notas
+        if (ex.type !== NOTE_TYPE && ex.category !== NOTE_CATEGORY_NAME) {
+          const categoryKey = ex.category || "Sin Categoría";
+          const currentDuration = focusMap.get(categoryKey) || 0;
+          focusMap.set(categoryKey, currentDuration + (ex.duration || 0));
+        }
+      });
+    });
+    
+    // Convertir el Map a un array para el gráfico y ordenarlo
+    const sortedFocusData = Array.from(focusMap.entries()).map(([name, minutos]) => ({
+      name,
+      minutos,
+      fill: getCategoryColors(name) // Asignar color
+    })).sort((a, b) => b.minutos - a.minutos); // Ordenar de mayor a menor
+
+    // Lógica para truncar el gráfico y mostrar el botón "Ver Todas"
+    const isTruncated = sortedFocusData.length > 10;
+    const chartDisplayData = isTruncated ? sortedFocusData.slice(0, 10) : sortedFocusData;
+    
+    // Calcular el total de minutos SÓLO de ejercicios (excluyendo notas)
+    const totalGraphMinutes = sortedFocusData.reduce((sum, data) => sum + data.minutos, 0);
+
+
+    return (
+      <>
+        <Card className="bg-[#213041] border-[#305176]">
+          <CardHeader>
+            {/* --- MODIFICACIÓN: Encabezado con botón condicional --- */}
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-white flex items-center">
+                  <Dumbbell className="h-5 w-5 mr-2" />
+                  Estadísticas de Entrenamiento
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Rendimiento general de: <span className="text-[#aff606] font-medium">{categoryName}</span>
+                </CardDescription>
+              </div>
+              {isTruncated && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
+                  onClick={() => setShowAllStatsModal(true)}
+                >
+                  Ver todas
+                </Button>
+              )}
+            </div>
+            {/* --- FIN MODIFICACIÓN --- */}
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div className="bg-[#1d2834] p-4 rounded-lg">
+                <p className="text-sm text-gray-400 flex items-center justify-center"><Users className="h-4 w-4 mr-1"/> Asistencia General</p>
+                <p className={`text-3xl font-bold ${attendancePercentage > 80 ? 'text-[#25d03f]' : 'text-[#f4c11a]'}`}>
+                  {attendancePercentage > 0 ? `${attendancePercentage}%` : "N/A"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {totalPossible > 0 ? `${totalAttended} de ${totalPossible} (sesiones pasadas)` : "Sin datos de asistencia"}
+                </p>
+              </div>
+              <div className="bg-[#1d2834] p-4 rounded-lg">
+                <p className="text-sm text-gray-400 flex items-center justify-center"><Dumbbell className="h-4 w-4 mr-1"/> Sesiones Totales</p>
+                <p className="text-3xl font-bold text-white">{totalSessions}</p>
+                <p className="text-xs text-gray-500">Programadas y Recientes</p>
+              </div>
+              <div className="bg-[#1d2834] p-4 rounded-lg">
+                <p className="text-sm text-gray-400 flex items-center justify-center"><Clock className="h-4 w-4 mr-1"/> Tiempo Total Entrenado</p>
+                <p className="text-3xl font-bold text-white">{totalDuration} <span className="text-xl">min</span></p>
+                <p className="text-xs text-gray-500">En todas las sesiones</p>
+              </div>
+            </div>
+
+            {/* Gráfico de Foco */}
+            <Card className="bg-[#1d2834] border-[#305176] pt-4">
+              <CardHeader className="pt-0">
+                <CardTitle className="text-white text-lg flex items-center">
+                    <PieChart className="h-5 w-5 mr-2" />
+                    Foco de Entrenamiento (Top {chartDisplayData.length} por Minutos)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {chartDisplayData.length > 0 ? (
+                    <div style={{ width: '100%', height: 250 }}>
+                      <ResponsiveContainer>
+                        <BarChart data={chartDisplayData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                          <XAxis 
+                            dataKey="name" 
+                            stroke="#888888" 
+                            fontSize={12} 
+                            tickLine={false} 
+                            axisLine={false} 
+                          />
+                          <YAxis 
+                            stroke="#888888" 
+                            fontSize={12} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            label={{ value: 'min', angle: -90, position: 'insideLeft', fill: '#888888' }}
+                          />
+                          <Tooltip
+                            cursor={{ fill: '#305176' }}
+                            contentStyle={{ backgroundColor: '#213041', border: '1px solid #305176', borderRadius: '8px' }}
+                            labelStyle={{ color: '#fff' }}
+                            itemStyle={{ fontWeight: 'bold' }}
+                            formatter={(value: number, name: string) => [`${value} min`, name]}
+                          />
+                          <Bar dataKey="minutos" radius={[4, 4, 0, 0]} fill="#aff606" /> {/* Color fijo para el gráfico */}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-10">No hay datos de ejercicios para mostrar en esta categoría.</p>
+                )}
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+
+        {/* --- MODIFICACIÓN: Modal para "Ver Todas" las estadísticas de entrenamiento --- */}
+        <Dialog open={showAllStatsModal} onOpenChange={setShowAllStatsModal}>
+          <DialogContent className="sm:max-w-lg bg-[#213041] border-[#305176] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-white text-2xl font-bold">Distribución Total de Entrenamiento</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Todas las categorías de ejercicios para <span className="text-[#aff606] font-medium">{categoryName}</span>, ordenadas por tiempo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-[#305176]">
+                      <TableHead className="text-white">Categoría</TableHead>
+                      <TableHead className="text-white text-right">Minutos Totales</TableHead>
+                      <TableHead className="text-white text-right">Porcentaje</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedFocusData.map((data) => {
+                      const percentage = totalGraphMinutes > 0 ? ((data.minutos / totalGraphMinutes) * 100).toFixed(1) : 0;
+                      return (
+                        <TableRow key={data.name} className="border-b-[#305176]">
+                          <TableCell className="font-medium">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.fill }} />
+                              <span className="text-white">{data.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-white font-bold text-right">{data.minutos} min</TableCell>
+                          <TableCell className="text-gray-400 text-right">{percentage}%</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+              <div className="mt-4 pt-4 border-t border-[#305176] flex justify-between">
+                <span className="text-gray-400">Tiempo Total (Solo Ejercicios):</span>
+                <span className="text-white font-bold">{totalGraphMinutes} minutos</span>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        {/* --- FIN DE LA MODIFICACIÓN --- */}
+
+      </>
+    )
+  }
+  // --- FIN Componente auxiliar ---
+
 
   return (
     <div className="space-y-6">
@@ -485,7 +690,15 @@ export function StatisticsSection() {
           <div className="space-y-4">
             {/* Se muestran solo los 3 últimos partidos (ya ordenados por fecha) */}
             {filteredMatches.slice(0, 3).map((match) => (
-              <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
+              <div 
+                key={match.id} 
+                className={`p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                // Lógica de clic para abrir el modal de detalles
+                onClick={isMobile ? () => {
+                    setShowMatchDetailModal(match);
+                    setActiveMatchDetailView('general');
+                  } : undefined}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="text-white font-medium">VS {match.opponent}</h3>
@@ -493,11 +706,14 @@ export function StatisticsSection() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge className={getResultColor(match.status)}>{match.result}</Badge>
+                    
+                    {/* Botón VER ESTADÍSTICAS DEL PARTIDO - OCULTADO EN MÓVIL */}
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                      onClick={() => {
+                      className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Previene el click de la fila/tarjeta
                         setShowMatchDetailModal(match);
                         setActiveMatchDetailView('general'); // Asegura la vista inicial
                       }}
@@ -539,12 +755,18 @@ export function StatisticsSection() {
                         {/* <TableHead className="text-center text-[#aff606]"><TrendingUp className="h-4 w-4 mx-auto text-[#f4c11a]" title="Asistencias" /></TableHead> <-- ELIMINADO */}
                         <TableHead className="text-center text-[#aff606]"><Clock className="h-4 w-4 mx-auto text-[#33d9f6]" title="Minutos Jugados" /></TableHead>
                         <TableHead className="text-center text-[#aff606]"><AlertTriangle className="h-4 w-4 mx-auto text-[#f4c11a]" title="Tarjetas" /></TableHead>
-                        <TableHead className="text-right text-[#aff606] pr-4">ACCIÓN</TableHead>
+                        {/* COLUMNA DE ACCIÓN - OCULTADA EN MÓVIL */}
+                        <TableHead className={`text-right text-[#aff606] pr-4 ${isMobile ? 'hidden lg:table-cell' : ''}`}>ACCIÓN</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {allPlayersList.slice(0, 3).map((player) => (
-                        <TableRow key={player.id} className="border-[#305176] hover:bg-[#305176]/50">
+                        <TableRow 
+                            key={player.id} 
+                            className={`border-[#305176] hover:bg-[#305176]/50 ${isMobile ? 'cursor-pointer' : ''}`}
+                            // Lógica de clic para abrir el modal de detalles del jugador
+                            onClick={isMobile ? () => setShowPlayerDetailModal(player) : undefined} 
+                        >
                             <TableCell className="font-medium text-white p-2">
                                 <div className="flex items-center space-x-2">
                                     <Avatar className="h-8 w-8">
@@ -567,12 +789,16 @@ export function StatisticsSection() {
                                 {player.generalStats.yellowCards}A / {player.generalStats.redCards}R
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right pr-4">
+                            {/* Botón VER ESTADÍSTICAS - OCULTADO EN MÓVIL */}
+                            <TableCell className={`text-right pr-4 ${isMobile ? 'hidden lg:table-cell' : ''}`}>
                                 <Button
                                     size="sm"
                                     variant="outline"
                                     className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                                    onClick={() => setShowPlayerDetailModal(player)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowPlayerDetailModal(player);
+                                    }}
                                 >
                                     <Eye className="h-4 w-4" />
                                 </Button>
@@ -585,8 +811,7 @@ export function StatisticsSection() {
         </CardContent>
       </Card>
 
-      {/* --- MODIFICACIÓN: Nuevo Cuadrante de Estadísticas de Entrenamiento --- */}
-      {/* Se mostrará solo si hay datos de entrenamiento para esa categoría */}
+      {/* --- CUADRANTE DE ESTADÍSTICAS DE ENTRENAMIENTO --- */}
       {filteredTrainings.length > 0 && (
         <TrainingStatistics 
           sessions={filteredTrainings} 
@@ -877,7 +1102,15 @@ export function StatisticsSection() {
             <div className="space-y-4">
               {filteredMatches.length > 0 ? (
                 filteredMatches.map((match) => (
-                  <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
+                  <div 
+                    key={match.id} 
+                    className={`p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                    onClick={isMobile ? () => {
+                        setShowMatchDetailModal(match);
+                        setActiveMatchDetailView('general'); 
+                        setShowAllMatchesModal(false);
+                      } : undefined}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <h3 className="text-white font-medium">VS {match.opponent}</h3>
@@ -885,11 +1118,13 @@ export function StatisticsSection() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge className={getResultColor(match.status)}>{match.result}</Badge>
+                        {/* Botón VER - OCULTADO EN MÓVIL */}
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                          onClick={() => {
+                          className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setShowMatchDetailModal(match);
                             setActiveMatchDetailView('general'); 
                             setShowAllMatchesModal(false);
@@ -960,7 +1195,14 @@ export function StatisticsSection() {
                     <div className="space-y-3">
                         {filteredPlayersList.length > 0 ? (
                             filteredPlayersList.map((player) => (
-                                <div key={player.id} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                                <div 
+                                    key={player.id} 
+                                    className={`flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`} // <-- Clickable siempre en este modal
+                                    onClick={() => {
+                                        setShowPlayerDetailModal(player);
+                                        setShowAllPlayersModal(false);
+                                    }}
+                                >
                                     <div className="flex items-center space-x-4">
                                         <Avatar className="h-10 w-10">
                                             <AvatarImage src={player.photo} alt={player.name} />
@@ -979,7 +1221,8 @@ export function StatisticsSection() {
                                         size="sm"
                                         variant="outline"
                                         className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             setShowPlayerDetailModal(player);
                                             setShowAllPlayersModal(false);
                                         }}
@@ -1175,205 +1418,5 @@ export function StatisticsSection() {
         </DialogContent>
       </Dialog>
     </div>
-  )
-}
-
-// --- MODIFICACIÓN: Componente de Estadísticas de Entrenamiento ---
-// (Este es el nuevo cuadrante que solicitaste)
-function TrainingStatistics({ sessions, categoryName }: { sessions: any[], categoryName: string }) {
-  
-  const [showAllStatsModal, setShowAllStatsModal] = useState(false);
-  
-  // 1. Calcular KPIs
-  let totalAttended = 0;
-  let totalPossible = 0;
-  
-  sessions.forEach(s => {
-    // Solo contamos las sesiones pasadas (que tienen asistencia real)
-    if (new Date(s.date) < new Date()) {
-      const [attended, possible] = s.attendance.split('/').map(Number);
-      if (!isNaN(attended) && !isNaN(possible)) {
-        totalAttended += attended;
-        totalPossible += possible;
-      }
-    }
-  });
-
-  const attendancePercentage = totalPossible > 0 ? Math.round((totalAttended / totalPossible) * 100) : 0;
-  const totalSessions = sessions.length;
-  const totalDuration = sessions.reduce((acc, s) => acc + s.duration, 0);
-
-  // 2. Calcular Foco de Entrenamiento (Gráfico)
-  const focusMap = new Map<string, number>();
-
-  sessions.forEach(s => {
-    s.exercises.forEach((ex: any) => {
-      // Ignoramos las notas
-      if (ex.type !== NOTE_TYPE && ex.category !== NOTE_CATEGORY_NAME) {
-        const categoryKey = ex.category || "Sin Categoría";
-        const currentDuration = focusMap.get(categoryKey) || 0;
-        focusMap.set(categoryKey, currentDuration + (ex.duration || 0));
-      }
-    });
-  });
-  
-  // Convertir el Map a un array para el gráfico y ordenarlo
-  const sortedFocusData = Array.from(focusMap.entries()).map(([name, minutos]) => ({
-    name,
-    minutos,
-    fill: getCategoryColors(name) // Asignar color
-  })).sort((a, b) => b.minutos - a.minutos); // Ordenar de mayor a menor
-
-  // Lógica para truncar el gráfico y mostrar el botón "Ver Todas"
-  const isTruncated = sortedFocusData.length > 10;
-  const chartDisplayData = isTruncated ? sortedFocusData.slice(0, 10) : sortedFocusData;
-
-
-  return (
-    <>
-      <Card className="bg-[#213041] border-[#305176]">
-        <CardHeader>
-          {/* --- MODIFICACIÓN: Encabezado con botón condicional --- */}
-          <div className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-white flex items-center">
-                <Dumbbell className="h-5 w-5 mr-2" />
-                Estadísticas de Entrenamiento
-              </CardTitle>
-              <CardDescription className="text-gray-400">
-                Rendimiento general de: <span className="text-[#aff606] font-medium">{categoryName}</span>
-              </CardDescription>
-            </div>
-            {isTruncated && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                onClick={() => setShowAllStatsModal(true)}
-              >
-                Ver todas
-              </Button>
-            )}
-          </div>
-          {/* --- FIN MODIFICACIÓN --- */}
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div className="bg-[#1d2834] p-4 rounded-lg">
-              <p className="text-sm text-gray-400 flex items-center justify-center"><Users className="h-4 w-4 mr-1"/> Asistencia General</p>
-              <p className={`text-3xl font-bold ${attendancePercentage > 80 ? 'text-[#25d03f]' : 'text-[#f4c11a]'}`}>
-                {attendancePercentage > 0 ? `${attendancePercentage}%` : "N/A"}
-              </p>
-              <p className="text-xs text-gray-500">
-                {totalPossible > 0 ? `${totalAttended} de ${totalPossible} (sesiones pasadas)` : "Sin datos de asistencia"}
-              </p>
-            </div>
-            <div className="bg-[#1d2834] p-4 rounded-lg">
-              <p className="text-sm text-gray-400 flex items-center justify-center"><Dumbbell className="h-4 w-4 mr-1"/> Sesiones Totales</p>
-              <p className="text-3xl font-bold text-white">{totalSessions}</p>
-              <p className="text-xs text-gray-500">Programadas y Recientes</p>
-            </div>
-            <div className="bg-[#1d2834] p-4 rounded-lg">
-              <p className="text-sm text-gray-400 flex items-center justify-center"><Clock className="h-4 w-4 mr-1"/> Tiempo Total Entrenado</p>
-              <p className="text-3xl font-bold text-white">{totalDuration} <span className="text-xl">min</span></p>
-              <p className="text-xs text-gray-500">En todas las sesiones</p>
-            </div>
-          </div>
-
-          {/* Gráfico de Foco */}
-          <Card className="bg-[#1d2834] border-[#305176] pt-4">
-            <CardHeader className="pt-0">
-               <CardTitle className="text-white text-lg flex items-center">
-                  <PieChart className="h-5 w-5 mr-2" />
-                  Foco de Entrenamiento (Top {chartDisplayData.length} por Minutos)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {chartDisplayData.length > 0 ? (
-                  <div style={{ width: '100%', height: 250 }}>
-                    <ResponsiveContainer>
-                      <BarChart data={chartDisplayData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                        <XAxis 
-                          dataKey="name" 
-                          stroke="#888888" 
-                          fontSize={12} 
-                          tickLine={false} 
-                          axisLine={false} 
-                        />
-                        <YAxis 
-                          stroke="#888888" 
-                          fontSize={12} 
-                          tickLine={false} 
-                          axisLine={false} 
-                          label={{ value: 'min', angle: -90, position: 'insideLeft', fill: '#888888' }}
-                        />
-                        <Tooltip
-                          cursor={{ fill: '#305176' }}
-                          contentStyle={{ backgroundColor: '#213041', border: '1px solid #305176', borderRadius: '8px' }}
-                          labelStyle={{ color: '#fff' }}
-                          itemStyle={{ fontWeight: 'bold' }}
-                          formatter={(value: number, name: string) => [`${value} min`, name]}
-                        />
-                        <Bar dataKey="minutos" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-              ) : (
-                <p className="text-gray-500 text-center py-10">No hay datos de ejercicios para mostrar en esta categoría.</p>
-              )}
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
-
-      {/* --- MODIFICACIÓN: Modal para "Ver Todas" las estadísticas de entrenamiento --- */}
-      <Dialog open={showAllStatsModal} onOpenChange={setShowAllStatsModal}>
-        <DialogContent className="sm:max-w-lg bg-[#213041] border-[#305176] text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white text-2xl font-bold">Distribución Total de Entrenamiento</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Todas las categorías de ejercicios para <span className="text-[#aff606] font-medium">{categoryName}</span>, ordenadas por tiempo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <ScrollArea className="h-[400px]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b-[#305176]">
-                    <TableHead className="text-white">Categoría</TableHead>
-                    <TableHead className="text-white text-right">Minutos Totales</TableHead>
-                    <TableHead className="text-white text-right">Porcentaje</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedFocusData.map((data) => {
-                    const percentage = totalDuration > 0 ? ((data.minutos / totalDuration) * 100).toFixed(1) : 0;
-                    return (
-                      <TableRow key={data.name} className="border-b-[#305176]">
-                        <TableCell className="font-medium">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.fill }} />
-                            <span className="text-white">{data.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white font-bold text-right">{data.minutos} min</TableCell>
-                        <TableCell className="text-gray-400 text-right">{percentage}%</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-            <div className="mt-4 pt-4 border-t border-[#305176] flex justify-between">
-              <span className="text-gray-400">Tiempo Total (Solo Ejercicios):</span>
-              <span className="text-white font-bold">{totalDuration} minutos</span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* --- FIN DE LA MODIFICACIÓN --- */}
-
-    </>
   )
 }

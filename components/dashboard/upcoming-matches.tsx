@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
 
 // --- Importaciones del Calendario ---
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -34,6 +35,7 @@ import { es } from 'date-fns/locale/es';
 // ------------------------------------
 
 export function UpcomingMatches() {
+  const isMobile = useIsMobile(); // <-- Uso del hook
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [showPlayerSelection, setShowPlayerSelection] = useState(false) 
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([])
@@ -585,7 +587,11 @@ export function UpcomingMatches() {
           <div className="space-y-4">
             {upcomingMatches.length > 0 ? (
               upcomingMatches.map((match) => (
-                <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
+                <div 
+                    key={match.id} 
+                    className={`p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                    onClick={isMobile ? () => handleViewDetails(match) : undefined} // <-- Asigna el click
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
@@ -631,11 +637,15 @@ export function UpcomingMatches() {
                         </Button>
                       ) : (
                         <>
+                          {/* Botón VER DETALLES - OCULTO EN MÓVIL */}
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                            onClick={() => handleViewDetails(match)}
+                            className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Previene el click de la fila
+                              handleViewDetails(match);
+                            }}
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             Ver Detalles
@@ -644,7 +654,10 @@ export function UpcomingMatches() {
                             size="sm"
                             variant="ghost"
                             className="text-white hover:text-red-400"
-                            onClick={() => setMatchToDelete(match.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setMatchToDelete(match.id);
+                              }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

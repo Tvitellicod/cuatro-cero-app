@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, MapPin, Trophy, TrendingUp, Activity, Target, Plus, X } from "lucide-react"
+import { Calendar, Clock, MapPin, Trophy, TrendingUp, Activity, Target, Plus, X, Eye } from "lucide-react" // Importar Eye
 import Link from "next/link"
 import {
   Dialog,
@@ -16,21 +16,33 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
 
 export function TournamentsOverview() {
+  const isMobile = useIsMobile(); // <-- Uso del hook
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showTournamentStats, setShowTournamentStats] = useState<any>(null)
   const [newTournamentName, setNewTournamentName] = useState("")
   const [newTournamentColor, setNewTournamentColor] = useState("#aff606")
 
   const today = new Date()
-  const nextMatch = new Date(today)
-  nextMatch.setDate(nextMatch.getDate() + 2)
+  const nextMatchDate = new Date(today)
+  nextMatchDate.setDate(nextMatchDate.getDate() + 2)
+
+  // Función auxiliar para formatear la fecha a DD-MM-YYYY
+  const formatDate = (date: Date): string => {
+    const d = new Date(date)
+    const day = String(d.getDate()).padStart(2, '0')
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = d.getFullYear()
+    return `${day}-${month}-${year}`
+  }
+
 
   const upcomingMatch = {
     id: 1,
     opponent: "Club Atlético River",
-    date: nextMatch.toISOString().split("T")[0],
+    date: formatDate(nextMatchDate),
     time: "16:00",
     location: "Local",
     tournament: "Liga Profesional",
@@ -83,6 +95,14 @@ export function TournamentsOverview() {
     }
   }
 
+  // --- FUNCIÓN DE CLIC PARA NAVEGAR EN MÓVIL ---
+  const handleMatchClick = () => {
+    // Redireccionar al módulo de próximos partidos
+    if (isMobile) {
+      window.location.href = "/dashboard/torneos/proximos"
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,7 +111,10 @@ export function TournamentsOverview() {
       </div>
 
       {/* Próximo Partido */}
-      <Card className="bg-[#213041] border-[#305176]">
+      <Card 
+        className={`bg-[#213041] border-[#305176] ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+        onClick={handleMatchClick} // <-- Asigna la función de click a la tarjeta
+      >
         <CardHeader>
           <CardTitle className="text-white flex items-center">
             <Trophy className="h-5 w-5 mr-2 text-[#f4c11a]" />
@@ -127,15 +150,27 @@ export function TournamentsOverview() {
                   <span className="text-sm">{upcomingMatch.location}</span>
                 </div>
               </div>
-              <Link href="/dashboard/torneos/proximos">
-                <Button className="bg-[#aff606] text-black hover:bg-[#25d03f] w-full sm:w-auto mt-2 sm:mt-0">Ver Próximo Partido</Button>
+              {/* Botón "Ver Próximo Partido" - OCULTO EN MÓVIL */}
+              <Link 
+                href="/dashboard/torneos/proximos" 
+                className={isMobile ? 'hidden lg:block' : ''} 
+                onClick={(e) => { // Previene el doble click en desktop
+                    if (isMobile) e.preventDefault();
+                }}
+              >
+                <Button 
+                    className="bg-[#aff606] text-black hover:bg-[#25d03f] w-full sm:w-auto mt-2 sm:mt-0"
+                >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver Próximo Partido
+                </Button>
               </Link>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Estadísticas de Partidos */}
+      {/* Estadísticas de Partidos (Resto de la UI sin cambios en la lógica de clics) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="bg-[#213041] border-[#305176]">
           <CardHeader>

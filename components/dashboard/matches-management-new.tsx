@@ -25,8 +25,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
 
 export function MatchesManagement() {
+  const isMobile = useIsMobile(); // <-- Uso del hook
   const [showStatsModal, setShowStatsModal] = useState(false)
   const [selectedMatchStats, setSelectedMatchStats] = useState<any>(null)
   const [matchToDelete, setMatchToDelete] = useState<number | null>(null)
@@ -225,7 +227,11 @@ export function MatchesManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredMatches.length > 0 ? (
               filteredMatches.map((match) => (
-                <div key={match.id} className="p-4 bg-[#1d2834] rounded-lg">
+                <div 
+                  key={match.id} 
+                  className={`p-4 bg-[#1d2834] rounded-lg ${isMobile ? 'cursor-pointer hover:bg-[#305176]' : ''}`}
+                  onClick={isMobile ? () => handleViewStats(match) : undefined} // <-- Asigna el click
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-center">
                       <div className="text-white font-medium text-sm">{match.tournament}</div>
@@ -256,11 +262,15 @@ export function MatchesManagement() {
                     </div>
                   </div>
 
+                  {/* Botón VER ESTADÍSTICAS - OCULTO EN MÓVIL */}
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                    onClick={() => handleViewStats(match)}
+                    className={`w-full border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent ${isMobile ? 'hidden lg:flex' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Previene el click de la fila
+                      handleViewStats(match)
+                    }}
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Estadísticas

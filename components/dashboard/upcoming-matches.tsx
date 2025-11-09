@@ -139,23 +139,23 @@ export function UpcomingMatches() {
     { name: "Supercopa", matches: 2 },
   ]
   
-  // Opciones de Hora y Minuto para los Selects
-  const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-  const minuteOptions = ["00", "15", "30", "45"];
+  // Opciones de Hora y Minuto para los Selects (ya no se usan)
+  // const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  // const minuteOptions = ["00", "15", "30", "45"];
   
-  const getCurrentHour = () => newMatch.time ? newMatch.time.split(':')[0] : "10";
-  const getCurrentMinute = () => newMatch.time ? newMatch.time.split(':')[1] : "00";
+  // const getCurrentHour = () => newMatch.time ? newMatch.time.split(':')[0] : "10";
+  // const getCurrentMinute = () => newMatch.time ? newMatch.time.split(':')[1] : "00";
   
-  // Handlers para actualizar HH y MM en el estado newMatch.time
-  const setTimePart = (part: 'hour' | 'minute', value: string) => {
-    const currentHour = getCurrentHour();
-    const currentMinute = getCurrentMinute();
+  // Handlers para actualizar HH y MM en el estado newMatch.time (ya no se usa)
+  // const setTimePart = (part: 'hour' | 'minute', value: string) => {
+  //   const currentHour = getCurrentHour();
+  //   const currentMinute = getCurrentMinute();
     
-    let newHour = part === 'hour' ? value : currentHour;
-    let newMinute = part === 'minute' ? value : currentMinute;
+  //   let newHour = part === 'hour' ? value : currentHour;
+  //   let newMinute = part === 'minute' ? value : currentMinute;
     
-    setNewMatch(prev => ({ ...prev, time: `${newHour}:${newMinute}` }));
-  };
+  //   setNewMatch(prev => ({ ...prev, time: `${newHour}:${newMinute}` }));
+  // };
 
   
   const handlePlayerToggle = (playerId: number) => {
@@ -175,7 +175,17 @@ export function UpcomingMatches() {
     }
     
     // 2. VALIDACIÓN DE FECHA Y HORA FUTURA
-    const [hours, minutes] = newMatch.time.split(':').map(Number);
+    // Usamos regex simple para la validación del formato HH:MM
+    const timeMatch = newMatch.time.match(/^(\d{2}):(\d{2})$/);
+    if (!timeMatch) {
+      alert("Error: El formato de hora no es válido (HH:MM).");
+      return;
+    }
+    
+    const [_, hourStr, minuteStr] = timeMatch;
+    const hours = parseInt(hourStr, 10);
+    const minutes = parseInt(minuteStr, 10);
+    
     const plannedDateTime = new Date(newMatch.date);
     // Aseguramos que la hora del plannedDateTime sea la del formulario
     plannedDateTime.setHours(hours, minutes, 0, 0); 
@@ -248,6 +258,12 @@ export function UpcomingMatches() {
   const handleViewDetails = (match: any) => {
     setShowMatchDetail(match)
   }
+  
+  // Helper para mostrar la hora sin dos puntos
+  const formatTimeWithoutColons = (timeString: string) => {
+    if (!timeString) return '';
+    return timeString.replace(':', '');
+  };
 
   return (
     <div className="space-y-6">
@@ -389,10 +405,10 @@ export function UpcomingMatches() {
           <CardContent className="space-y-4">
             
             {/* PRIMERA FILA: Rival, Torneo, Condición, Categoría, Jugadores */}
-            <div className="grid grid-cols-8 gap-4 items-center"> {/* <-- CAMBIO: Usamos grid-cols-8 */}
+            <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center"> 
               
-              {/* Rival (1/8) */}
-              <div className="col-span-1 w-full"> 
+              {/* Rival (col-span-1 en PC) */}
+              <div className="col-span-1 md:col-span-1 w-full"> 
                 <Input
                   placeholder="Rival" 
                   className="bg-[#1d2834] border-[#305176] text-white h-10" // Altura uniforme h-10
@@ -401,8 +417,8 @@ export function UpcomingMatches() {
                 />
               </div>
 
-              {/* Torneo (2/8) */}
-              <div className="col-span-2 w-full"> {/* <-- CAMBIO: col-span-2 */}
+              {/* Torneo (col-span-2 en PC) */}
+              <div className="col-span-1 md:col-span-2 w-full"> 
                 <Select
                   value={newMatch.tournament}
                   onValueChange={(value) => setNewMatch({ ...newMatch, tournament: value })}
@@ -420,8 +436,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Condición (2/8) */}
-              <div className="col-span-2 w-full"> {/* <-- CAMBIO: col-span-2 */}
+              {/* Condición (col-span-2 en PC) */}
+              <div className="col-span-1 md:col-span-2 w-full"> 
                 <Select
                   value={newMatch.location}
                   onValueChange={(value) => setNewMatch({ ...newMatch, location: value })}
@@ -440,8 +456,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
 
-              {/* Categoría (2/8) */}
-              <div className="col-span-2 w-full"> {/* <-- CAMBIO: col-span-2 */}
+              {/* Categoría (col-span-2 en PC) */}
+              <div className="col-span-1 md:col-span-2 w-full"> 
                 <Select
                   value={newMatch.category}
                   onValueChange={(value) => {
@@ -463,8 +479,8 @@ export function UpcomingMatches() {
                 </Select>
               </div>
               
-              {/* Botón de Selección de Jugadores (1/8) */}
-              <div className="col-span-1 w-full"> {/* <-- CAMBIO: col-span-1 */}
+              {/* Botón de Selección de Jugadores (col-span-1 en PC) */}
+              <div className="col-span-1 md:col-span-1 w-full"> 
                   <Button
                       className="bg-[#33d9f6] text-black hover:bg-[#2bc4ea] h-10 w-full" // Altura uniforme h-10
                       onClick={() => {
@@ -480,10 +496,11 @@ export function UpcomingMatches() {
             </div>
 
             {/* SEGUNDA FILA: Fecha y Hora */}
-            <div className="grid grid-cols-8 gap-4 pt-4 border-t border-[#305176] items-center"> {/* <-- CAMBIO: Usamos grid-cols-8 */}
+            {/* Se usa flex-col en mobile para apilar, y grid para desktop */}
+            <div className="flex flex-col md:grid md:grid-cols-8 gap-4 pt-4 border-t border-[#305176]"> 
               
-              {/* Fecha (Ocupa 1/8) */}
-              <div className="space-y-1 col-span-1 w-full"> 
+              {/* Fecha (Ocupa 100% en móvil, 2/8 en PC) */}
+              <div className="space-y-1 w-full md:col-span-2"> 
                 <label className="text-white text-sm">Fecha</label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -519,38 +536,17 @@ export function UpcomingMatches() {
                 </Popover>
               </div>
               
-              {/* Hora (Ocupa 7/8) */}
-              <div className="space-y-1 col-span-7 w-full"> {/* <-- CAMBIO: col-span-7 */}
+              {/* Hora (Ocupa 100% en móvil, 6/8 restantes en PC) */}
+              <div className="space-y-1 w-full md:col-span-6"> 
                 <label className="text-white text-sm">Hora</label>
-                <div className="flex items-center space-x-1">
-                  <Select
-                    value={getCurrentHour()}
-                    onValueChange={(value) => setTimePart('hour', value)}
-                  >
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10"> {/* Altura uniforme h-10 */}
-                      <SelectValue placeholder="HH" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#213041] border-[#305176] max-h-[15rem]">
-                      {hourOptions.map(hour => (
-                        <SelectItem key={hour} value={hour} className="text-white">{hour}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-white text-lg h-10 flex items-center">:</span> {/* Altura uniforme h-10 */}
-                  <Select
-                    value={getCurrentMinute()}
-                    onValueChange={(value) => setTimePart('minute', value)}
-                  >
-                    <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white h-10"> {/* Altura uniforme h-10 */}
-                      <SelectValue placeholder="MM" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#213041] border-[#305176] max-h-[15rem]">
-                      {minuteOptions.map(minute => (
-                        <SelectItem key={minute} value={minute} className="text-white">{minute}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* CAMBIO CLAVE: Usar input type="time" para HH:MM en un solo campo */}
+                <Input
+                  id="match-time"
+                  type="time"
+                  className="bg-[#1d2834] border-[#305176] text-white h-10 w-full md:w-1/4" // w-full en móvil, w-1/4 en PC
+                  value={newMatch.time}
+                  onChange={(e) => setNewMatch({ ...newMatch, time: e.target.value })}
+                />
               </div>
 
             </div>
@@ -577,9 +573,14 @@ export function UpcomingMatches() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Partidos Programados</CardTitle>
           {!showScheduleForm && (
-            <Button className="bg-[#aff606] text-black hover:bg-[#25d03f]" onClick={() => setShowScheduleForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Agendar Próximo Partido
+            <Button 
+                // MODIFICACIÓN 1: Botón Planificar Responsive
+                size={isMobile ? "icon" : "default"}
+                className={`bg-[#aff606] text-black hover:bg-[#25d03f] font-semibold ${isMobile ? 'h-9 w-9 p-0' : 'h-10 px-4'}`}
+                onClick={() => setShowScheduleForm(true)}
+            >
+                <Plus className="h-4 w-4" />
+                <span className={isMobile ? 'hidden' : 'inline ml-2'}>Agendar Próximo Partido</span>
             </Button>
           )}
         </CardHeader>
@@ -594,10 +595,7 @@ export function UpcomingMatches() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <div className="text-white font-bold text-lg">VS</div>
-                        <div className="text-xs text-gray-400">{match.category}</div>
-                      </div>
+                      {/* MODIFICACIÓN 2: Bloque de VS y Categoria ELIMINADO */}
                       <div>
                         <h3 className="text-white font-medium">{match.opponent}</h3>
                         <div className="flex items-center space-x-4 text-sm text-gray-400">
@@ -607,12 +605,17 @@ export function UpcomingMatches() {
                           </div>
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
-                            {match.time}
+                            {/* CAMBIO CLAVE: Mostrar HHMM sin dos puntos */}
+                            {formatTimeWithoutColons(match.time)}
                           </div>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 mr-1" />
-                            {upcomingMatches.find(m => m.id === match.id)?.citedPlayers.length} jugadores citados
+                          {/* INICIO DE ELIMINACIÓN DE "X jugadores citados" EN MÓVIL */}
+                          <div 
+                              className={`flex items-center ${isMobile ? 'hidden lg:flex' : ''}`}
+                            >
+                              <Users className="h-4 w-4 mr-1" />
+                              {upcomingMatches.find(m => m.id === match.id)?.citedPlayers.length} jugadores citados
                           </div>
+                          {/* FIN DE ELIMINACIÓN */}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">{match.tournament}</div>
                       </div>
@@ -705,7 +708,8 @@ export function UpcomingMatches() {
               </div>
               <div className="space-y-2">
                 <label className="text-white text-sm">Hora</label>
-                <Input value={showMatchDetail?.time} readOnly className="bg-[#1d2834] border-[#305176] text-white" />
+                {/* CAMBIO CLAVE: Mostrar HHMM en modal de detalle */}
+                <Input value={formatTimeWithoutColons(showMatchDetail?.time)} readOnly className="bg-[#1d2834] border-[#305176] text-white" />
               </div>
             </div>
             

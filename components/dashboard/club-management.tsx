@@ -837,39 +837,48 @@ export function ClubManagement() {
           ) : (
             <Card className="bg-[#213041] border-[#305176]">
               <CardHeader>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <CardTitle className="text-2xl font-bold text-white whitespace-nowrap">
+                <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap"> {/* Reducir gap en móvil */}
+                    {/* TÍTULO DE JUGADORES - TRUNCATE y ajuste de texto en móvil */}
+                    <CardTitle 
+                        className="text-lg sm:text-2xl font-bold text-white whitespace-nowrap overflow-hidden truncate max-w-[calc(100%-100px)] sm:max-w-none"
+                        title={
+                            selectedCategory !== "all"
+                            ? `${categories.find((c) => c.id === selectedCategory)?.name} - Jugadores (${filteredPlayers.length})`
+                            : `Todas las categorías - Jugadores (${filteredPlayers.length})`
+                        }
+                    >
                       {selectedCategory !== "all"
                         ? `${categories.find((c) => c.id === selectedCategory)?.name}`
                         : "Todas las categorías"}{" "}
                       - Jugadores ({filteredPlayers.length})
                     </CardTitle>
-                    {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+                    {/* BOTÓN NUEVO JUGADOR - Reemplazar por "+" en móvil */}
                     {!isKinesiologo && (
                       <Button
-                        size="default"
-                        className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-4 ml-auto flex-shrink-0"
+                        size={isMobile ? "icon" : "default"} // Usar size="icon" en móvil
+                        className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-3 flex-shrink-0 ml-auto"
                         onClick={() => {
                           setEditingPlayer(null);
                           setShowCreateForm(true);
                         }}
                       >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Nuevo Jugador
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden sm:inline ml-1">Nuevo Jugador</span> {/* Ocultar texto en móvil */}
                       </Button>
                     )}
                 </div>
-                <div className="flex-1 flex items-center space-x-2 mt-4">
-                    <div className="relative flex-1">
+                {/* BARRA DE BÚSQUEDA - Se ajusta el layout a flex-1/w-full */}
+                <div className="flex-1 flex items-center space-x-2 mt-4 w-full">
+                    <div className="relative w-full"> {/* Usar w-full en lugar de flex-1 */}
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
                         placeholder="Buscar jugadores..."
-                        className="pl-10 bg-[#1d2834] border-[#305176] text-white"
+                        className="pl-10 bg-[#1d2834] border-[#305176] text-white w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
-                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -895,42 +904,49 @@ export function ClubManagement() {
                           <p className="text-gray-400 text-sm">
                             "{player.nickname}" • {player.position} • {player.foot}
                           </p>
-                          <p className="text-gray-500 text-xs">Estado: {player.status}</p>
+                          {/* LÍNEA "Estado:..." ELIMINADA */}
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <Badge
-                          className={
-                            player.status === "DISPONIBLE"
-                              ? "bg-[#25d03f] text-black"
-                              : player.status === "LESIONADO"
-                                ? "bg-orange-500 text-white"
-                                : "bg-red-500 text-white"
-                          }
-                        >
-                          {player.status}
-                        </Badge>
-                        {/* --- INICIO DE MODIFICACIONES KINESIOLOGO --- */}
-                        {player.status === "LESIONADO" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            // OCULTAR en móvil, solo se usa el click en la tarjeta.
-                            className={`text-white hover:bg-white/10 ${isMobile ? 'hidden lg:flex' : ''}`} 
-                            onClick={(e) => {
-                                e.stopPropagation(); // Evita que se active el click de la tarjeta si es móvil
-                                handleViewMedicalReport(player);
-                            }} 
-                          >
-                            <FileText className="h-4 w-4 text-orange-500" />
-                          </Button>
+                        {/* INICIO NUEVA LÓGICA: Botón LESIONADO con icono de Reporte */}
+                        {player.status === "LESIONADO" ? (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="bg-orange-500 text-white hover:bg-orange-600 h-7 px-3 group"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Evita que el click abra el detalle si está en móvil
+                                            handleViewMedicalReport(player);
+                                        }}
+                                    >
+                                        LESIONADO
+                                        <FileText className="h-4 w-4 ml-1 transition-transform group-hover:scale-110" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-[#305176] text-white border-[#aff606]">
+                                    Ver Informe Médico
+                                </TooltipContent>
+                            </Tooltip>
+                        ) : (
+                            <Badge
+                              className={
+                                player.status === "DISPONIBLE"
+                                  ? "bg-[#25d03f] text-black"
+                                  : "bg-red-500 text-white"
+                              }
+                            >
+                              {player.status}
+                            </Badge>
                         )}
-                        {/* Botón de Botiquín (Solo para Kine y jugadores DISPONIBLES) */}
+                        {/* FIN NUEVA LÓGICA */}
+
+                        {/* Botón de Botiquín (Solo para Kine y jugadores DISPONIBLES) - Visible en desktop */}
                         {isKinesiologo && player.status === "DISPONIBLE" && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            // OCULTAR en móvil, se espera que el Kine vaya al módulo Kinesiólogo para reportar.
                             className={`text-white hover:text-orange-500 ${isMobile ? 'hidden lg:flex' : ''}`} 
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -940,7 +956,6 @@ export function ClubManagement() {
                             <HeartPulse className="h-5 w-5" />
                           </Button>
                         )}
-                        {/* --- FIN DE MODIFICACIONES KINESIOLOGO --- */}
                         
                         {/* Botón Eye (Ver Detalles) */}
                         <Button
@@ -980,7 +995,7 @@ export function ClubManagement() {
         </div>
       </div>
       
-      {/* Player Detail Dialog (No modificado, se abre con el nuevo click) */}
+      {/* Player Detail Dialog (No modificado) */}
       <Dialog open={!!showPlayerDetail} onOpenChange={() => setShowPlayerDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1082,11 +1097,16 @@ export function ClubManagement() {
       </Dialog>
 
 
-      {/* Medical Report Dialog (No modificado) */}
+      {/* Medical Report Dialog */}
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">INFORME MEDICO</DialogTitle>
+            {/* INICIO MODIFICACIÓN REQUERIDA (de la respuesta anterior) */}
+            <DialogTitle className="text-white text-2xl font-bold flex items-center justify-center">
+                <FileText className="h-6 w-6 mr-2 text-orange-500" />
+                INFORME MEDICO
+            </DialogTitle>
+            {/* FIN MODIFICACIÓN REQUERIDA */}
             <DialogDescription className="text-gray-400">
               Detalles de la lesión de {showMedicalReport?.firstName} {showMedicalReport?.lastName}.
             </DialogDescription>

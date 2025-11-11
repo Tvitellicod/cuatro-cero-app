@@ -817,21 +817,24 @@ export function ClubManagement() {
                   </div>
                 </div>
 
-                <div className="flex justify-center space-x-4">
+                {/* INICIO MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
+                <div className="flex flex-col space-y-3 sm:flex-row sm:justify-center sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
                   <Button
-                    className="w-1/4 h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f]"
+                    className="w-full h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/4 order-1" /* order-1 (arriba) */
                     onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
                   >
                     {editingPlayer ? "Actualizar" : "Crear"}
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-1/4 h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                    className="w-full h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/4 order-2" /* order-2 (abajo) */
                     onClick={handleCancelForm}
                   >
                     Cancelar
                   </Button>
                 </div>
+                {/* FIN MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
+
               </CardContent>
             </Card>
           ) : (
@@ -1077,12 +1080,12 @@ export function ClubManagement() {
               </div>
             </div>
           </div>
-          {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
+          {/* --- MODIFICACIÓN DE BOTONES EDITAR --- */}
           {!isKinesiologo && (
-            <div className="flex justify-between space-x-4">
+            <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
               <Button
                 variant="default"
-                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f]"
+                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/2 order-1" /* order-1 (arriba en móvil) */
                 onClick={() => {
                   handleEditPlayer(showPlayerDetail!);
                   setShowPlayerDetail(null);
@@ -1091,8 +1094,17 @@ export function ClubManagement() {
                 <Edit className="h-4 w-4 mr-2" />
                 Editar Jugador
               </Button>
+              <Button
+                variant="outline"
+                className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/2 order-2" /* order-2 (abajo en móvil) */
+                onClick={() => setPlayerToDelete(showPlayerDetail?.id ?? null)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar Jugador
+              </Button>
             </div>
           )}
+          {/* --- FIN MODIFICACIÓN DE BOTONES EDITAR --- */}
         </DialogContent>
       </Dialog>
 

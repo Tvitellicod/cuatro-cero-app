@@ -117,7 +117,7 @@ export function ExerciseManagement() {
       goalkeepers: 1,
       difficulty: "Media",
       materials: "Balones, conos",
-      objective: "Mejorar transiciones rápidas", // Añadido
+      objective: "Mejorar transiciones rápidas",
       description: "Ejercicio para practicar la transición...", // Añadido
       type: "Técnico", // Añadido
       createdAt: "2024-01-13",
@@ -131,7 +131,7 @@ export function ExerciseManagement() {
       goalkeepers: 1,
       difficulty: "Fácil",
       materials: "Balones, barrera",
-      objective: "Mejorar precisión en tiros libres", // Añadido
+      objective: "Mejorar precisión en tiros libres",
       description: "Práctica de tiros libres...", // Añadido
       type: "Técnico", // Añadido
       createdAt: "2024-01-12",
@@ -145,7 +145,7 @@ export function ExerciseManagement() {
       goalkeepers: 1,
       difficulty: "Media",
       materials: "Balones, conos",
-      objective: "Mejorar distribución del arquero", // Añadido
+      objective: "Mejorar distribución del arquero",
       description: "Ejercicio para que el arquero...", // Añadido
       type: "Técnico", // Añadido
       createdAt: "2024-01-11",
@@ -654,20 +654,13 @@ export function ExerciseManagement() {
                   </div>
                 </div>
 
-                <div className="flex justify-between space-x-4">
-                  {/* Botón dinámico para guardar o actualizar */}
-                  <Button
-                    className="w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-                    // Llama a la función correcta según si estamos editando o creando
-                    onClick={newExercise.id ? handleUpdateExercise : handleCreateExercise}
-                    // Deshabilitar si es un Ebook
-                    disabled={newExercise.category === "Biblioteca Ebook"}
-                  >
-                    {newExercise.id ? "Actualizar Ejercicio" : "Guardar Ejercicio"}
-                  </Button>
+                {/* INICIO MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
+                {/* Usamos flex-col-reverse para que el primer elemento (Guardar/Actualizar) quede arriba en móvil */}
+                <div className="flex flex-col-reverse space-y-3 space-y-reverse sm:flex-row sm:justify-between sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
+                  {/* Botón Cancelar - Ahora en la parte inferior de la pila (orden inverso en móvil) */}
                   <Button
                     variant="outline"
-                    className="w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                    className="w-full h-11 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/2"
                     onClick={() => {
                       setShowCreateForm(false);
                       setNewExercise(INITIAL_EXERCISE_STATE); // Reiniciar al cancelar
@@ -675,7 +668,18 @@ export function ExerciseManagement() {
                   >
                     Cancelar
                   </Button>
+                  {/* Botón principal (Actualizar/Crear) - Ahora en la parte superior de la pila */}
+                  <Button
+                    className="w-full h-11 text-lg bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/2"
+                    // Llama a la función correcta según si estamos editando o creando
+                    onClick={newExercise.id ? handleUpdateExercise : handleCreateExercise}
+                    // Deshabilitar si es un Ebook
+                    disabled={newExercise.category === "Biblioteca Ebook"}
+                  >
+                    {newExercise.id ? "Actualizar Ejercicio" : "Guardar Ejercicio"}
+                  </Button>
                 </div>
+                 {/* FIN MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
               </CardContent>
             </Card>
           ) : (
@@ -947,22 +951,24 @@ export function ExerciseManagement() {
           </div>
           {/* Contenedor para apilar los botones en móvil */}
           {showExerciseDetail?.category !== "Biblioteca Ebook" && (
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:justify-between sm:space-x-4">
-              <Button
-                variant="default"
-                className="w-full sm:w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f]"
-                onClick={() => handleEditExercise(showExerciseDetail)} // Llama a la función de edición
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Editar Ejercicio
-              </Button>
+             <div className="flex flex-col-reverse space-y-3 space-y-reverse sm:flex-row sm:justify-between sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
+               {/* Botón Eliminar - Ahora en la parte inferior de la pila (orden inverso en móvil) */}
               <Button
                 variant="outline"
-                className="w-full sm:w-1/2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/2"
                 onClick={() => setExerciseToDelete(showExerciseDetail?.id)} // Inicia el proceso de borrado
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Eliminar Ejercicio
+              </Button>
+               {/* Botón Editar - Ahora en la parte superior de la pila */}
+              <Button
+                variant="default"
+                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/2"
+                onClick={() => handleEditExercise(showExerciseDetail)} // Llama a la función de edición
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Ejercicio
               </Button>
             </div>
           )}

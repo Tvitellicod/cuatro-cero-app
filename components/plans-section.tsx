@@ -175,21 +175,27 @@ export function PlansSection() {
         ))}
       </div>
 
-      <div className="bg-[#213041] border border-[#305176] rounded-lg p-4 w-full mb-2 px-16 mt-6 py-5">
-         <div className="flex items-center justify-between">
-          <div className="flex-1">
+      <div className="bg-[#213041] border border-[#305176] rounded-lg p-4 w-full mb-2 px-4 sm:px-16 mt-6 py-5">
+         {/* MODIFICACIÓN CLAVE DE LAYOUT AQUÍ */}
+         <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+          
+          <div className="flex-1 text-center md:text-left">
+            {/* El texto completo ahora ocupa todo el ancho en móvil y se centra */}
             <h3 className="text-lg font-semibold text-white mb-1">
               ¿No sabes cual es tu plan ideal? Nosotros te ayudamos!
             </h3>
           </div>
-          <div className="ml-6">
+          
+          <div className="w-full md:w-auto flex-shrink-0">
+            {/* El botón se mueve debajo del texto y usa todo el ancho en móvil */}
             <Button
-              className="bg-[#aff606] text-black hover:bg-[#25d03f] px-6 rounded-lg font-semibold py-7"
+              className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] px-6 rounded-lg font-semibold py-7"
               onClick={() => window.open("https://wa.me/5491112345678", "_blank")}
             >
               Mandanos un mensaje
             </Button>
           </div>
+          
         </div>
       </div>
 

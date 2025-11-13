@@ -32,6 +32,24 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile" // <-- Importado useIsMobile
 
 // Opcional: Define un tipo para Player
+type Player = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  nickname: string;
+  birthDate: string;
+  phoneNumber: string;
+  position: string;
+  foot: string;
+  status: string; // "DISPONIBLE", "LESIONADO", "NO DISPONIBLE"
+  category: string;
+  photo: string;
+  injury?: {
+    type: string;
+    date: string;
+    recovery: string;
+  } | null;
+}
 
 export function ClubManagement() {
   const isMobile = useIsMobile(); // <-- Uso de useIsMobile
@@ -108,7 +126,7 @@ export function ClubManagement() {
     const lastNames = ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín", "Jiménez", "Ruiz", "Hernández", "Díaz", "Moreno", "Muñoz", "Álvarez", "Romero", "Alonso", "Gutiérrez", "Navarro", "Torres", "Domínguez", "Vázquez", "Ramos"]
     const nicknames = ["Checo", "Toto", "Pipa", "Chino", "Flaco", "Gordo", "Ruso", "Turco", "Negro", "Rubio", "Pelado", "Chiqui", "Tano", "Mono", "Loco", "Pato", "Gato", "Oso", "León", "Tigre", "Lobo", "Colo", "Nacho", "Maxi", "Santi"]
 
-    const players = []
+    const players: Player[] = []
     let playerId = 1
 
     const categoryMap: Record<string, { name: string; count: number }> = {
@@ -451,6 +469,7 @@ export function ClubManagement() {
                       width={80}
                       height={80}
                       className="object-cover"
+                      unoptimized
                     />
                   </div>
                   <div>
@@ -497,6 +516,7 @@ export function ClubManagement() {
                         width={96}
                         height={96}
                         className="object-cover"
+                        unoptimized
                       />
                     </div>
                     <Button
@@ -766,6 +786,7 @@ export function ClubManagement() {
                             width={96}
                             height={96}
                             className="object-cover w-full h-full"
+                            unoptimized
                           />
                         ) : (
                           <Upload className="h-8 w-8 text-gray-400" />
@@ -818,19 +839,20 @@ export function ClubManagement() {
                 </div>
 
                 {/* INICIO MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
-                <div className="flex flex-col space-y-3 sm:flex-row sm:justify-center sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
+                {/* NOTA: Usamos flex-col-reverse para que el primer elemento (Crear/Actualizar) quede arriba en móvil, cumpliendo con el orden deseado. */}
+                <div className="flex flex-col-reverse space-y-3 space-y-reverse sm:flex-row sm:justify-center sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
                   <Button
-                    className="w-full h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/4 order-1" /* order-1 (arriba) */
-                    onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
-                  >
-                    {editingPlayer ? "Actualizar" : "Crear"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/4 order-2" /* order-2 (abajo) */
+                    variant="outline" // CANCELAR (Se va abajo en móvil)
+                    className="w-full h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/4" 
                     onClick={handleCancelForm}
                   >
                     Cancelar
+                  </Button>
+                  <Button
+                    className="w-full h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/4" // CREAR / ACTUALIZAR (Se va arriba en móvil)
+                    onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
+                  >
+                    {editingPlayer ? "Actualizar" : "Crear"}
                   </Button>
                 </div>
                 {/* FIN MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
@@ -895,7 +917,7 @@ export function ClubManagement() {
                     >
                       <div className="flex items-center space-x-4">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.firstName} />
+                          <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.firstName} unoptimized />
                           <AvatarFallback className="bg-[#305176] text-white">
                             {(player.firstName?.[0] || "") + (player.lastName?.[0] || "")}
                           </AvatarFallback>
@@ -998,7 +1020,7 @@ export function ClubManagement() {
         </div>
       </div>
       
-      {/* Player Detail Dialog (No modificado) */}
+      {/* Player Detail Dialog (MODIFICADO: Se inserta el botón "Marcar Jugador como Lesionado") */}
       <Dialog open={!!showPlayerDetail} onOpenChange={() => setShowPlayerDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1010,7 +1032,7 @@ export function ClubManagement() {
           <div className="grid gap-4 py-4">
             <div className="flex items-center space-x-4 mb-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={showPlayerDetail?.photo || "/placeholder.svg"} alt={showPlayerDetail?.firstName} />
+                <AvatarImage src={showPlayerDetail?.photo || "/placeholder.svg"} alt={showPlayerDetail?.firstName} unoptimized />
                 <AvatarFallback className="bg-[#305176] text-white text-2xl">
                   {(showPlayerDetail?.firstName?.[0] || "") + (showPlayerDetail?.lastName?.[0] || "")}
                 </AvatarFallback>
@@ -1080,6 +1102,26 @@ export function ClubManagement() {
               </div>
             </div>
           </div>
+          
+          {/* --- INICIO AÑADIDO: Botón Marcar Lesionado (SOLO Kinesiologo en Responsive) --- */}
+          {isKinesiologo && showPlayerDetail?.status === "DISPONIBLE" && (
+              <div className="flex justify-center pt-4 border-t border-[#305176]">
+                  <Button
+                      type="button"
+                      className="w-full bg-orange-500 text-white hover:bg-orange-600 h-11 text-lg font-bold"
+                      onClick={() => {
+                          handleOpenInjuryModal(showPlayerDetail!); 
+                          setShowPlayerDetail(null); // Cierra el modal de detalle
+                      }}
+                  >
+                      <HeartPulse className="h-5 w-5 mr-2" />
+                      Marcar Jugador como Lesionado
+                  </Button>
+              </div>
+          )}
+          {/* --- FIN AÑADIDO: Botón Marcar Lesionado --- */}
+
+
           {/* --- MODIFICACIÓN DE BOTONES EDITAR --- */}
           {!isKinesiologo && (
             <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
@@ -1113,12 +1155,10 @@ export function ClubManagement() {
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
-            {/* INICIO MODIFICACIÓN REQUERIDA (de la respuesta anterior) */}
             <DialogTitle className="text-white text-2xl font-bold flex items-center justify-center">
                 <FileText className="h-6 w-6 mr-2 text-orange-500" />
                 INFORME MEDICO
             </DialogTitle>
-            {/* FIN MODIFICACIÓN REQUERIDA */}
             <DialogDescription className="text-gray-400">
               Detalles de la lesión de {showMedicalReport?.firstName} {showMedicalReport?.lastName}.
             </DialogDescription>
@@ -1183,7 +1223,7 @@ export function ClubManagement() {
         </DialogContent>
       </Dialog>
       
-      {/* --- AÑADIDO: Nuevo Modal para Reportar Lesión (No modificado) --- */}
+      {/* --- MODIFICADO: Nuevo Modal para Reportar Lesión con Footer Responsive --- */}
       <Dialog open={!!injuryReportModalOpen} onOpenChange={() => setInjuryReportModalOpen(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1232,16 +1272,17 @@ export function ClubManagement() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button
+          {/* CAMBIO CLAVE: Se usa flex-col-reverse para que Guardar quede arriba de Cancelar en móvil */}
+          <DialogFooter className="flex flex-col-reverse space-y-3 space-y-reverse sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-4">
+            <Button // Botón CANCELAR (Order 2: abajo en móvil)
               variant="outline"
-              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+              className="w-full sm:w-auto border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
               onClick={() => setInjuryReportModalOpen(null)}
             >
               Cancelar
             </Button>
-            <Button
-              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
+            <Button // Botón GUARDAR (Order 1: arriba en móvil)
+              className="w-full sm:w-auto bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg font-bold"
               onClick={handleSaveInjury}
             >
               Guardar Reporte
@@ -1297,24 +1338,4 @@ export function ClubManagement() {
       </AlertDialog>
     </div>
   )
-}
-
-// Opcional: Define un tipo para Player
-type Player = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  nickname: string;
-  birthDate: string;
-  phoneNumber: string;
-  position: string;
-  foot: string;
-  status: string; // "DISPONIBLE", "LESIONADO", "NO DISPONIBLE"
-  category: string;
-  photo: string;
-  injury?: {
-    type: string;
-    date: string;
-    recovery: string;
-  } | null;
 }

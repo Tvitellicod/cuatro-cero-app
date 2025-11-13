@@ -364,7 +364,9 @@ export function NutritionSection() {
 
       
       <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
-        <DialogContent className="sm:max-w-6xl h-[90vh] bg-[#213041] border-[#305176] text-white flex flex-col">
+        {/* --- MODIFICACIÓN CLAVE PARA RESPONSIVE --- */}
+        {/* max-h-[95vh] asegura que el modal quepa en la pantalla del móvil, y sm:max-w-4xl reduce el ancho. */}
+        <DialogContent className="sm:max-w-4xl max-h-[95vh] lg:h-[90vh] overflow-y-auto bg-[#213041] border-[#305176] text-white flex flex-col">
           <DialogHeader className="pr-16"> 
             <DialogTitle className="text-white text-2xl font-bold">
               Gestión Nutricional: {selectedPlayer?.name}
@@ -382,7 +384,8 @@ export function NutritionSection() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
 
             {/* Columna Izquierda: Historial */}
-            <div className="md:col-span-1 flex flex-col h-full bg-[#1d2834] rounded-lg p-4 overflow-hidden min-h-0"> 
+            {/* Se elimina h-full y overflow-hidden para móvil, se añaden en lg: */}
+            <div className="md:col-span-1 flex flex-col lg:h-full bg-[#1d2834] rounded-lg p-4 lg:overflow-hidden min-h-0"> 
               <h3 className="text-lg font-semibold text-white mb-4">Historial de Informes</h3>
               <Button
                 size="sm"
@@ -449,7 +452,8 @@ export function NutritionSection() {
             </div>
 
             {/* Columna Derecha: Formulario (CON ARREGLO DE SCROLL) */}
-            <div className="md:col-span-2 h-full flex flex-col overflow-hidden min-h-0"> 
+            {/* Se elimina h-full y overflow-hidden para móvil, se añaden en lg: */}
+            <div className="md:col-span-2 lg:h-full flex flex-col lg:overflow-hidden min-h-0"> 
               
               {!isCreatingReport && !activeReportId ? (
                 // 1. VISTA PLACEHOLDER (NUEVA)

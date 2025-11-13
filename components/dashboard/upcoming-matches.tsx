@@ -32,6 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as DatePickerCalendar } from "@/components/ui/calendar" // Renomrado para evitar conflicto
 import { format } from "date-fns"
 import { es } from 'date-fns/locale/es';
+import { Label } from "@/components/ui/label"
 // ------------------------------------
 
 export function UpcomingMatches() {
@@ -138,13 +139,6 @@ export function UpcomingMatches() {
     { name: "Copa Libertadores", matches: 6 },
     { name: "Supercopa", matches: 2 },
   ]
-  
-  // Opciones de Hora y Minuto para los Selects (ya no se usan)
-  // const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-  // const minuteOptions = ["00", "15", "30", "45"];
-  
-  // const getCurrentHour = () => newMatch.time ? newMatch.time.split(':')[0] : "10";
-  // const getCurrentMinute = () => newMatch.time ? newMatch.time.split(':')[1] : "00";
   
   // Handlers para actualizar HH y MM en el estado newMatch.time (ya no se usa)
   // const setTimePart = (part: 'hour' | 'minute', value: string) => {
@@ -274,7 +268,7 @@ export function UpcomingMatches() {
         </div>
       </div>
 
-      {/* Player Selection Modal - CORREGIDO PARA ELIMINAR LA CRUZ REDUNDANTE */}
+      {/* Player Selection Modal - MODIFICACIÓN APLICADA AQUÍ */}
       <Dialog open={showPlayerSelection} onOpenChange={setShowPlayerSelection}>
         <DialogContent 
             className="sm:max-w-4xl bg-[#213041] border-[#305176] text-white p-6" 
@@ -293,43 +287,34 @@ export function UpcomingMatches() {
                 </Button>
             </div>
             
-            {/* Contenedor principal de selección: Categoría (1/4) y Jugadores (3/4) */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4"> 
+            {/* INICIO DE LA NUEVA ESTRUCTURA DE FILTRO EN LÍNEA */}
+            <div className="space-y-4"> 
             
-              {/* COLUMNA 1: Panel de Categorías */}
-              <div className="md:col-span-1 space-y-3 p-3 bg-[#1d2834] rounded-lg h-full"> 
-                  <h4 className="text-white font-semibold mb-3 border-b border-[#305176] pb-2">
-                      Filtrar por Categoría
-                  </h4>
-                  
-                  {/* Listado de Categorías */}
-                  {categories.map((cat) => (
-                      <div
-                          key={cat.id}
-                          className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                              selectedModalCategory === cat.id
-                                  ? "bg-[#aff606] text-black font-bold"
-                                  : "text-white hover:bg-[#305176]"
-                          }`}
-                          onClick={() => setSelectedModalCategory(cat.id)}
-                      >
-                          {cat.name}
-                      </div>
-                  ))}
-                  <div
-                      className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                          selectedModalCategory === "all"
-                              ? "bg-[#33d9f6] text-black font-bold"
-                              : "text-white hover:bg-[#305176]"
-                      }`}
-                      onClick={() => setSelectedModalCategory("all")}
+              {/* FILTRO EN LÍNEA */}
+              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
+                  <Label className="text-white font-semibold flex-shrink-0 whitespace-nowrap mr-4">
+                      CATEGORIA :
+                  </Label>
+                  <Select
+                      value={selectedModalCategory}
+                      onValueChange={setSelectedModalCategory}
                   >
-                      Mostrar Todas
-                  </div>
+                      <SelectTrigger className="w-full bg-[#1d2834] border-[#305176] text-white">
+                          <SelectValue placeholder="Seleccionar Categoría" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#213041] border-[#305176]">
+                          <SelectItem value="all" className="text-white">Mostrar Todas</SelectItem>
+                          {categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id} className="text-white">
+                                  {cat.name}
+                              </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
               </div>
 
-              {/* COLUMNA 2: Lista de Jugadores */}
-              <div className="md:col-span-3 space-y-4">
+              {/* LISTA DE JUGADORES */}
+              <div className="space-y-4">
                   <div className="text-sm text-gray-400">
                       Lista de Jugadores ({selectedModalCategory === "all" ? "Todas" : categories.find(c => c.id === selectedModalCategory)?.name || ""})
                   </div>
@@ -377,6 +362,7 @@ export function UpcomingMatches() {
                   </div>
               </div>
             </div>
+            {/* FIN DE LA NUEVA ESTRUCTURA */}
             
             <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
                 <Button
@@ -551,16 +537,19 @@ export function UpcomingMatches() {
 
             </div>
 
-            <div className="flex justify-end space-x-4 pt-4 border-t border-[#305176] mt-4">
+            {/* MODIFICACIÓN AQUÍ: Se usa flex-col-reverse para el orden en mobile */}
+            <div className="flex flex-col-reverse space-y-4 space-y-reverse sm:flex-row sm:justify-end sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176] mt-4">
               <Button
                 variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11" 
+                className="w-full sm:w-auto border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11" 
                 onClick={() => setShowScheduleForm(false)}
               >
                 Cancelar
               </Button>
-              <Button className="bg-[#aff606] text-black hover:bg-[#25d03f] h-11" 
-              onClick={handleSaveMatch}>
+              <Button 
+                className="w-full sm:w-auto bg-[#aff606] text-black hover:bg-[#25d03f] h-11" 
+                onClick={handleSaveMatch}
+              >
                 Agendar Partido
               </Button>
             </div>

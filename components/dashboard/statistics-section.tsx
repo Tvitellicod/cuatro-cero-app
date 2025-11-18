@@ -1,1435 +1,322 @@
+// components/dashboard/statistics-section.tsx
+
 "use client"
 
 import { useState, useMemo } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-// --- MODIFICACIÓN: Iconos añadidos ---
-import { BarChart3, TrendingUp, Users, Target, Eye, Goal, Clock, Trophy, ShieldOff, AlertTriangle, ChevronDown, Calendar, Dumbbell, PieChart } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label" 
-import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
+import { BarChart, Users, Goal, TrendingUp, Filter } from "lucide-react"
+import { useProfile, Player as ContextPlayer } from "@/hooks/use-profile"
 
-// Recharts Components para el gráfico
+// Importar Recharts si están disponibles. Asumo que están instalados:
 import {
-  BarChart,
   Bar,
+  BarChart as RechartsBarChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts"
 
-// --- MODIFICACIÓN: Constantes de color para el gráfico de entrenamiento ---
-const NOTE_TYPE = "Note";
-const NOTE_CATEGORY_NAME = "Nota de Sesión";
-const NOTE_NEUTRAL_COLOR = "#7c7c7c";
 
-const getCategoryColors = (category: string) => {
-  switch (category) {
-      case 'Ataque': return '#ea3498';
-      case 'Defensa': return '#33d9f6';
-      case 'Transiciones': return '#f4c11a';
-      case 'Balón Parado': return '#8a46c5';
-      case 'Resistencia': return '#25d03f';
-      case 'Fuerza': return '#ff6b35';
-      case 'Rehabilitación': return '#4ecdc4';
-      case 'Prevención': return '#45b7d1';
-      case 'Técnico': return '#aff606';
-      case 'Kinesiológico': return '#4ecdc4';
-      case 'Físico': return '#25d03f';
-      case NOTE_CATEGORY_NAME: return NOTE_NEUTRAL_COLOR;
-      default: return '#aff606';
-  }
-};
-// -----------------------------------------------------------------
+// --- ESTADOS INICIALES LIMPIOS ---
 
-// --- DATOS MOCK DE SESIONES DE ENTRENAMIENTO ---
-const trainingSessions = [
-  {
-    id: 1, name: "Entrenamiento Táctico - Ataque", date: "2025-11-08", time: "10:00", duration: 90,
-    exercises: [
-      { id:1, name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico" },
-      { id:2, name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico" },
-      { id:3, name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Táctico" },
-      { id:4, name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico" },
-      { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Táctico" },
-    ],
-    category: "Primera División", categoryId: "primera", createdBy: "DIRECTOR TECNICO", attendance: "0/25",
-  },
-  {
-    id: 2, name: "Preparación Física - Resistencia", date: "2025-11-10", time: "15:00", duration: 75,
-    exercises: [
-      { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 30, type: "Físico" },
-      { id:102, name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico" },
-      { id:103, name: "Trabajo aeróbico", category: "Resistencia", duration: 25, type: "Físico" },
-    ],
-    category: "Primera División", categoryId: "primera", createdBy: "PREPARADOR FISICO", attendance: "0/25",
-  },
+// Datos para el gráfico de Goles y Asistencias
+const initialGoalsData = [
+  // { name: "Jugador 1", Goles: 0, Asistencias: 0 },
 ];
 
-const previousSessions = [
-  {
-    id: 3, name: "Entrenamiento Técnico", date: "2024-01-10", duration: 60,
-    exercises: [
-      { id:1, name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico" },
-      { id:2, name: "Definición", category: "Ataque", duration: 25, type: "Técnico" },
-      { id:3, name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico" },
-    ],
-    category: "Juveniles", categoryId: "juveniles", createdBy: "DIRECTOR TECNICO", attendance: "19/22"
-  },
-  {
-    id: 4, name: "Trabajo Defensivo", date: "2024-01-08", duration: 80,
-    exercises: [
-      { id:1, name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico" },
-      { id:2, name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico" },
-      { id:3, name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico" },
-    ],
-    category: "Primera División", categoryId: "primera", createdBy: "DIRECTOR TECNICO", attendance: "20/22"
-  },
-  {
-    id: 5, name: "Sesión Física Juveniles", date: "2024-01-07", duration: 40,
-    exercises: [ 
-      { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 40, type: "Físico" },
-    ],
-    category: "Juveniles", categoryId: "juveniles", createdBy: "PREPARADOR FISICO", attendance: "15/15"
-  },
-  {
-    id: 6, name: "Fuerza y Potencia", date: "2024-01-06", duration: 65,
-    exercises: [ 
-      { id:102, name: "Fuerza", category: "Fuerza", duration: 40, type: "Físico" },
-      { id:103, name: "Prevención", category: "Prevención", duration: 25, type: "Kinesiológico" },
-    ],
-    category: "Primera División", categoryId: "primera", createdBy: "PREPARADOR FISICO", attendance: "22/22"
-  }
+// Datos para el gráfico de Distribución de Entrenamiento (si lo hubiera, aquí estará vacío)
+const initialTrainingDistribution = [
+  // { name: "Técnico", value: 0 },
 ];
 
-// Combinamos todas las sesiones
-const allMockSessions = [...trainingSessions, ...previousSessions];
-// -------------------------------------------------------------------------
+// Datos para el gráfico de Lesiones
+const initialInjuryData = [
+  // { name: 'Rodilla', Lesiones: 0 },
+];
 
-// --- HELPER FUNCIÓN PARA ELIMINAR LOS DOS PUNTOS DE LA HORA ---
-const formatTimeWithoutColons = (timeString: string | undefined) => {
-    if (!timeString) return 'N/A';
-    return timeString.replace(':', '');
-};
-// -----------------------------------------------------------
-
+// ---------------------------------
 
 export function StatisticsSection() {
-  const isMobile = useIsMobile(); // <-- Uso del hook
+  const { profile, players: allPlayers, categories } = useProfile();
+  const [selectedPlayer, setSelectedPlayer] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [statType, setStatType] = useState("performance");
+
+  const isAnalyst = profile?.role === "ANALISTA" || profile?.role === "DIRECTOR TECNICO";
   
-  // Lógica para obtener la categoría del perfil (ID del equipo)
-  const getProfileCategoryId = () => {
-    if (typeof window !== "undefined") {
-        const profileJson = localStorage.getItem("userProfile");
-        if (profileJson) {
-            try {
-                const profile = JSON.parse(profileJson);
-                // Usamos profile?.category, que se espera que sea el ID de la categoría (ej: "primera")
-                return profile?.category || "all"; 
-            } catch (e) {
-                return "all";
-            }
-        }
-    }
-    return "all";
-  };
-  
-  // --- ESTADO DE FILTRO INICIALIZADO CON LA CATEGORÍA DEL PERFIL ---
-  const [filterCategoryList, setFilterCategoryList] = useState(getProfileCategoryId());
-  // ------------------------------------------------------------------
+  // Mapeo de jugadores para el select (incluye "Todos")
+  const playerOptions = useMemo(() => {
+    return [
+      { id: "all", name: "Todos los jugadores" },
+      ...allPlayers.map(p => ({ id: p.id, name: p.name }))
+    ]
+  }, [allPlayers]);
+
+  const categoryOptions = useMemo(() => {
+    return [
+      { id: "all", name: "Todas las categorías" },
+      ...categories.map(c => ({ id: c.id, name: c.name }))
+    ]
+  }, [categories]);
 
 
-  const [showMatchDetailModal, setShowMatchDetailModal] = useState<any>(null)
-  const [showPlayerDetailModal, setShowPlayerDetailModal] = useState<any>(null)
-  const [showAllMatchesModal, setShowAllMatchesModal] = useState(false);
-  const [showAllPlayersModal, setShowAllPlayersModal] = useState(false); 
-  const [filterResult, setFilterResult] = useState("all");
-  const [filterLocation, setFilterLocation] = useState("all");
-  const [filterTournament, setFilterTournament] = useState("all");
-  
-  const [activeMatchDetailView, setActiveMatchDetailView] = useState<'general' | 'player'>('general');
-
-  // --- MODIFICACIÓN: Filtrar entrenamientos por categoría seleccionada ---
-  const filteredTrainings = useMemo(() => {
-    return allMockSessions.filter(s => filterCategoryList === "all" || s.categoryId === filterCategoryList);
-  }, [filterCategoryList]);
-  // ------------------------------------------------------------------
-
-  // --- DATOS MOCK DE CATEGORÍAS ---
-  const categories = [
-    { id: "primera", name: "Primera División" },
-    { id: "tercera", name: "Tercera División" },
-    { id: "juveniles", name: "Juveniles" },
-  ]
-  
-  // --- DATOS MOCK DE PARTIDOS (ASISTENCIAS Y POSESIÓN ELIMINADAS) ---
-  const matches = [
-    {
-      id: 1,
-      opponent: "Boca Juniors",
-      date: "12/01/2024",
-      time: "18:30",
-      location: "Visitante",
-      tournament: "Copa Argentina",
-      result: "2-1",
-      status: "Victoria",
-      stats: {
-        goalsFor: 2,
-        goalsAgainst: 1,
-        shotsOnTarget: 5,
-        totalShots: 8,
-        foulsCommitted: 10,
-        foulsReceived: 8,
-        yellowCards: 3,
-        redCards: 0,
-        recuperoPelota: 50,
-        perdioPelota: 30,
-      },
-      duration: 90, 
-      playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 2, yellowCards: 1, redCards: 0, minutes: 90, shots: 5, foulsReceived: 3, recupero: 5, perdida: 3, tiroAlArco: 3, faltaCometida: 2 },
-        { id: 2, name: "Miguel A. González", goals: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 2, foulsReceived: 5, recupero: 8, perdida: 6, tiroAlArco: 1, faltaCometida: 4 },
-        { id: 3, name: "Roberto Silva", goals: 0, yellowCards: 1, redCards: 0, minutes: 75, shots: 0, foulsReceived: 2, recupero: 10, perdida: 3, tiroAlArco: 0, faltaCometida: 5 },
-      ],
-    },
-    {
-      id: 2,
-      opponent: "Racing Club",
-      date: "08/01/2024",
-      time: "20:00",
-      location: "Local",
-      tournament: "Liga Profesional",
-      result: "1-1",
-      status: "Empate",
-      stats: {
-        goalsFor: 1,
-        goalsAgainst: 1,
-        shotsOnTarget: 3,
-        totalShots: 5,
-        foulsCommitted: 15,
-        foulsReceived: 12,
-        yellowCards: 2,
-        redCards: 0,
-        recuperoPelota: 45,
-        perdioPelota: 40,
-      },
-      duration: 90, 
-      playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 3, foulsReceived: 4, recupero: 4, perdida: 5, tiroAlArco: 1, faltaCometida: 2 },
-        { id: 2, name: "Miguel A. González", goals: 0, yellowCards: 0, redCards: 0, minutes: 90, shots: 1, foulsReceived: 2, recupero: 6, perdida: 7, tiroAlArco: 0, faltaCometida: 3 },
-        { id: 3, name: "Roberto Silva", goals: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 0, foulsReceived: 1, recupero: 12, perdida: 5, tiroAlArco: 0, faltaCometida: 4 },
-      ],
-    },
-    {
-      id: 3,
-      opponent: "Independiente",
-      date: "05/01/2024",
-      time: "16:00",
-      location: "Local",
-      tournament: "Liga Profesional",
-      result: "3-0",
-      status: "Victoria",
-      stats: {
-        goalsFor: 3,
-        goalsAgainst: 0,
-        shotsOnTarget: 8,
-        totalShots: 12,
-        foulsCommitted: 8,
-        foulsReceived: 5,
-        yellowCards: 1,
-        redCards: 0,
-        recuperoPelota: 60,
-        perdioPelota: 25,
-      },
-      duration: 90, 
-      playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 4, foulsReceived: 1, recupero: 6, perdida: 2, tiroAlArco: 2, faltaCometida: 1 },
-        { id: 2, name: "Miguel A. González", goals: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 3, foulsReceived: 2, recupero: 7, perdida: 4, tiroAlArco: 1, faltaCometida: 2 },
-        { id: 3, name: "Roberto Silva", goals: 1, yellowCards: 0, redCards: 0, minutes: 90, shots: 1, foulsReceived: 1, recupero: 15, perdida: 4, tiroAlArco: 1, faltaCometida: 2 },
-      ],
-    },
-    {
-      id: 4,
-      opponent: "River Plate",
-      date: "02/01/2024",
-      time: "19:00",
-      location: "Visitante",
-      tournament: "Liga Profesional",
-      result: "0-2",
-      status: "Derrota",
-      stats: {
-        goalsFor: 0,
-        goalsAgainst: 2,
-        shotsOnTarget: 2,
-        totalShots: 6,
-        foulsCommitted: 12,
-        foulsReceived: 18,
-        yellowCards: 4,
-        redCards: 1,
-        recuperoPelota: 35,
-        perdioPelota: 50,
-      },
-      duration: 90, 
-      playerStats: [
-        { id: 1, name: "Juan C. Pérez", goals: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 2, foulsReceived: 8, recupero: 3, perdida: 6, tiroAlArco: 0, faltaCometida: 1 },
-        { id: 2, name: "Miguel A. González", goals: 0, yellowCards: 1, redCards: 0, minutes: 90, shots: 1, foulsReceived: 5, recupero: 5, perdida: 8, tiroAlArco: 0, faltaCometida: 3 },
-        { id: 3, name: "Roberto Silva", goals: 0, yellowCards: 1, redCards: 1, minutes: 60, shots: 0, foulsReceived: 3, recupero: 8, perdida: 6, tiroAlArco: 0, faltaCometida: 3 },
-      ],
-    },
-  ]
-  
-  // --- DATOS MOCK DE JUGADORES (ASISTENCIAS ELIMINADAS) ---
-  const allPlayersList = [
-    {
-      id: 1,
-      name: "Juan Carlos Pérez",
-      position: "Pivot", 
-      photo: "/placeholder-user.jpg",
-      nickname: "Pipa", 
-      foot: "Derecho",
-      category: "primera", 
-      generalStats: { matches: 18, goals: 12, yellowCards: 2, redCards: 0, minutesPlayed: 1500, recuperoPelota: 80, perdioPelota: 55, remate: 65, remateAlArco: 30, faltaCometida: 15, faltaRecibida: 25 },
-      matchHistory: [ 
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 2, recupero: 5, perdida: 3, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 1, tRoja: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", time: "20:00", result: "1-1", status: "Empate", minutes: 90, goles: 1, recupero: 4, perdida: 5, remate: 3, tiroAlArco: 1, faltaRecibida: 4, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", time: "16:00", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 6, perdida: 2, remate: 4, tiroAlArco: 2, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", time: "19:00", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 3, perdida: 6, remate: 2, tiroAlArco: 0, faltaRecibida: 8, faltaCometida: 1, tAmarilla: 1, tRoja: 0 },
-      ],
-    },
-    {
-      id: 2,
-      name: "Miguel Ángel González",
-      position: "Ala", 
-      photo: "/placeholder-user.jpg",
-      nickname: "Chino", 
-      foot: "Ambidiestro",
-      category: "primera", 
-      generalStats: { matches: 20, goals: 3, yellowCards: 4, redCards: 1, minutesPlayed: 1650, recuperoPelota: 120, perdioPelota: 70, remate: 40, remateAlArco: 15, faltaCometida: 25, faltaRecibida: 35 },
-      matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 8, perdida: 6, remate: 2, tiroAlArco: 1, faltaRecibida: 5, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", time: "20:00", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 6, perdida: 7, remate: 1, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 3, tAmarilla: 0, tRoja: 0 },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", time: "16:00", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 7, perdida: 4, remate: 3, tiroAlArco: 1, faltaRecibida: 2, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", time: "19:00", result: "0-2", status: "Derrota", minutes: 90, goles: 0, recupero: 5, perdida: 8, remate: 1, tiroAlArco: 0, faltaRecibida: 5, faltaCometida: 3, tAmarilla: 1, tRoja: 0 },
-      ],
-    },
-    {
-      id: 3,
-      name: "Roberto Silva",
-      position: "Ultimo", 
-      photo: "/placeholder-user.jpg",
-      nickname: "Robi",
-      foot: "Izquierdo",
-      category: "juveniles", 
-      generalStats: { matches: 15, goals: 1, yellowCards: 3, redCards: 0, minutesPlayed: 1200, recuperoPelota: 150, perdioPelota: 40, remate: 10, remateAlArco: 5, faltaCometida: 30, faltaRecibida: 10 },
-      matchHistory: [
-        { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 75, goles: 0, recupero: 10, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 2, faltaCometida: 5, tAmarilla: 1, tRoja: 0 },
-        { matchId: 2, opponent: "Racing Club", date: "08/01/2024", time: "20:00", result: "1-1", status: "Empate", minutes: 90, goles: 0, recupero: 12, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 4, tAmarilla: 1, tRoja: 0 },
-        { matchId: 3, opponent: "Independiente", date: "05/01/2024", time: "16:00", result: "3-0", status: "Victoria", minutes: 90, goles: 1, recupero: 15, perdida: 4, remate: 1, tiroAlArco: 1, faltaRecibida: 1, faltaCometida: 2, tAmarilla: 0, tRoja: 0 },
-        { matchId: 4, opponent: "River Plate", date: "02/01/2024", time: "19:00", result: "0-2", status: "Derrota", minutes: 60, goles: 0, recupero: 8, perdida: 6, remate: 0, tiroAlArco: 0, faltaRecibida: 3, faltaCometida: 3, tAmarilla: 1, tRoja: 1 },
-      ],
-    },
-    { id: 4, name: "Tomás López", position: "Arquero", photo: "/placeholder-user.jpg", nickname: "Tomi", foot: "Derecho", category: "primera", generalStats: { matches: 15, goals: 0, yellowCards: 1, redCards: 0, minutesPlayed: 1200, recuperoPelota: 50, perdioPelota: 20, remate: 5, remateAlArco: 2, faltaCometida: 10, faltaRecibida: 5 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 1, perdida: 5, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
-    { id: 5, name: "Alejandro Díaz", position: "Defensor", photo: "/placeholder-user.jpg", nickname: "Ale", foot: "Izquierdo", category: "tercera", generalStats: { matches: 22, goals: 1, yellowCards: 4, redCards: 0, minutesPlayed: 1900, recuperoPelota: 180, perdioPelota: 60, remate: 15, remateAlArco: 8, faltaCometida: 20, faltaRecibida: 15 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 15, perdida: 3, remate: 0, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
-    { id: 6, name: "Santiago Giménez", position: "Ala", photo: "/placeholder-user.jpg", nickname: "Santi", foot: "Derecho", category: "tercera", generalStats: { matches: 10, goals: 5, yellowCards: 0, redCards: 0, minutesPlayed: 900, recuperoPelota: 40, perdioPelota: 30, remate: 25, remateAlArco: 12, faltaCometida: 8, faltaRecibida: 15 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 1, recupero: 5, perdida: 5, remate: 5, tiroAlArco: 3, faltaRecibida: 3, faltaCometida: 2, tAmarilla: 0, tRoja: 0 }, ] },
-    { id: 7, name: "Martín Palacios", position: "Ultimo", photo: "/placeholder-user.jpg", nickname: "Mar", foot: "Ambidiestro", category: "juveniles", generalStats: { matches: 12, goals: 0, yellowCards: 2, redCards: 0, minutesPlayed: 1000, recuperoPelota: 90, perdioPelota: 35, remate: 5, remateAlArco: 1, faltaCometida: 15, faltaRecibida: 10 }, matchHistory: [ { matchId: 1, opponent: "Boca Juniors", date: "12/01/2024", time: "18:30", result: "2-1", status: "Victoria", minutes: 90, goles: 0, recupero: 7, perdida: 2, remate: 1, tiroAlArco: 0, faltaRecibida: 1, faltaCometida: 1, tAmarilla: 0, tRoja: 0 }, ] },
-  ]
-  const players = allPlayersList.slice(0, 3);
-  // --- FIN DATOS MOCK ---
-
-
-  const generalStats = [
-    {
-      title: "Total Partidos",
-      value: "24",
-      icon: Trophy,
-      color: "text-[#aff606]",
-      change: "+3 este mes",
-    },
-    {
-      title: "Victorias",
-      value: "16",
-      icon: TrendingUp,
-      color: "text-[#25d03f]",
-      change: "66.7% efectividad",
-    },
-    {
-      title: "Goles Anotados",
-      value: "45",
-      icon: Target,
-      color: "text-[#f4c11a]",
-      change: "1.9 promedio/partido",
-    },
-    {
-      title: "Jugadores Activos",
-      value: "28",
-      icon: Users,
-      color: "text-[#33d9f6]",
-      change: "3 categorías",
-    },
-  ]
-  
-  // Datos formateados para el gráfico de barras (últimos 4 partidos)
-  const chartData = useMemo(() => {
-    return matches.slice(0, 4).sort((a, b) => {
-        const parseDate = (dateStr: string) => {
-            const [day, month, year] = dateStr.split('/').map(Number);
-            return new Date(year, month - 1, day).getTime();
-        };
-        return parseDate(a.date) - parseDate(b.date);
-    }).map(match => ({
-        name: `vs ${match.opponent.split(' ')[0]}`,
-        GolesAFavor: match.stats.goalsFor,
-        GolesEnContra: match.stats.goalsAgainst,
-        date: match.date,
-    }));
-  }, [matches]);
-
-
-  const getResultColor = (status: string) => {
-    switch (status) {
-      case "Victoria":
-        return "bg-[#25d03f] text-black"
-      case "Empate":
-        return "bg-[#f4c11a] text-black"
-      case "Derrota":
-        return "bg-red-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
-    }
-  }
-
-  const filteredMatches = matches.filter((match) => {
-    const matchesResult = filterResult === "all" || match.status === filterResult
-    const matchesLocation = filterLocation === "all" || match.location === filterLocation
-    const matchesTournament = filterTournament === "all" || match.tournament === filterTournament
-    return matchesResult && matchesLocation && matchesTournament
-  }).sort((a, b) => {
-    // Lógica de ordenamiento por fecha: más reciente a más lejano
-    const parseDate = (dateStr: string) => {
-        const [day, month, year] = dateStr.split('/').map(Number);
-        return new Date(year, month - 1, day).getTime();
-    };
-    return parseDate(b.date) - parseDate(a.date);
-  });
-
-  const uniqueTournaments = [...new Set(matches.map(m => m.tournament))];
-
-  const filteredPlayersList = allPlayersList.filter(p => filterCategoryList === "all" || p.category === filterCategoryList);
-
-  const getCitedPlayersFromMatch = (match: any) => {
-    return match.playerStats.map((pStat: any) => {
-        const fullPlayer = allPlayersList.find(p => p.id === pStat.id);
-        const categoryName = categories.find(c => c.id === (fullPlayer?.category || ''))?.name || 'N/A';
-        return {
-            ...pStat,
-            name: fullPlayer?.name || pStat.name,
-            category: categoryName,
-        };
-    });
-  };
-
-  // Componente de Tooltip personalizado para el gráfico
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const match = chartData.find(d => d.name === label);
-      return (
-        <div className="bg-[#213041] border border-[#305176] p-3 rounded-lg shadow-xl text-sm text-white">
-          <p className="font-bold mb-1">Partido: {match?.date}</p>
-          {payload.map((p: any, index: number) => (
-            <p key={index} style={{ color: p.color }}>
-              {p.name}: <span className="font-bold">{p.value}</span>
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-  
-  // Función para obtener el color de la tarjeta de jugador según el estado de tarjetas
-  const getCardColor = (player: any) => {
-    if (player.generalStats.redCards > 0) return "bg-red-500 text-white";
-    if (player.generalStats.yellowCards > 0) return "bg-yellow-500 text-black";
-    return "bg-[#25d03f] text-black";
-  }
-
-  // --- Componente auxiliar de Estadísticas de Entrenamiento (copiado de training-planner-section.tsx) ---
-  function TrainingStatistics({ sessions, categoryName }: { sessions: any[], categoryName: string }) {
-  
-    const [showAllStatsModal, setShowAllStatsModal] = useState(false);
-    
-    // 1. Calcular KPIs
-    let totalAttended = 0;
-    let totalPossible = 0;
-    
-    sessions.forEach(s => {
-      // Solo contamos las sesiones pasadas (que tienen asistencia real)
-      if (new Date(s.date) < new Date()) {
-        const [attended, possible] = s.attendance.split('/').map(Number);
-        if (!isNaN(attended) && !isNaN(possible)) {
-          totalAttended += attended;
-          totalPossible += possible;
-        }
+  // Función para generar datos simulados limpios, basada en el filtro
+  const generateCleanData = useMemo(() => {
+      // Si no hay jugadores, devolvemos datos vacíos
+      if (allPlayers.length === 0) {
+          return {
+              goals: initialGoalsData,
+              injuries: initialInjuryData,
+              training: initialTrainingDistribution,
+          }
       }
-    });
 
-    const attendancePercentage = totalPossible > 0 ? Math.round((totalAttended / totalPossible) * 100) : 0;
-    const totalSessions = sessions.length;
-    const totalDuration = sessions.reduce((acc, s) => acc + s.duration, 0);
+      // 1. Filtrar jugadores por categoría (si se selecciona)
+      const filteredPlayers = allPlayers.filter(player => 
+          selectedCategory === "all" || player.categoryId === selectedCategory
+      );
 
-    // 2. Calcular Foco de Entrenamiento (Gráfico)
-    const focusMap = new Map<string, number>();
+      // 2. Si se selecciona un jugador específico
+      const playersToAnalyze = selectedPlayer !== "all" 
+          ? filteredPlayers.filter(p => p.id === selectedPlayer) 
+          : filteredPlayers;
+      
+      // 3. Generar datos limpios/vacíos para el gráfico
+      
+      // Goles/Asistencias (Performance) - Solo listamos los jugadores
+      const goalsData = playersToAnalyze.map(p => ({
+          name: p.name,
+          Goles: 0,
+          Asistencias: 0,
+      }));
 
-    sessions.forEach(s => {
-      s.exercises.forEach((ex: any) => {
-        // Ignoramos las notas
-        if (ex.type !== NOTE_TYPE && ex.category !== NOTE_CATEGORY_NAME) {
-          const categoryKey = ex.category || "Sin Categoría";
-          const currentDuration = focusMap.get(categoryKey) || 0;
-          focusMap.set(categoryKey, currentDuration + (ex.duration || 0));
-        }
-      });
-    });
-    
-    // Convertir el Map a un array para el gráfico y ordenarlo
-    const sortedFocusData = Array.from(focusMap.entries()).map(([name, minutos]) => ({
-      name,
-      minutos,
-      fill: getCategoryColors(name) // Asignar color
-    })).sort((a, b) => b.minutos - a.minutos); // Ordenar de mayor a menor
+      // Lesiones (Health) - Contamos las lesiones
+      const injuryMap = playersToAnalyze.reduce((acc, player) => {
+          if (player.injuryStatus === 'INJURED') {
+              // Si está lesionado, asumimos una lesión genérica para el mock
+              const injuryType = player.injuryDetails || "Lesión Genérica";
+              acc[injuryType] = (acc[injuryType] || 0) + 1;
+          }
+          return acc;
+      }, {} as Record<string, number>);
 
-    // Lógica para truncar el gráfico y mostrar el botón "Ver Todas"
-    const isTruncated = sortedFocusData.length > 10;
-    const chartDisplayData = isTruncated ? sortedFocusData.slice(0, 10) : sortedFocusData;
-    
-    // Calcular el total de minutos SÓLO de ejercicios (excluyendo notas)
-    const totalGraphMinutes = sortedFocusData.reduce((sum, data) => sum + data.minutos, 0);
+      const injuryData = Object.entries(injuryMap).map(([name, Lesiones]) => ({
+          name,
+          Lesiones,
+      }));
 
 
+      // Entrenamiento (Tactical/Physical) - Siempre vacío
+      const trainingData = initialTrainingDistribution;
+
+
+      return {
+          goals: goalsData,
+          injuries: injuryData,
+          training: trainingData,
+      }
+
+  }, [allPlayers, selectedPlayer, selectedCategory]);
+
+  const { goals, injuries, training } = generateCleanData;
+
+
+  if (!isAnalyst) {
     return (
-      <>
-        <Card className="bg-[#213041] border-[#305176]">
-          <CardHeader>
-            {/* --- MODIFICACIÓN: Encabezado con botón condicional --- */}
-            <div className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-white flex items-center">
-                  <Dumbbell className="h-5 w-5 mr-2" />
-                  Estadísticas de Entrenamiento
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Rendimiento general de: <span className="text-[#aff606] font-medium">{categoryName}</span>
-                </CardDescription>
-              </div>
-              {isTruncated && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                  onClick={() => setShowAllStatsModal(true)}
-                >
-                  Ver todas
-                </Button>
-              )}
-            </div>
-            {/* --- FIN MODIFICACIÓN --- */}
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="bg-[#1d2834] p-4 rounded-lg">
-                <p className="text-sm text-gray-400 flex items-center justify-center"><Users className="h-4 w-4 mr-1"/> Asistencia General</p>
-                <p className={`text-3xl font-bold ${attendancePercentage > 80 ? 'text-[#25d03f]' : 'text-[#f4c11a]'}`}>
-                  {attendancePercentage > 0 ? `${attendancePercentage}%` : "N/A"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {totalPossible > 0 ? `${totalAttended} de ${totalPossible} (sesiones pasadas)` : "Sin datos de asistencia"}
-                </p>
-              </div>
-              <div className="bg-[#1d2834] p-4 rounded-lg">
-                <p className="text-sm text-gray-400 flex items-center justify-center"><Dumbbell className="h-4 w-4 mr-1"/> Sesiones Totales</p>
-                <p className="text-3xl font-bold text-white">{totalSessions}</p>
-                <p className="text-xs text-gray-500">Programadas y Recientes</p>
-              </div>
-              <div className="bg-[#1d2834] p-4 rounded-lg">
-                <p className="text-sm text-gray-400 flex items-center justify-center"><Clock className="h-4 w-4 mr-1"/> Tiempo Total Entrenado</p>
-                <p className="text-3xl font-bold text-white">{totalDuration} <span className="text-xl">min</span></p>
-                <p className="text-xs text-gray-500">En todas las sesiones</p>
-              </div>
-            </div>
-
-            {/* Gráfico de Foco */}
-            <Card className="bg-[#1d2834] border-[#305176] pt-4">
-              <CardHeader className="pt-0">
-                <CardTitle className="text-white text-lg flex items-center">
-                    <PieChart className="h-5 w-5 mr-2" />
-                    Foco de Entrenamiento (Top {chartDisplayData.length} por Minutos)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {chartDisplayData.length > 0 ? (
-                    <div style={{ width: '100%', height: 250 }}>
-                      <ResponsiveContainer>
-                        <BarChart data={chartDisplayData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                          <XAxis 
-                            dataKey="name" 
-                            stroke="#888888" 
-                            fontSize={12} 
-                            tickLine={false} 
-                            axisLine={false} 
-                          />
-                          <YAxis 
-                            stroke="#888888" 
-                            fontSize={12} 
-                            tickLine={false} 
-                            axisLine={false} 
-                            label={{ value: 'min', angle: -90, position: 'insideLeft', fill: '#888888' }}
-                          />
-                          <Tooltip
-                            cursor={{ fill: '#305176' }}
-                            contentStyle={{ backgroundColor: '#213041', border: '1px solid #305176', borderRadius: '8px' }}
-                            labelStyle={{ color: '#fff' }}
-                            itemStyle={{ fontWeight: 'bold' }}
-                            formatter={(value: number, name: string) => [`${value} min`, name]}
-                          />
-                          <Bar dataKey="minutos" radius={[4, 4, 0, 0]} fill="#aff606" /> {/* Color fijo para el gráfico */}
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-10">No hay datos de ejercicios para mostrar en esta categoría.</p>
-                )}
-              </CardContent>
-            </Card>
-          </CardContent>
-        </Card>
-
-        {/* --- MODIFICACIÓN: Modal para "Ver Todas" las estadísticas de entrenamiento --- */}
-        <Dialog open={showAllStatsModal} onOpenChange={setShowAllStatsModal}>
-          <DialogContent className="sm:max-w-lg bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-white text-2xl font-bold">Distribución Total de Entrenamiento</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Todas las categorías de ejercicios para <span className="text-[#aff606] font-medium">{categoryName}</span>, ordenadas por tiempo.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <ScrollArea className="h-[400px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b-[#305176]">
-                      <TableHead className="text-white">Categoría</TableHead>
-                      <TableHead className="text-white text-right">Minutos Totales</TableHead>
-                      <TableHead className="text-white text-right">Porcentaje</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedFocusData.map((data) => {
-                      const percentage = totalGraphMinutes > 0 ? ((data.minutos / totalGraphMinutes) * 100).toFixed(1) : 0;
-                      return (
-                        <TableRow key={data.name} className="border-b-[#305176]">
-                          <TableCell className="font-medium">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.fill }} />
-                              <span className="text-white">{data.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-white font-bold text-right">{data.minutos} min</TableCell>
-                          <TableCell className="text-gray-400 text-right">{percentage}%</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-              <div className="mt-4 pt-4 border-t border-[#305176] flex justify-between">
-                <span className="text-gray-400">Tiempo Total (Solo Ejercicios):</span>
-                <span className="text-white font-bold">{totalGraphMinutes} minutos</span>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-        {/* --- FIN DE LA MODIFICACIÓN --- */}
-
-      </>
-    )
+      <Card className="bg-[#213041] border-[#305176] text-white p-6 text-center">
+        <h2 className="text-2xl font-bold mb-2">Acceso Restringido</h2>
+        <p className="text-gray-400">Solo los perfiles con rol de **ANALISTA** o **DIRECTOR TECNICO** tienen acceso a este módulo.</p>
+      </Card>
+    );
   }
-  // --- FIN Componente auxiliar ---
 
+
+  const renderChart = () => {
+    switch (statType) {
+      case 'performance':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsBarChart data={goals}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#305176" />
+              <XAxis dataKey="name" stroke="#fff" angle={-45} textAnchor="end" height={80} />
+              <YAxis stroke="#fff" />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#213041', border: '1px solid #305176', color: '#fff' }}
+                formatter={(value: number, name: string) => [`${value}`, name]}
+              />
+              <Legend wrapperStyle={{ color: '#fff', paddingTop: '10px' }} />
+              <Bar dataKey="Goles" fill="#aff606" name="Goles" />
+              <Bar dataKey="Asistencias" fill="#33d9f6" name="Asistencias" />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        );
+      case 'health':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsBarChart data={injuries}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#305176" />
+              <XAxis dataKey="name" stroke="#fff" angle={-45} textAnchor="end" height={80} />
+              <YAxis stroke="#fff" />
+              <Tooltip 
+                 contentStyle={{ backgroundColor: '#213041', border: '1px solid #305176', color: '#fff' }}
+                 formatter={(value: number, name: string) => [`${value}`, name]}
+              />
+              <Legend wrapperStyle={{ color: '#fff', paddingTop: '10px' }} />
+              <Bar dataKey="Lesiones" fill="#ff6b35" name="Lesiones" />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        );
+      case 'training':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <div className="flex items-center justify-center h-full text-gray-500">
+                Aún no hay datos de distribución de entrenamiento.
+            </div>
+          </ResponsiveContainer>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Estadísticas</h2>
-        <p className="text-gray-400">Análisis completo del rendimiento del equipo</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-2 flex items-center">
+            <TrendingUp className="h-6 w-6 mr-2 text-[#33d9f6]" />
+            Estadísticas y Análisis
+          </h2>
+          <p className="text-gray-400">
+            Visualiza el rendimiento y el estado de salud de tu plantilla.
+          </p>
+        </div>
       </div>
 
-      {/* Estadísticas Generales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {generalStats.map((stat, index) => (
-          <Card key={index} className="bg-[#213041] border-[#305176]">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <stat.icon className={`h-8 w-8 ${stat.color}`} />
-                <Badge variant="secondary" className="bg-[#305176] text-gray-300">
-                  {stat.change}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm font-medium">{stat.title}</p>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-
-      {/* Estadísticas de Partidos */}
       <Card className="bg-[#213041] border-[#305176]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-white flex items-center">
-            <Trophy className="h-5 w-5 mr-2" />
-            Estadísticas de Partidos
-          </CardTitle>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-            onClick={() => setShowAllMatchesModal(true)}
-          >
-            Ver Demás Partidos
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Se muestran solo los 3 últimos partidos (ya ordenados por fecha) */}
-            {filteredMatches.slice(0, 3).map((match) => (
-              <div 
-                key={match.id} 
-                className={`p-4 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`}
-                // Lógica de clic para abrir el modal de detalles
-                onClick={() => {
-                    setShowMatchDetailModal(match);
-                    setActiveMatchDetailView('general');
-                  }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-white font-medium">VS {match.opponent}</h3>
-                    <p className="text-gray-400 text-sm">{match.date} - {match.tournament}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getResultColor(match.status)}>{match.result}</Badge>
-                    
-                    {/* Botón VER ESTADÍSTICAS DEL PARTIDO - ELIMINADO PARA SIMPLIFICAR EL CLIC EN EL CARD */}
+        <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <CardTitle className="text-white flex items-center">
+                    <BarChart className="h-5 w-5 mr-2" />
+                    Gráfico de Análisis: {statType === 'performance' ? 'Rendimiento' : statType === 'health' ? 'Salud' : 'Entrenamiento'}
+                </CardTitle>
+                <div className="flex flex-wrap gap-2">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent hidden lg:flex`}
-                      onClick={(e) => {
-                        e.stopPropagation(); // Previene el click de la fila/tarjeta
-                        setShowMatchDetailModal(match);
-                        setActiveMatchDetailView('general'); // Asegura la vista inicial
-                      }}
+                        size="sm"
+                        className={`font-semibold ${statType === 'performance' ? 'bg-[#aff606] text-black' : 'bg-[#305176] text-white hover:bg-[#305176]/80'}`}
+                        onClick={() => setStatType('performance')}
                     >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Estadísticas de Partido
+                        Rendimiento
                     </Button>
-                  </div>
+                    <Button
+                        size="sm"
+                        className={`font-semibold ${statType === 'health' ? 'bg-[#ff6b35] text-white' : 'bg-[#305176] text-white hover:bg-[#305176]/80'}`}
+                        onClick={() => setStatType('health')}
+                    >
+                        Salud
+                    </Button>
+                    <Button
+                        size="sm"
+                        className={`font-semibold ${statType === 'training' ? 'bg-[#33d9f6] text-black' : 'bg-[#305176] text-white hover:bg-[#305176]/80'}`}
+                        onClick={() => setStatType('training')}
+                    >
+                        Entrenamiento
+                    </Button>
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Estadísticas por Jugador (Tabla compacta mejorada) */}
-      <Card className="bg-[#213041] border-[#305176]">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-white flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            Top 3 Jugadores
-          </CardTitle>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-            onClick={() => setShowAllPlayersModal(true)} 
-          >
-            Ver Demás Jugadores
-          </Button>
+            </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[250px]">
-            <Table>
-                <TableHeader>
-                    <TableRow className="border-[#305176] hover:bg-transparent">
-                        <TableHead className="w-[180px] text-[#aff606]">JUGADOR</TableHead>
-                        <TableHead className="text-center text-[#aff606]"><Goal className="h-4 w-4 mx-auto text-[#25d03f]" title="Goles" /></TableHead>
-                        {/* <TableHead className="text-center text-[#aff606]"><TrendingUp className="h-4 w-4 mx-auto text-[#f4c11a]" title="Asistencias" /></TableHead> <-- ELIMINADO */}
-                        <TableHead className="text-center text-[#aff606]"><Clock className="h-4 w-4 mx-auto text-[#33d9f6]" title="Minutos Jugados" /></TableHead>
-                        <TableHead className="text-center text-[#aff606]"><AlertTriangle className="h-4 w-4 mx-auto text-[#f4c11a]" title="Tarjetas" /></TableHead>
-                        {/* COLUMNA DE ACCIÓN - OCULTADA EN MÓVIL */}
-                        <TableHead className={`text-right text-[#aff606] pr-4 ${isMobile ? 'hidden lg:table-cell' : ''}`}>ACCIÓN</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {allPlayersList.slice(0, 3).map((player) => (
-                        <TableRow 
-                            key={player.id} 
-                            className={`border-[#305176] hover:bg-[#305176]/50 cursor-pointer`}
-                            // Lógica de clic para abrir el modal de detalles del jugador
-                            onClick={() => setShowPlayerDetailModal(player)} 
-                        >
-                            <TableCell className="font-medium text-white p-2">
-                                <div className="flex items-center space-x-2">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={player.photo} alt={player.name} />
-                                        <AvatarFallback className="bg-[#305176] text-white text-xs">
-                                            {player.name.split(" ").map((n) => n[0]).join("")}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <span className="text-sm">{player.name.split(' ')[0]} {player.name.split(' ')[1]}</span>
-                                      <p className="text-gray-500 text-xs">{player.position}</p>
-                                    </div>
-                                </div>
-                            </TableCell>
-                            <TableCell className="text-center text-white font-bold">{player.generalStats.goals}</TableCell>
-                            {/* <TableCell className="text-center text-white font-bold">{player.generalStats.assists}</TableCell> <-- ELIMINADO */}
-                            <TableCell className="text-center text-white font-bold">{Math.floor(player.generalStats.minutesPlayed / 90)} ({player.generalStats.minutesPlayed} min)</TableCell>
-                            <TableCell className="text-center">
-                              <Badge className={getCardColor(player)}>
-                                {player.generalStats.yellowCards}A / {player.generalStats.redCards}R
-                              </Badge>
-                            </TableCell>
-                            {/* Botón VER ESTADÍSTICAS - OCULTADO EN MÓVIL */}
-                            <TableCell className={`text-right pr-4 ${isMobile ? 'hidden lg:table-cell' : ''}`}>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowPlayerDetailModal(player);
-                                    }}
-                                >
-                                    <Eye className="h-4 w-4" />
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {/* --- CUADRANTE DE ESTADÍSTICAS DE ENTRENAMIENTO --- */}
-      {filteredTrainings.length > 0 && (
-        <TrainingStatistics 
-          sessions={filteredTrainings} 
-          categoryName={filterCategoryList === 'all' ? 'Todas las Categorías' : categories.find(c => c.id === filterCategoryList)?.name || ''}
-        />
-      )}
-      {/* --- FIN DE LA MODIFICACIÓN --- */}
-
-
-      {/* Rendimiento por Categoría y Entrenamientos (Resto de Tarjetas) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-[#213041] border-[#305176]">
-          <CardHeader>
-            <CardTitle className="text-white">Rendimiento por Categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {categories.map((category, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                  <div>
-                    <p className="text-white font-medium">{category.name}</p>
-                    <p className="text-gray-400 text-sm">8 partidos jugados</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[#25d03f] font-bold">75% victorias</p>
-                    <p className="text-gray-400 text-sm">6V - 1E - 1D</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#213041] border-[#305176]">
-          <CardHeader>
-            <CardTitle className="text-white">Entrenamientos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                <div>
-                  <p className="text-white font-medium">Total Entrenamientos</p>
-                  <p className="text-gray-400 text-sm">Este mes</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#aff606] font-bold text-2xl">24</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                <div>
-                  <p className="text-white font-medium">Promedio Semanal</p>
-                  <p className="text-gray-400 text-sm">Entrenamientos</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#33d9f6] font-bold text-2xl">6</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg">
-                <div>
-                  <p className="text-white font-medium">Asistencia Promedio</p>
-                  <p className="text-gray-400 text-sm">Jugadores por entrenamiento</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#f4c11a] font-bold text-2xl">22</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Modal de Estadísticas del Partido */}
-      <Dialog open={!!showMatchDetailModal} onOpenChange={(open) => {
-        if (!open) {
-          setShowMatchDetailModal(null);
-          setActiveMatchDetailView('general'); 
-        }
-      }}>
-        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
-        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">Estadísticas del Partido</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              VS {showMatchDetailModal?.opponent} ({showMatchDetailModal?.date})
-            </DialogDescription>
-          </DialogHeader>
-
-          {activeMatchDetailView === 'general' && (
-            <div className="py-4 space-y-4">
-                <Card className="bg-[#1d2834] border-[#305176] p-6">
-                    <h3 className="text-xl font-bold text-white mb-4 border-b border-[#305176] pb-2 text-center">RESUMEN DEL PARTIDO</h3>
-                    <div className="space-y-3">
-                        
-                        <div className="flex justify-between items-center">
-                            <span className="text-gray-400 font-medium">Resultado Final</span>
-                            <Badge className={getResultColor(showMatchDetailModal?.status)}>{showMatchDetailModal?.result}</Badge>
-                        </div>
-                        
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">Tiempo Jugado</span>
-                            <span className="text-white font-bold">{showMatchDetailModal?.duration || 0} min</span>
-                        </div>
-                        
-                        {/* Posesión ELIMINADA del resumen */}
-
-                        <div className="pt-2 border-t border-[#305176] space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400 flex items-center"><Goal className="h-4 w-4 mr-2 text-[#25d03f]" /> Goles a Favor</span>
-                                <span className="text-[#25d03f] font-bold">{showMatchDetailModal?.stats?.goalsFor || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400 flex items-center"><Goal className="h-4 w-4 mr-2 text-red-500" /> Goles en Contra</span>
-                                <span className="text-red-500 font-bold">{showMatchDetailModal?.stats?.goalsAgainst || 0}</span>
-                            </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#305176] space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Remates (Total)</span>
-                                <span className="text-white font-bold">{showMatchDetailModal?.stats?.totalShots || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Remates al Arco</span>
-                                <span className="text-white font-bold">{showMatchDetailModal?.stats?.shotsOnTarget || 0}</span>
-                            </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#305176] space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Recuperación de Pelota</span>
-                                <span className="text-white font-bold">{showMatchDetailModal?.stats?.recuperoPelota || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Pérdida de Pelota</span>
-                                <span className="text-white font-bold">{showMatchDetailModal?.stats?.perdioPelota || 0}</span>
-                            </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#305176] space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Faltas Cometidas</span>
-                                <span className="text-white font-bold">{showMatchDetailModal?.stats?.foulsCommitted || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Faltas Recibidas</span>
-                                <span className="text-white font-bold">{showMatchDetailModal?.stats?.foulsReceived || 0}</span>
-                            </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#305176] space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400 flex items-center"><AlertTriangle className="h-4 w-4 mr-2 text-[#f4c11a]" /> Tarjetas Amarillas</span>
-                                <span className="text-[#f4c11a] font-bold">{showMatchDetailModal?.stats?.yellowCards || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400 flex items-center"><ShieldOff className="h-4 w-4 mr-2 text-red-500" /> Tarjetas Rojas</span>
-                                <span className="text-red-500 font-bold">{showMatchDetailModal?.stats?.redCards || 0}</span>
-                            </div>
-                        </div>
-                        
-                    </div>
-                </Card>
-                
-                {/* Botón para cambiar a la vista de Jugadores */}
-                <div className="pt-0">
-                  <Button 
-                    className="w-full bg-[#33d9f6] text-black hover:bg-[#2bc4ea] font-bold h-10"
-                    onClick={() => setActiveMatchDetailView('player')}
-                  >
-                    <Users className="h-5 w-5 mr-2" />
-                    Ver Estadísticas por Jugador
-                  </Button>
-                </div>
-                
-                
-            </div>
-          )}
-
-          {/* VISTA DE JUGADORES */}
-          {activeMatchDetailView === 'player' && (
-            <div className="py-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-white">Estadísticas de Jugadores Citados</h3>
-                <Button 
-                    variant="link" 
-                    className="text-[#aff606] p-0 h-auto text-sm" 
-                    onClick={() => setActiveMatchDetailView('general')}
-                >
-                    <ChevronDown className="h-4 w-4 mr-1 rotate-90" />
-                    Volver a Resumen General
-                </Button>
-              </div>
-
-              <ScrollArea className="h-[400px]">
-                <Table className="min-w-[750px] w-full">
-                  <TableHeader className="sticky top-0 bg-[#213041] z-10">
-                    <TableRow className="border-[#305176] hover:bg-transparent">
-                      <TableHead className="w-[150px] text-[#aff606]">JUGADOR</TableHead>
-                      <TableHead className="text-center text-[#aff606]"><Goal className="h-4 w-4 mx-auto text-[#25d03f]" title="Goles" /></TableHead>
-                      {/* <TableHead className="text-center text-[#aff606]"><TrendingUp className="h-4 w-4 mx-auto text-[#f4c11a]" title="Asistencias" /></TableHead> <-- ELIMINADO */}
-                      <TableHead className="text-center text-[#aff606]">MIN</TableHead>
-                      <TableHead className="text-center text-[#aff606]">RECUP.</TableHead>
-                      <TableHead className="text-center text-[#aff606]">PERD.</TableHead>
-                      <TableHead className="text-center text-[#aff606]">REMATE</TableHead>
-                      <TableHead className="text-center text-[#aff606]">T. ARCO</TableHead>
-                      <TableHead className="text-center text-[#aff606]">F. REC.</TableHead>
-                      <TableHead className="text-center text-[#aff606]">F. COM.</TableHead>
-                      <TableHead className="text-center text-[#aff606]"><AlertTriangle className="h-4 w-4 mx-auto text-[#f4c11a]" title="T. Amarilla" /></TableHead>
-                      <TableHead className="text-center text-[#aff606]"><ShieldOff className="h-4 w-4 mx-auto text-red-500" title="T. Roja" /></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {showMatchDetailModal && getCitedPlayersFromMatch(showMatchDetailModal).map((player: any) => (
-                      <TableRow key={player.id} className="border-[#305176] hover:bg-[#305176]/50">
-                        <TableCell className="font-medium text-white p-2">
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="bg-[#305176] text-white text-xs">{player.name.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{player.name}</span>
-                          </div>
-                          <p className="text-gray-500 text-xs pl-8">{player.category}</p>
-                        </TableCell>
-                        <TableCell className="text-center text-[#25d03f] font-bold">{player.goals}</TableCell>
-                        {/* <TableCell className="text-center text-[#f4c11a] font-bold">{player.assists}</TableCell> <-- ELIMINADO */}
-                        <TableCell className="text-center text-white font-bold">{player.minutes}</TableCell>
-                        <TableCell className="text-center text-white">{player.recupero || 0}</TableCell>
-                        <TableCell className="text-center text-white">{player.perdida || 0}</TableCell>
-                        <TableCell className="text-center text-white">{player.shots || 0}</TableCell>
-                        <TableCell className="text-center text-white">{player.tiroAlArco || 0}</TableCell>
-                        <TableCell className="text-center text-white">{player.foulsReceived || 0}</TableCell>
-                        <TableCell className="text-center text-white">{player.faltaCometida || 0}</TableCell>
-                        <TableCell className="text-center text-[#f4c11a] font-bold">{player.yellowCards}</TableCell>
-                        <TableCell className="text-center text-red-500 font-bold">{player.redCards}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-              <p className="text-xs text-gray-500 pt-2">
-                Leyenda de Encabezados: MIN (Minutos), RECUP. (Recuperación de Pelota), PERD. (Pérdida de Pelota), REMATE (Remates Totales), T. ARCO (Tiro al Arco), F. REC. (Falta Recibida), F. COM. (Falta Cometida), T. AMA. (Tarjeta Amarilla), T. ROJA (Tarjeta Roja).
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Modal para ver todos los partidos (Filtros sin posesión/asistencias) */}
-      <Dialog open={showAllMatchesModal} onOpenChange={setShowAllMatchesModal}>
-        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
-        <DialogContent className="sm:max-w-[800px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6">
-            <div className="space-y-1">
-              <DialogTitle className="text-white text-2xl font-bold">Todos los Partidos</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Historial completo de partidos jugados.
-              </DialogDescription>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterResult} onValueChange={setFilterResult}>
-                <SelectTrigger className="w-full sm:w-32 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Resultado" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#213041] border-[#305176]">
-                  <SelectItem value="all" className="text-white text-xs">Resultado</SelectItem>
-                  <SelectItem value="Victoria" className="text-white text-xs">Victorias</SelectItem>
-                  <SelectItem value="Empate" className="text-white text-xs">Empates</SelectItem>
-                  <SelectItem value="Derrota" className="text-white text-xs">Derrotas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger className="w-full sm:w-32 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Localía" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#213041] border-[#305176]">
-                    <SelectItem value="all" className="text-white text-xs">Condición</SelectItem>
-                    <SelectItem value="Local" className="text-white text-xs">Local</SelectItem>
-                    <SelectItem value="Visitante" className="text-white text-xs">Visitante</SelectItem>
-                  </SelectContent>
-              </Select>
-              <Select value={filterTournament} onValueChange={setFilterTournament}>
-                <SelectTrigger className="w-full sm:w-32 bg-[#1d2834] border-[#305176] text-white text-xs">
-                  <SelectValue placeholder="Torneo" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#213041] border-[#305176]">
-                  <SelectItem value="all" className="text-white text-xs">Torneo</SelectItem>
-                  {uniqueTournaments.map((tournament: any) => (
-                    <SelectItem key={tournament} value={tournament} className="text-white text-xs">
-                      {tournament}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <ScrollArea className="h-[400px] pr-6">
-            <div className="space-y-4">
-              {filteredMatches.length > 0 ? (
-                filteredMatches.map((match) => (
-                  <div 
-                    key={match.id} 
-                    className={`p-4 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`}
-                    onClick={() => {
-                        setShowMatchDetailModal(match);
-                        setActiveMatchDetailView('general'); 
-                        setShowAllMatchesModal(false);
-                      }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="text-white font-medium">VS {match.opponent}</h3>
-                        <p className="text-gray-400 text-sm">{match.date} - {match.tournament}</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getResultColor(match.status)}>{match.result}</Badge>
-                        {/* Botón VER - OCULTADO EN MÓVIL */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className={`border-[#aff606] text-[#aff606] hover:bg-[#aff606] hover:text-black bg-transparent hidden lg:flex`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowMatchDetailModal(match);
-                            setActiveMatchDetailView('general'); 
-                            setShowAllMatchesModal(false);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-400">No se encontraron partidos con estos filtros.</p>
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Modal para ver TODOS LOS JUGADORES */}
-      <Dialog open={showAllPlayersModal} onOpenChange={setShowAllPlayersModal}>
-        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
-        <DialogContent className="sm:max-w-4xl bg-[#213041] border-[#305176] text-white p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-white text-2xl font-bold">Lista Completa de Jugadores</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Selecciona un jugador para ver sus estadísticas detalladas.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            
-            {/* COLUMNA 1: Panel de Categorías */}
-            <div className="md:col-span-1 space-y-3 p-3 bg-[#1d2834] rounded-lg h-fit"> {/* Cambiado h-[400px] a h-fit para ajustarse */}
-                {/* INICIO MODIFICACIÓN DEL SELECT EN LA MISMA LÍNEA */}
-                <div className="flex items-center justify-between border-b border-[#305176] pb-2">
-                    <h4 className="text-white font-semibold flex-shrink-0">
-                        CATEGORIAS
-                    </h4>
+            {/* Filtros de Datos */}
+            <div className="flex flex-wrap gap-4 mb-6 pt-2 border-t border-[#305176]">
+                <div className="w-full sm:w-auto flex-1 sm:flex-initial">
+                    <Label className="text-gray-400 text-sm">Categoría</Label>
                     <Select
-                        value={filterCategoryList}
-                        onValueChange={setFilterCategoryList}
+                        value={selectedCategory}
+                        onValueChange={setSelectedCategory}
                     >
-                        <SelectTrigger className="w-auto min-w-[150px] bg-[#305176] border-[#305176] text-white">
-                            <SelectValue placeholder="Seleccionar Categoría" />
+                        <SelectTrigger className="w-full bg-[#1d2834] border-[#305176] text-white">
+                            <SelectValue placeholder="Todas las categorías" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#213041] border-[#305176]">
-                            <SelectItem value="all" className="text-white">Todas las categorías</SelectItem>
-                            {categories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id} className="text-white">
-                                    {cat.name}
-                                </SelectItem>
+                            {categoryOptions.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id} className="text-white">{cat.name}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
-                {/* FIN MODIFICACIÓN DEL SELECT EN LA MISMA LÍNEA */}
-
-            </div>
-
-            {/* COLUMNA 2: Lista de Jugadores */}
-            <div className="md:col-span-3 space-y-4">
-                <ScrollArea className="h-[400px] pr-4">
-                    <div className="space-y-3">
-                        {filteredPlayersList.length > 0 ? (
-                            filteredPlayersList.map((player) => (
-                                <div 
-                                    key={player.id} 
-                                    className={`flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176]`} // <-- Clickable en todo el div
-                                    onClick={() => {
-                                        setShowPlayerDetailModal(player);
-                                        setShowAllPlayersModal(false);
-                                    }}
-                                >
-                                    <div className="flex items-center space-x-4">
-                                        <Avatar className="h-10 w-10">
-                                            <AvatarImage src={player.photo} alt={player.name} />
-                                            <AvatarFallback className="bg-[#305176] text-white text-xs">
-                                                {player.name.split(" ").map((n) => n[0]).join("")}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <h3 className="text-white font-medium">{player.name}</h3>
-                                            <p className="text-gray-400 text-xs">
-                                                {player.position}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    {/* BOTÓN "Ver Estadísticas" ELIMINADO */}
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-center text-gray-400">No se encontraron jugadores en esta categoría.</p>
-                        )}
+                {statType === 'performance' && (
+                    <div className="w-full sm:w-auto flex-1 sm:flex-initial">
+                        <Label className="text-gray-400 text-sm">Jugador Específico</Label>
+                        <Select
+                            value={selectedPlayer}
+                            onValueChange={setSelectedPlayer}
+                        >
+                            <SelectTrigger className="w-full bg-[#1d2834] border-[#305176] text-white">
+                                <SelectValue placeholder="Todos los jugadores" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#213041] border-[#305176]">
+                                {playerOptions.filter(p => selectedCategory === "all" || allPlayers.some(ap => ap.id === p.id && ap.categoryId === selectedCategory)).map(p => (
+                                    <SelectItem key={p.id} value={p.id} className="text-white">{p.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                </ScrollArea>
+                )}
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            {/* Contenedor del Gráfico */}
+            <div className="h-[300px] w-full">
+                {renderChart()}
+            </div>
+        </CardContent>
+      </Card>
       
-      {/* Modal de Estadísticas por Jugador (INTERFAZ CONSERVADA) */}
-      <Dialog open={!!showPlayerDetailModal} onOpenChange={setShowPlayerDetailModal}>
-        {/* MODIFICACIÓN: Scrollable en móviles/tablets */}
-        <DialogContent className="sm:max-w-[1000px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">
-              Estadísticas de {showPlayerDetailModal?.name}
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Análisis de rendimiento a lo largo de los partidos.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Resumen de Métricas Clave */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Total Jugadores</CardTitle>
+                <Users className="h-4 w-4 text-[#aff606]" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-white">{allPlayers.length}</div>
+                <p className="text-xs text-gray-500">
+                    Jugadores registrados
+                </p>
+            </CardContent>
+        </Card>
 
-            <Card className="bg-[#1d2834] border-[#305176] lg:col-span-1 h-fit">
-              <CardHeader>
-                <CardTitle className="text-white text-lg flex items-center justify-center"> {/* CENTRADO */}
-                   <Users className="h-5 w-5 mr-2 text-[#33d9f6]" /> Información de Jugador
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 flex flex-col items-center p-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={showPlayerDetailModal?.photo} alt={showPlayerDetailModal?.name} />
-                  <AvatarFallback className="bg-[#305176] text-white text-2xl">
-                    {showPlayerDetailModal?.name?.split(" ").map((n: string) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                {/* MODIFICACIÓN: Solo Nombre y Apodo */}
-                <div className="text-center">
-                  <h3 className="text-white font-bold text-xl">{showPlayerDetailModal?.name}</h3>
-                  <p className="text-gray-400 text-sm">"{showPlayerDetailModal?.nickname}"</p>
+        <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Jugadores Lesionados</CardTitle>
+                <HeartPulse className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-red-500">
+                    {allPlayers.filter(p => p.injuryStatus === 'INJURED').length}
                 </div>
-                
-                {/* ESTADÍSTICAS ELIMINADAS/SIMPLIFICADAS DEL BLOQUE LATERAL */}
-              </CardContent>
-            </Card>
-
-            <div className="lg:col-span-2">
-              <ScrollArea className="h-[500px] pr-6 space-y-6">
-                
-                <Card className="bg-[#1d2834] border-[#305176]">
-                  <CardHeader>
-                    <CardTitle className="text-white text-lg text-center">Historial Acumulado</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm text-center"> {/* CENTRADO */}
-                    
-                    <div className="space-y-2 text-center"> {/* CENTRADO */}
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Tiempo Jugado</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.minutesPlayed} min</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Goles</span>
-                            <span className="text-[#25d03f] font-bold">{showPlayerDetailModal?.generalStats?.goals}</span>
-                        </div>
-                        {/* <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Asistencias</span>
-                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.assists}</span>
-                        </div> <-- ELIMINADO */}
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Remate</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remate}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">Tiro al Arco</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.remateAlArco}</span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2 text-center"> {/* CENTRADO */}
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Pelota Recuperada</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.recuperoPelota}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Pelota Perdida</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.perdioPelota}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Falta Recibida</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaRecibida}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">Falta Cometida</span>
-                            <span className="text-white font-bold">{showPlayerDetailModal?.generalStats?.faltaCometida}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-white/10 pb-1">
-                            <span className="text-gray-400">T. Amarilla</span>
-                            <span className="text-[#f4c11a] font-bold">{showPlayerDetailModal?.generalStats?.yellowCards}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">T. Roja</span>
-                            <span className="text-[#ea3498] font-bold">{showPlayerDetailModal?.generalStats?.redCards}</span>
-                        </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">Historial Partido a Partido</h3>
-                    {showPlayerDetailModal?.matchHistory?.map((match: any) => (
-                        <Card key={match.matchId} className="bg-[#1d2834] border-[#305176] p-0">
-                            <CardHeader className="py-2 px-4 bg-[#305176]/50 rounded-t-lg">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-white text-sm font-bold">VS {match.opponent} ({match.date})</CardTitle>
-                                    <Badge className={getResultColor(match.status)}>{match.result}</Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-y-1 gap-x-4 p-4 text-sm">
-                                
-                                <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Minutos</span>
-                                    <span className="text-white font-bold">{match.minutes} min</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Goles</span>
-                                    <span className="text-[#25d03f] font-bold">{match.goles}</span>
-                                </div>
-                                
-                                <div className="col-span-1 flex justify-between">
-                                    <span className="text-gray-400">Hora</span>
-                                    <span className="text-white font-bold">{formatTimeWithoutColons(match.time)}</span>
-                                </div>
-                                
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">Recuperada</span>
-                                    <span className="text-white font-bold">{match.recupero}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">Perdida</span>
-                                    <span className="text-white font-bold">{match.perdida}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">Remates</span>
-                                    <span className="text-white font-bold">{match.remate}</span>
-                                </div>
-                                
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">R. al Arco</span>
-                                    <span className="text-white font-bold">{match.tiroAlArco}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">F. Recibida</span>
-                                    <span className="text-white font-bold">{match.faltaRecibida}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">F. Cometida</span>
-                                    <span className="text-white font-bold">{match.faltaCometida}</span>
-                                
-                                </div>
-
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">T. Amarilla</span>
-                                    <span className="text-[#f4c11a] font-bold">{match.tAmarilla}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-between pt-2 border-t border-white/10">
-                                    <span className="text-gray-400">T. Roja</span>
-                                    <span className="text-[#ea3498] font-bold">{match.tRoja}</span>
-                                </div>
-                                
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+                <p className="text-xs text-gray-500">
+                    Aptos para entrenar: {allPlayers.filter(p => p.injuryStatus === 'FIT').length}
+                </p>
+            </CardContent>
+        </Card>
+        
+        <Card className="bg-[#213041] border-[#305176]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Promedio de Goles (Simulado)</CardTitle>
+                <Goal className="h-4 w-4 text-[#33d9f6]" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-white">0.0</div>
+                <p className="text-xs text-gray-500">
+                    Basado en partidos jugados (0)
+                </p>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

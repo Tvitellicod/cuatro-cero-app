@@ -11,8 +11,11 @@ import { Upload, ArrowRight, X } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-// Clave para guardar el club en localStorage (simulando la DB)
-const CLUB_DATA_KEY = "clubData";
+// --- MODIFICACIÓN CLAVE: Usar la clave de club del nuevo contexto (4c_club) ---
+const CLUB_DATA_KEY = "4c_club"; 
+const CATEGORY_KEY = "selectedCategory"; 
+const PROFILE_KEY = "userProfile"; 
+// -----------------------------------------------------------------------------
 
 export default function CreateClubPage() {
   const router = useRouter()
@@ -70,13 +73,16 @@ export default function CreateClubPage() {
       abbreviation: clubAbbreviation.trim().toUpperCase(),
       logoUrl: clubLogo || "/placeholder-logo.png", // Usar un placeholder si no hay logo
       createdAt: new Date().toISOString(),
+      isDemo: true, // Flag para indicar que son datos de prueba
     }
 
     if (typeof window !== 'undefined') {
+      // 1. Guardar el Club usando la clave correcta (4c_club)
       localStorage.setItem(CLUB_DATA_KEY, JSON.stringify(clubData))
-      // Limpiar estados de navegación anteriores
-      localStorage.removeItem("userProfile");
-      localStorage.removeItem("selectedCategory");
+      
+      // 2. Limpiar estados de navegación posteriores para asegurar el flujo
+      localStorage.removeItem(PROFILE_KEY);
+      localStorage.removeItem(CATEGORY_KEY);
     }
     
     toast({

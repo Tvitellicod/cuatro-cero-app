@@ -1,9 +1,17 @@
-// tvitellicod/cuatro-cero-app/cuatro-cero-app-60479741c8ea2ca449bfcef814f36d999ab6ab01/hooks/use-profile.tsx
+// hooks/use-profile.tsx
 
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useMemo } from "react"
+import { toast } from "sonner"
+// import { v4 as uuidv4 } from "uuid"; // <-- DEPENDENCIA ELIMINADA: CAUSA EL ERROR
+import { getLimits, PlanKey } from "@/lib/limits"
+
+// --- FUNCIÓN DE ID TEMPORAL (SUSTITUTO DE UUID PARA EL MOCK) ---
+const generateMockId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
+// -----------------------------------------------------------
+
 
 // --- INTERFACES ---
 interface UserCategory {
@@ -12,215 +20,292 @@ interface UserCategory {
   color: string;
 }
 
-interface UserProfile {
-    id: number;
-    firstName: string;
-    lastName: string;
-    profileType: string;
-    category: string; // ID de la categoría
-    displayName: string;
-}
+// Definiciones de Tipos (Mantenidas y modificadas para incluir el 'plan')
 
-interface ProfilePermissions {
-  canEditClub: boolean
-  canEditPlayers: boolean
-  canCreateExercises: boolean
-  canPlanTraining: boolean
-  canManageMatches: boolean
-  canViewStats: boolean
-  canViewNutrition: boolean
-  canViewMedical: boolean
-  exerciseTypes: string[]
-  sections: string[]
-}
+export type Club = {
+  id: string;
+  name: string;
+  logoUrl: string;
+  isDemo: boolean;
+};
 
-interface ProfileContextType {
-  // Perfil Activo (quién eres)
-  currentProfile: string | null // El displayName
-  setCurrentProfile: (profile: string) => void
-  
-  // Categoría Activa (dónde estás trabajando)
-  selectedCategory: UserCategory | null
-  allCategories: UserCategory[]
-  setSelectedCategory: (category: UserCategory | null) => void
-  
-  // Permisos y Plan
-  userPlan: string
-  setUserPlan: (plan: string) => void
-  getPermissions: () => ProfilePermissions
-}
+export type Profile = {
+  id: string;
+  name: string;
+  role: string;
+  clubId: string;
+  plan: PlanKey; // Propiedad 'plan' AÑADIDA
+};
 
-const ProfileContext = createContext<ProfileContextType | undefined>(undefined)
+export type Category = {
+  id: string;
+  clubId: string;
+  name: string;
+  ageGroup: string;
+  isDemo: boolean;
+};
 
-// --- Claves de LocalStorage ---
-const ACTIVE_PROFILE_KEY = "userProfile"; // El perfil con rol (DT, PF...)
-const SELECTED_CATEGORY_KEY = "selectedCategory"; // La categoría (Primera, Reserva...)
-const ALL_CATEGORIES_KEY = "allUserCategories";
+export type Player = {
+  id: string;
+  categoryId: string;
+  name: string;
+  birthDate: string;
+  position: string;
+  number: number;
+  isDemo: boolean;
+  injuryStatus: "FIT" | "INJURED";
+  injuryDetails?: string;
+  // Campos extra añadidos para evitar errores de tipo en ClubManagement.tsx
+  photo: string;
+  nickname: string;
+  phoneNumber: string;
+  foot: string;
+};
 
-export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const [currentProfile, setCurrentProfile] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategoryState] = useState<UserCategory | null>(null)
-  const [allCategories, setAllCategories] = useState<UserCategory[]>([])
-  const [userPlan, setUserPlan] = useState<string>("institucional")
 
-  // Cargar estado desde localStorage al iniciar
+// Definición de Tipos para el Contexto
+
+type ProfileContextType = {
+  // Datos principales
+  profile: Profile | null;
+  club: Club | null;
+  categories: Category[];
+  players: Player[];
+  // Funciones de modificación
+  setProfile: (profile: Profile) => void;
+  setClub: (club: Club) => void;
+  addCategory: (category: Omit<Category, "id" | "clubId" | "isDemo">) => void;
+  addPlayer: (player: Omit<Player, "id" | "isDemo" | "injuryStatus">) => void;
+  updatePlayer: (playerId: string, data: Partial<Player>) => void;
+  deleteCategory: (categoryId: string) => void;
+  deletePlayer: (playerId: string) => void;
+  // Estado de carga y demo
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  // LÍMITES Y USO DEL PLAN (NUEVAS PROPIEDADES)
+  limits: ReturnType<typeof getLimits>;
+  usedPlayersCount: number;
+  usedCategoriesCount: number;
+  // Limpieza
+  clearProfileData: () => void;
+};
+
+const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+
+// --- Claves de LocalStorage (Actualizadas para usar prefijo simple '4c_') ---
+const CLUB_STORAGE_KEY = "4c_club";
+const PROFILE_STORAGE_KEY = "4c_profile";
+const CATEGORIES_STORAGE_KEY = "4c_categories";
+const PLAYERS_STORAGE_KEY = "4c_players";
+// -------------------------------------------------------------------------
+
+// Mocks vacíos para iniciar la app limpia
+const initialClub: Club | null = null;
+const initialProfile: Profile | null = null;
+const initialCategories: Category[] = [];
+const initialPlayers: Player[] = [];
+
+// Proveedor de Contexto
+
+export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [profile, setProfileState] = useState<Profile | null>(initialProfile);
+  const [club, setClubState] = useState<Club | null>(initialClub);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1. Cargar datos del localStorage al montar
   useEffect(() => {
-    const savedProfileJson = localStorage.getItem(ACTIVE_PROFILE_KEY);
-    const savedCategoryJson = localStorage.getItem(SELECTED_CATEGORY_KEY);
-    const savedAllCategoriesJson = localStorage.getItem(ALL_CATEGORIES_KEY);
+    try {
+      const storedClub = localStorage.getItem(CLUB_STORAGE_KEY);
+      const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+      const storedPlayers = localStorage.getItem(PLAYERS_STORAGE_KEY);
 
-    if (savedProfileJson) {
-      try {
-        const savedProfile: UserProfile = JSON.parse(savedProfileJson);
-        setCurrentProfile(savedProfile.displayName);
-      } catch (e) {
-        console.error("Error parsing profile", e);
-        localStorage.removeItem(ACTIVE_PROFILE_KEY);
+      if (storedClub) {
+        setClubState(JSON.parse(storedClub));
       }
+      if (storedProfile) {
+        setProfileState(JSON.parse(storedProfile));
+      }
+      // NOTA: Cargamos lo que haya, si el login lo limpió (previo), serán arrays vacíos
+      if (storedCategories) {
+          setCategories(JSON.parse(storedCategories));
+      }
+      if (storedPlayers) {
+          setPlayers(JSON.parse(storedPlayers));
+      }
+    } catch (error) {
+      console.error("Error loading initial data from localStorage:", error);
+      clearProfileData();
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
+
+  // 2. Persistencia de datos al cambiar el estado
+  useEffect(() => {
+    if (club) localStorage.setItem(CLUB_STORAGE_KEY, JSON.stringify(club));
+  }, [club]);
+
+  useEffect(() => {
+    if (profile) localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  }, [profile]);
+
+  useEffect(() => {
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(players));
+  }, [players]);
+
+
+  // 3. Funciones de actualización
+
+  const clearProfileData = () => {
+    localStorage.removeItem(CLUB_STORAGE_KEY);
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+    localStorage.removeItem(CATEGORIES_STORAGE_KEY);
+    localStorage.removeItem(PLAYERS_STORAGE_KEY);
+    // Limpieza de datos viejos que podrían causar conflicto con el ProfileGuard (previo al plan)
+    localStorage.removeItem("userProfile"); 
+    localStorage.removeItem("selectedCategory");
+    localStorage.removeItem("allUserCategories"); 
+    localStorage.removeItem("allUserProfiles"); 
+    localStorage.removeItem("clubData"); 
     
-    if (savedCategoryJson) {
-       try {
-        const savedCategory: UserCategory = JSON.parse(savedCategoryJson);
-        setSelectedCategoryState(savedCategory);
-      } catch (e) {
-        console.error("Error parsing selected category", e);
-        localStorage.removeItem(SELECTED_CATEGORY_KEY);
-      }
-    }
-
-    if (savedAllCategoriesJson) {
-       try {
-        const allCats: UserCategory[] = JSON.parse(savedAllCategoriesJson);
-        setAllCategories(allCats);
-      } catch (e) {
-        console.error("Error parsing all categories", e);
-        localStorage.removeItem(ALL_CATEGORIES_KEY);
-      }
-    }
-  }, [])
-
-  // Función para actualizar la categoría (y guardarla en localStorage)
-  const setSelectedCategory = (category: UserCategory | null) => {
-    setSelectedCategoryState(category);
-    if (category) {
-      localStorage.setItem(SELECTED_CATEGORY_KEY, JSON.stringify(category));
-    } else {
-      localStorage.removeItem(SELECTED_CATEGORY_KEY);
-    }
+    setClubState(initialClub);
+    setProfileState(initialProfile);
+    setCategories(initialCategories);
+    setPlayers(initialPlayers);
+    // No mostramos toast aquí, el login-form lo maneja.
   };
 
-  // --- Lógica de Permisos ---
-  const getPermissions = (): ProfilePermissions => {
-    let profileType: string | null = null;
-    if (typeof window !== 'undefined') {
-        const savedProfileJson = localStorage.getItem(ACTIVE_PROFILE_KEY);
-        if (savedProfileJson) {
-            try {
-                const savedProfile: UserProfile = JSON.parse(savedProfileJson);
-                profileType = savedProfile.profileType;
-            } catch (e) {
-                console.error("Error parsing profile for permissions", e);
-            }
-        }
+  const setProfile = (newProfile: Profile) => {
+    const profileWithPlan = {
+      ...newProfile,
+      plan: newProfile.plan || 'tecnico',
+    } as Profile;
+    setProfileState(profileWithPlan);
+  };
+
+  const setClub = (newClub: Club) => {
+    setClubState(newClub);
+  };
+  
+  const addCategory = (categoryData: Omit<Category, "id" | "clubId" | "isDemo">) => {
+    if (!club) return toast.error("Club no encontrado. No se puede crear la categoría.");
+
+    // Validación de Límite de Categorías
+    if (usedCategoriesCount >= limits.MAX_CATEGORIES) {
+        toast.error(`Límite alcanzado: Su plan solo permite ${limits.MAX_CATEGORIES} categorías.`);
+        return;
     }
 
-    // Basado en el profileType (esto no cambia)
-    const isTechnician = profileType?.includes("DIRECTOR TECNICO") || profileType?.includes("TECNICO");
-    const isPhysicalTrainer = profileType?.includes("PREPARADOR FISICO");
-    const isKinesiologist = profileType === "KINESIOLOGO";
-    const isNutritionist = profileType === "NUTRICIONISTA";
-    const isDirective = profileType?.includes("DIRECTIVO") || profileType?.includes("ANALISTA");
-    const isPublisher = profileType === "PUBLICADOR";
-
-     return {
-      canEditClub: isTechnician || false,
-      canEditPlayers: isTechnician || false,
-      canCreateExercises: isTechnician || isPhysicalTrainer || isKinesiologist || false,
-      canPlanTraining: !isNutritionist && !isPublisher, 
-      canManageMatches: isTechnician || false,
-      canViewStats: isTechnician || isDirective || false,
-      canViewNutrition: isNutritionist || false,
-      canViewMedical: isKinesiologist || false,
-      exerciseTypes: isTechnician
-        ? ["EJERCICIOS"]
-        : isPhysicalTrainer
-          ? ["EJERCICIOS FISICOS", "EJERCICIOS KINESIOLOGIA"]
-          : isKinesiologist
-            ? ["EJERCICIOS KINESIOLOGIA"]
-            : [],
-      sections: getSectionsForProfile(profileType),
+    const newCategory: Category = {
+      id: generateMockId(), // <-- USO DE ID TEMPORAL
+      clubId: club.id,
+      name: categoryData.name,
+      ageGroup: categoryData.ageGroup,
+      isDemo: club.isDemo,
+      // Color debe venir de categoryData si lo expandimos
+      color: (categoryData as any).color, 
     };
+    setCategories((prev) => [...prev, newCategory]);
+    toast.success("Categoría creada con éxito.");
+  };
+
+  // NOTA: addPlayer espera un objeto con las propiedades definidas en ContextPlayer, incluyendo photo, nickname, etc.
+  const addPlayer = (playerData: Omit<Player, "id" | "isDemo" | "injuryStatus">) => {
+    if (!profile || !club) return toast.error("Error de perfil/club. No se puede crear el jugador.");
+
+    // Validación de Límite de Jugadores
+    if (usedPlayersCount >= limits.MAX_PLAYERS) {
+        toast.error(`Límite alcanzado: Su plan solo permite ${limits.MAX_PLAYERS} jugadores.`);
+        return;
+    }
+
+    const newPlayer: Player = {
+      ...playerData,
+      id: generateMockId(), // <-- USO DE ID TEMPORAL
+      number: playerData.number || 0,
+      isDemo: club.isDemo,
+      injuryStatus: "FIT", // Estado inicial
+      // Aseguramos que los campos obligatorios del tipo Player existan
+      photo: playerData.photo || "/placeholder-user.jpg",
+      nickname: playerData.nickname || "",
+      phoneNumber: playerData.phoneNumber || "",
+      foot: playerData.foot || "Derecho",
+    };
+
+    setPlayers((prev) => [...prev, newPlayer]);
+    toast.success(`Jugador ${newPlayer.name} añadido.`);
+  };
+
+  const updatePlayer = (playerId: string, data: Partial<Player>) => {
+    setPlayers((prev) =>
+      prev.map((p) => (p.id === playerId ? { ...p, ...data } : p))
+    );
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+    setPlayers((prev) => prev.filter((p) => p.categoryId !== categoryId));
+    toast.success("Categoría y sus jugadores eliminados.");
+  };
+
+  const deletePlayer = (playerId: string) => {
+    setPlayers((prev) => prev.filter((p) => p.id !== playerId));
+    toast.success("Jugador eliminado.");
+  };
+
+  // 4. Lógica de LÍMITES
+
+  const limits = useMemo(() => {
+    if (profile) {
+      return getLimits(profile.plan);
+    }
+    return getLimits("tecnico");
+  }, [profile]);
+
+  const usedCategoriesCount = categories.length;
+  const usedPlayersCount = players.length;
+  
+  // 5. Contexto
+
+  const value = {
+    profile,
+    club,
+    categories,
+    players,
+    setProfile,
+    setClub,
+    addCategory,
+    addPlayer,
+    updatePlayer,
+    deleteCategory,
+    deletePlayer,
+    isAuthenticated: !!profile && !!club,
+    isLoading,
+    clearProfileData,
+    limits,
+    usedPlayersCount,
+    usedCategoriesCount,
   };
 
   return (
-    <ProfileContext.Provider
-      value={{
-        currentProfile,
-        setCurrentProfile,
-        selectedCategory,
-        allCategories,
-        setSelectedCategory,
-        userPlan,
-        setUserPlan,
-        getPermissions,
-      }}
-    >
+    <ProfileContext.Provider value={value}>
       {children}
     </ProfileContext.Provider>
-  )
-}
+  );
+};
 
-// --- Función para Secciones (para construir el Sidebar) ---
-function getSectionsForProfile(profileType: string | null): string[] {
-  if (!profileType) return [];
-
-  const isTechnician = profileType.includes("DIRECTOR TECNICO") || profileType.includes("TECNICO");
-  const isPhysicalTrainer = profileType.includes("PREPARADOR FISICO");
-  const isKinesiologist = profileType === "KINESIOLOGO";
-  const isNutritionist = profileType === "NUTRICIONISTA";
-  const isDirective = profileType.includes("DIRECTIVO") || profileType.includes("ANALISTA"); 
-  const isPublisher = profileType === "PUBLICADOR";
-
-  const sections = ["INICIO"];
-
-  if (isPublisher) {
-    sections.push("PUBLICAR");
-    return sections;
-  }
-  
-  // [MODIFICACIÓN CLAVE]: Lógica específica para el Analista
-  if (profileType === "ANALISTA") {
-      sections.push("TORNEOS"); // Acceso al menú Torneos
-      return sections;
-  }
-
-  // --- Lógica para todos los demás (DT, PF, KINE, NUTRI, Directivo)
-  sections.push("CLUB");
-
-  if (!isNutritionist) {
-    sections.push("ENTRENAMIENTO");
-  }
-
-  sections.push("TORNEOS");
-
-  if (isTechnician || isDirective) {
-    sections.push("ESTADISTICAS");
-  }
-
-  if (isNutritionist) {
-    sections.push("NUTRICION");
-  }
-
-  return sections;
-}
-
-
-// --- Hook useProfile (sin cambios) ---
-export function useProfile() {
-  const context = useContext(ProfileContext)
+// Hook personalizado
+export const useProfile = () => {
+  const context = useContext(ProfileContext);
   if (context === undefined) {
-    throw new Error("useProfile must be used within a ProfileProvider")
+    throw new Error("useProfile debe usarse dentro de un ProfileProvider")
   }
   return context
 }

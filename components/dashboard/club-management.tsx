@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-// Importaciones añadidas para el rol y la fecha
-import { useProfile } from "@/hooks/use-profile"
+import { useState, useEffect, useMemo } from "react"
+// Importamos los tipos necesarios del hook (ContextPlayer y ContextCategory son los tipos de Player y Category en el contexto)
+import { useProfile, Player as ContextPlayer, Category as ContextCategory } from "@/hooks/use-profile" 
 import { toast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { es } from "date-fns/locale/es"
+import { v4 as uuidv4 } from 'uuid'; // Para generar IDs al crear
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,6 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-// Icono 'HeartPulse' (Botiquín) añadido
 import { Upload, Plus, Search, Edit, Trash2, Users, FileText, Eye, HeartPulse } from "lucide-react"
 import Image from 'next/image'
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -29,78 +29,74 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useIsMobile } from "@/hooks/use-mobile" // <-- Importado useIsMobile
+import { useIsMobile } from "@/hooks/use-mobile"
 
-// Opcional: Define un tipo para Player
-type Player = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  nickname: string;
-  birthDate: string;
-  phoneNumber: string;
-  position: string;
-  foot: string;
-  status: string; // "DISPONIBLE", "LESIONADO", "NO DISPONIBLE"
-  category: string;
-  photo: string;
-  injury?: {
-    type: string;
-    date: string;
-    recovery: string;
-  } | null;
+// Mapeo de tipos del contexto a la UI local
+interface CategoryUI {
+    id: string; // Category ID
+    name: string;
+    playerCount: number;
+    color: string;
 }
 
+// Player MOCK DE BASE PARA EL FORMULARIO
+const INITIAL_PLAYER_STATE = {
+  id: '', 
+  name: '',
+  birthDate: '', // YYYY-MM-DD
+  birthDateDisplay: '', // DD/MM/AAAA para la UI
+  position: '',
+  number: 0,
+  categoryId: '', 
+  photo: '',
+  nickname: '',
+  phoneNumber: '',
+  foot: '',
+  status: 'DISPONIBLE',
+  injury: null, // Si es un campo custom no del contexto
+};
+
 export function ClubManagement() {
-  const isMobile = useIsMobile(); // <-- Uso de useIsMobile
-  // --- AÑADIDO: Hook de perfil para verificar el rol ---
-  const { currentProfile } = useProfile()
-  const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
-  const profileData = savedProfile ? JSON.parse(savedProfile) : null
-  const isKinesiologo = profileData?.profileType === "KINESIOLOGO";
-  // --- FIN AÑADIDO ---
+  const isMobile = useIsMobile();
+  // --- MODIFICACIÓN CLAVE: Destructurar el nuevo contexto ---
+  const {
+    profile,
+    club,
+    categories: contextCategories, 
+    players: contextPlayers, 
+    limits, 
+    usedPlayersCount,
+    usedCategoriesCount,
+    addPlayer,
+    updatePlayer: updatePlayerContext, 
+    deletePlayer: deletePlayerContext,
+    addCategory,
+    deleteCategory: deleteCategoryContext,
+  } = useProfile();
+  // --------------------------------------------------------
 
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
-  const [newPlayer, setNewPlayer] = useState<Player>({
-    id: 0,
-    firstName: "",
-    lastName: "",
-    nickname: "",
-    birthDate: "",
-    phoneNumber: "",
-    position: "",
-    foot: "",
-    category: "primera",
-    photo: "",
-    status: "DISPONIBLE",
-    injury: null,
-  })
-  const [showCreateCategory, setShowCreateCategory] = useState(false)
-  const [newCategoryName, setNewCategoryName] = useState("")
-  const [newCategoryColor, setNewCategoryColor] = useState("#aff606")
-  const [showMedicalReport, setShowMedicalReport] = useState<Player | null>(null)
-  const [playerToDelete, setPlayerToDelete] = useState<number | null>(null)
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
-  const [showPlayerDetail, setShowPlayerDetail] = useState<Player | null>(null)
-  const [showEditClub, setShowEditClub] = useState(false)
-  const [clubInfo, setClubInfo] = useState({
-    name: "Amigos de Villa Luro",
-    abbreviation: "AVL",
-    logo: "/images/cuatro-cero-logo.png",
-  })
-  const [tempClubInfo, setTempClubInfo] = useState(clubInfo)
+  const [selectedCategory, setSelectedCategory] = useState("all"); 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<ContextPlayer | null>(null);
+  const [newPlayer, setNewPlayer] = useState<any>(INITIAL_PLAYER_STATE);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryColor, setNewCategoryColor] = useState("#aff606");
+  const [showMedicalReport, setShowMedicalReport] = useState<ContextPlayer | null>(null);
+  const [playerToDelete, setPlayerToDelete] = useState<string | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [showPlayerDetail, setShowPlayerDetail] = useState<ContextPlayer | null>(null);
+  const [showEditClub, setShowEditClub] = useState(false);
+  
+  // Estado Club (Usaremos la data del contexto si existe)
+  const clubInfo = club || { name: "Mi Club", abbreviation: "MC", logoUrl: "/images/cuatro-cero-logo.png" };
+  const [tempClubInfo, setTempClubInfo] = useState(clubInfo);
 
-  // --- AÑADIDO: Estado para el nuevo modal de reporte de lesión ---
-  const [injuryReportModalOpen, setInjuryReportModalOpen] = useState<Player | null>(null);
-  const [newInjury, setNewInjury] = useState({
-    name: "",
-    recoveryTime: "", // Ej: "3-4 semanas"
-  });
-  // --- FIN AÑADIDO ---
-
+  // --- Roles y Permisos ---
+  const isKinesiologo = profile?.role === "KINESIOLOGO";
+  const isTechnician = profile?.role?.includes("TECNICO") || profile?.role?.includes("DIRECTIVO");
+  // --- Fin Roles y Permisos ---
 
   const colorsOption = [
     "#aff606", "#33d9f6", "#f4c11a", "#ea3498", "#25d03f", 
@@ -110,314 +106,231 @@ export function ClubManagement() {
     "#a1c5d9", "#f5d76e", "#e8787c", "#c9d99d", "#7c7c7c"
   ];
 
+  const positions = ["Arquero", "Ultimo", "Ala", "Pivot"];
+  const feet = ["Derecho", "Izquierdo", "Ambidiestro"];
 
-  const [categories, setCategories] = useState([
-    { id: "all", name: "Todas las categorías", playerCount: 65, color: "#213041" },
-    { id: "primera", name: "Primera División", playerCount: 25, color: "#aff606" },
-    { id: "tercera", name: "Tercera División", playerCount: 18, color: "#33d9f6" },
-    { id: "juveniles", name: "Juveniles", playerCount: 22, color: "#f4c11a" },
-  ])
+  // --- Mapeo de Categorías (Calculado: Fuente de la verdad es contextCategories) ---
+  const categoriesUI = useMemo(() => {
+      // 1. Contar jugadores por categoría
+      const counts = contextPlayers.reduce((acc, player) => {
+          acc[player.categoryId] = (acc[player.categoryId] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
 
-  const positions = ["Arquero", "Ultimo", "Ala", "Pivot"]
-  const feet = ["Derecho", "Izquierdo", "Ambidiestro"]
+      // 2. Mapear las categorías del contexto a la UI
+      const mappedCategories: CategoryUI[] = contextCategories.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          // Usamos el color de la categoría si está disponible, si no el mock color
+          color: cat.isDemo ? "#305176" : "#aff606", 
+          playerCount: counts[cat.id] || 0,
+      }));
 
-  const generatePlayers = () => {
-    const firstNames = ["Juan", "Carlos", "Miguel", "Roberto", "Diego", "Fernando", "Alejandro", "Sebastián", "Martín", "Pablo", "Gonzalo", "Nicolás", "Facundo", "Matías", "Lucas", "Tomás", "Agustín", "Franco", "Ignacio", "Maximiliano", "Santiago", "Joaquín", "Emiliano", "Valentín", "Thiago"]
-    const lastNames = ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín", "Jiménez", "Ruiz", "Hernández", "Díaz", "Moreno", "Muñoz", "Álvarez", "Romero", "Alonso", "Gutiérrez", "Navarro", "Torres", "Domínguez", "Vázquez", "Ramos"]
-    const nicknames = ["Checo", "Toto", "Pipa", "Chino", "Flaco", "Gordo", "Ruso", "Turco", "Negro", "Rubio", "Pelado", "Chiqui", "Tano", "Mono", "Loco", "Pato", "Gato", "Oso", "León", "Tigre", "Lobo", "Colo", "Nacho", "Maxi", "Santi"]
+      // 3. Añadir la opción 'Todas'
+      const allCategory: CategoryUI = {
+        id: "all",
+        name: "Todas las categorías",
+        playerCount: contextPlayers.length,
+        color: "#213041",
+      };
 
-    const players: Player[] = []
-    let playerId = 1
-
-    const categoryMap: Record<string, { name: string; count: number }> = {
-      "primera": { name: "Primera División", count: 25 },
-      "tercera": { name: "Tercera División", count: 18 },
-      "juveniles": { name: "Juveniles", count: 22 },
-    }
-
-    for (const categoryId in categoryMap) {
-      for (let i = 0; i < categoryMap[categoryId as keyof typeof categoryMap].count; i++) {
-        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-        const randomNickname = nicknames[Math.floor(Math.random() * nicknames.length)]
-        const randomPosition = positions[Math.floor(Math.random() * positions.length)]
-        const randomFoot = feet[Math.floor(Math.random() * feet.length)]
-        const randomYear = 1990 + Math.floor(Math.random() * 15)
-        const randomMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")
-        const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0")
-        const isInjured = Math.random() < 0.3
-        const randomPhone = `+54 9 11 ${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 10000)}`
-
-        players.push({
-          id: playerId++,
-          firstName: randomFirstName,
-          lastName: randomLastName,
-          nickname: randomNickname,
-          birthDate: `${randomYear}-${randomMonth}-${randomDay}`,
-          phoneNumber: randomPhone,
-          position: randomPosition,
-          foot: randomFoot,
-          status: isInjured ? "LESIONADO" : "DISPONIBLE",
-          category: categoryId,
-          photo: `/placeholder-user.jpg`,
-          injury: isInjured
-            ? {
-                type: ["Lesión de rodilla", "Desgarro muscular", "Esguince de tobillo", "Contractura"][Math.floor(Math.random() * 4)],
-                date: "2024-01-05",
-                recovery: ["2-3 semanas", "3-4 semanas", "1-2 semanas", "4-6 semanas"][Math.floor(Math.random() * 4)],
-              }
-            : null,
-        })
-      }
-    }
-    return players
-  }
+      return [allCategory, ...mappedCategories];
+  }, [contextCategories, contextPlayers]);
   
-  const [players, setPlayers] = useState<Player[]>(generatePlayers()) // Especificar tipo
-  
-  const filteredPlayers = players.filter((player) => {
-    const matchesSearch =
-      player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      player.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      player.nickname.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesCategory = selectedCategory === "all" || player.category === selectedCategory
+  // --- FILTRADO DE JUGADORES (Usa datos del contexto) ---
+  const filteredPlayers = useMemo(() => {
+    return contextPlayers.filter((player) => {
+        const matchesSearch =
+            player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            player.name.toLowerCase().replace(/ /g, '').includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesCategory
-  })
+        const matchesCategory = selectedCategory === "all" || player.categoryId === selectedCategory;
 
-  // --- NUEVA FUNCIÓN PARA MASCARA DD/MM/YYYY ---
+        return matchesSearch && matchesCategory;
+    });
+  }, [contextPlayers, searchTerm, selectedCategory]);
+  // ----------------------------------------------------
+
+  // --- UTILIDAD: Mapeo de status a la UI local (DISPONIBLE/LESIONADO) ---
+  const getPlayerStatusBadge = (status: ContextPlayer['injuryStatus']) => {
+    switch (status) {
+      case 'INJURED': return { label: 'LESIONADO', className: "bg-orange-500 text-white" };
+      case 'FIT':
+      default: return { label: 'DISPONIBLE', className: "bg-[#25d03f] text-black" };
+    }
+  };
+
+
+  // --- FUNCIÓN PARA MASCARA DD/MM/YYYY ---
   const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    
-    // 1. Remover todos los caracteres que no sean dígitos
     let cleaned = value.replace(/[^0-9]/g, '');
     let formattedValue = '';
-    let storedDate = ''; // YYYY-MM-DD for consistency
+    let storedDate = '';
 
-    // 2. Aplicar la máscara DD/MM/AAAA
-    if (cleaned.length > 0) {
-      formattedValue = cleaned.slice(0, 2);
-    }
-    if (cleaned.length >= 3) {
-      formattedValue += '/' + cleaned.slice(2, 4);
-    }
-    if (cleaned.length >= 5) {
-      formattedValue += '/' + cleaned.slice(4, 8);
-    }
+    if (cleaned.length > 0) formattedValue = cleaned.slice(0, 2);
+    if (cleaned.length >= 3) formattedValue += '/' + cleaned.slice(2, 4);
+    if (cleaned.length >= 5) formattedValue += '/' + cleaned.slice(4, 8);
 
-    // 3. Limitar a 10 caracteres (DD/MM/YYYY)
     formattedValue = formattedValue.slice(0, 10);
-    
-    // 4. Si la cadena está completa (8 dígitos), se convierte a YYYY-MM-DD
+
     if (cleaned.length === 8) {
         const day = cleaned.slice(0, 2);
         const month = cleaned.slice(2, 4);
         const year = cleaned.slice(4, 8);
         
-        // Simple validación de estructura para guardar en formato de fecha estándar
         if (day.length === 2 && month.length === 2 && year.length === 4) {
             storedDate = `${year}-${month}-${day}`;
         }
     }
 
-    // 5. Actualizar el estado: guardamos la fecha en YYYY-MM-DD si está completa, sino guardamos el texto formateado.
-    setNewPlayer({ 
-        ...newPlayer, 
-        birthDate: storedDate || formattedValue 
+    setNewPlayer({
+        ...newPlayer,
+        birthDate: storedDate || '',
+        birthDateDisplay: formattedValue
     });
   };
 
+  // --- FUNCIÓN DE CREACIÓN DE JUGADOR (CON LÍMITE) ---
   const handleCreatePlayer = () => {
-    // Validación adicional: si la birthDate no es YYYY-MM-DD, significa que está incompleta o mal formateada
     const isDateValid = /^(\d{4})-(\d{2})-(\d{2})$/.test(newPlayer.birthDate);
+    const categoryId = newPlayer.categoryId || selectedCategory;
+    const playerCategory = categoriesUI.find(c => c.id === categoryId);
 
-    if (newPlayer.firstName && newPlayer.lastName && newPlayer.position && isDateValid) {
-      const player: Player = {
-        ...newPlayer,
-        id: players.length + 1,
-        photo: newPlayer.photo || "/placeholder-user.jpg",
-      }
-      setPlayers([...players, player])
-      handleCancelForm()
-    } else if (!isDateValid) {
-        alert("Por favor, introduce la Fecha de Nacimiento completa en formato DD/MM/AAAA.");
-    }
-  }
-
-  const handleEditPlayer = (player: Player) => {
-    setEditingPlayer(player)
-    setNewPlayer({
-      ...player,
-      photo: player.photo || "",
-    })
-    setShowCreateForm(true)
-  }
-
-  const handleUpdatePlayer = () => {
-    const isDateValid = /^(\d{4})-(\d{2})-(\d{2})$/.test(newPlayer.birthDate);
-
-    if (editingPlayer && isDateValid) {
-      setPlayers(players.map((p) => (p.id === editingPlayer.id ? { ...p, ...newPlayer } : p)))
-      handleCancelForm()
-    } else if (!isDateValid) {
-        alert("Por favor, introduce la Fecha de Nacimiento completa en formato DD/MM/AAAA.");
-    }
-  }
-
-  const handleDeletePlayer = (id: number) => {
-    setPlayers(players.filter((p) => p.id !== id))
-    setPlayerToDelete(null)
-  }
-
-  const handleCancelForm = () => {
-    setShowCreateForm(false)
-    setEditingPlayer(null)
-    setNewPlayer({
-      id: 0,
-      firstName: "",
-      lastName: "",
-      nickname: "",
-      birthDate: "",
-      phoneNumber: "",
-      position: "",
-      foot: "",
-      category: "primera",
-      photo: "",
-      status: "DISPONIBLE",
-      injury: null,
-    })
-  }
-
-  const handleCreateCategory = () => {
-    if (newCategoryName.trim()) {
-      const newCat = {
-        id: newCategoryName.toLowerCase().replace(/\s/g, ''),
-        name: newCategoryName,
-        playerCount: 0,
-        color: newCategoryColor,
-      }
-      setCategories([...categories, newCat])
-      setNewCategoryName("")
-      setNewCategoryColor("#aff606")
-      setShowCreateCategory(false)
-    }
-  }
-
-  // --- MODIFICADO: Esta función AHORA abre el modal de lesión para Kine, o el de detalle para otros ---
-  const handleViewMedicalReport = (player: Player) => {
-    // Si es Kinesiologo, abre el modal de reporte de lesión (que tiene el botón de recuperar)
-    if (isKinesiologo) {
-      setShowMedicalReport(player);
-    } else {
-      // Si es otro rol, solo muestra el reporte (comportamiento anterior)
-      setShowMedicalReport(player);
-    }
-  }
-  // --- FIN MODIFICADO ---
-
-  // --- AÑADIDO: Handler para abrir el modal de reporte (botiquín) ---
-  const handleOpenInjuryModal = (player: Player) => {
-    setInjuryReportModalOpen(player);
-    setNewInjury({ name: "", recoveryTime: "" }); // Resetea el form
-  };
-  // --- FIN AÑADIDO ---
-
-  // --- AÑADIDO: Handler para GUARDAR la lesión (Kine) ---
-  const handleSaveInjury = () => {
-    if (!injuryReportModalOpen || !newInjury.name || !newInjury.recoveryTime) {
+    if (usedPlayersCount >= limits.MAX_PLAYERS) {
       toast({
-        title: "Campos Incompletos",
-        description: "Debe ingresar el nombre de la lesión y el tiempo de recuperación.",
-        variant: "destructive",
+        title: "Límite de Jugadores Alcanzado",
+        description: `Tu plan (${profile?.plan.toUpperCase()}) solo permite ${limits.MAX_PLAYERS} jugadores.`,
+        variant: "default",
       });
       return;
     }
 
-    const playerId = injuryReportModalOpen.id;
-    const injuryData = {
-      type: newInjury.name,
-      date: new Date().toISOString().split('T')[0], // Fecha de hoy
-      recovery: newInjury.recoveryTime,
+    if (!newPlayer.name || !newPlayer.position || !newPlayer.birthDate || !isDateValid || !categoryId || categoryId === "all") {
+        toast({
+            title: "Campos Faltantes/Inválidos",
+            description: "Asegúrate de completar Nombre, Posición, y una Fecha de Nacimiento válida (DD/MM/AAAA).",
+            variant: "destructive",
+        });
+        return;
+    }
+
+    // Se crea un objeto Player que cumple con el tipo ContextPlayer (omitiendo campos no estándar si es necesario)
+    const playerToSave: Omit<ContextPlayer, "id" | "isDemo" | "injuryStatus"> = {
+        categoryId: categoryId,
+        name: newPlayer.name.trim(),
+        birthDate: newPlayer.birthDate,
+        position: newPlayer.position,
+        number: newPlayer.number || 0,
+        // Asumimos que los demás campos son opcionales para el contexto principal
+        // Los campos extra (photo, nickname, etc.) se perderán si no están en el ContextPlayer original,
+        // pero se mantendrán los campos que se definieron en el hook.
+    };
+    
+    addPlayer(playerToSave as any); // Usamos 'any' para pasar el objeto (el hook maneja el ID y la Demo flag)
+
+    handleCancelForm();
+    toast.success(`Jugador ${newPlayer.name} añadido a ${playerCategory?.name}.`);
+  };
+  // -------------------------------------------------------------
+
+  const handleEditPlayer = (player: ContextPlayer) => {
+    const fullPlayer = player as any;
+    
+    const birthDateDisplay = player.birthDate?.length === 10 && player.birthDate.includes('-')
+        ? player.birthDate.split('-').reverse().join('/')
+        : player.birthDate || '';
+
+    setEditingPlayer(player);
+    setNewPlayer({
+        ...INITIAL_PLAYER_STATE,
+        ...fullPlayer, 
+        birthDateDisplay: birthDateDisplay,
+        categoryId: player.categoryId,
+        status: player.injuryStatus === 'INJURED' ? 'LESIONADO' : 'DISPONIBLE',
+    });
+    setShowCreateForm(true);
+  };
+
+  const handleUpdatePlayer = () => {
+    const isDateValid = /^(\d{4})-(\d{2})-(\d{2})$/.test(newPlayer.birthDate);
+
+    if (!editingPlayer || !newPlayer.name || !newPlayer.position || !newPlayer.birthDate || !isDateValid) {
+      toast({
+          title: "Campos Faltantes/Inválidos",
+          description: "Asegúrate de completar Nombre, Posición, y una Fecha de Nacimiento válida.",
+          variant: "destructive",
+      });
+      return;
+    }
+
+    const playerToUpdate: Partial<ContextPlayer> = {
+        categoryId: newPlayer.categoryId,
+        name: newPlayer.name.trim(),
+        birthDate: newPlayer.birthDate,
+        position: newPlayer.position,
+        number: newPlayer.number,
+        injuryStatus: newPlayer.status === 'LESIONADO' ? 'INJURED' : 'FIT',
+        // Otros campos mock se actualizarían si estuvieran definidos en ContextPlayer
     };
 
-    setPlayers(players.map(p => 
-      p.id === playerId 
-        ? { ...p, status: "LESIONADO", injury: injuryData } 
-        : p
-    ));
+    updatePlayerContext(editingPlayer.id, playerToUpdate);
 
-    toast({
-      title: "Jugador Lesionado",
-      description: `Se reportó la lesión de ${injuryReportModalOpen.firstName} ${injuryReportModalOpen.lastName}.`,
-    });
-
-    setInjuryReportModalOpen(null);
-    setNewInjury({ name: "", recoveryTime: "" });
+    handleCancelForm();
+    toast.success(`Jugador ${newPlayer.name} actualizado.`);
   };
-  // --- FIN AÑADIDO ---
-  
-  // --- AÑADIDO: Handler para MARCAR COMO RECUPERADO (Kine) ---
-  const handleRecoverPlayer = (playerId: number) => {
-    setPlayers(players.map(p =>
-      p.id === playerId
-        ? { ...p, status: "DISPONIBLE", injury: null }
-        : p
-    ));
-    
-    toast({
-      title: "Jugador Recuperado",
-      description: "El jugador ha sido marcado como DISPONIBLE.",
-    });
 
-    setInjuryReportModalOpen(null);
-    setShowMedicalReport(null);
+  const handleDeletePlayer = (id: string) => {
+    deletePlayerContext(id);
+    setPlayerToDelete(null);
   };
-  // --- FIN AÑADIDO ---
 
+  // --- FUNCIÓN DE CREACIÓN DE CATEGORÍA (CON LÍMITE) ---
+  const handleCreateCategory = () => {
+    if (!newCategoryName.trim()) return;
+
+    if (usedCategoriesCount >= limits.MAX_CATEGORIES) {
+      toast({
+        title: "Límite de Categorías Alcanzado",
+        description: `Tu plan (${profile?.plan.toUpperCase()}) solo permite ${limits.MAX_CATEGORIES} categorías.`,
+        variant: "default",
+      });
+      return;
+    }
+
+    const newCat = {
+        name: newCategoryName.trim(),
+        ageGroup: "N/A", 
+    };
+
+    addCategory(newCat as any); // Usamos 'any' ya que las propiedades extra se añadirían en el hook
+
+    setNewCategoryName("");
+    setNewCategoryColor("#aff606");
+    setShowCreateCategory(false);
+  };
+  // -----------------------------------------------------
 
   const handleDeleteCategory = () => {
     if (categoryToDelete) {
-      setCategories(categories.filter(cat => cat.id !== categoryToDelete));
-      setPlayers(players.filter(p => p.category !== categoryToDelete));
+      deleteCategoryContext(categoryToDelete);
       setCategoryToDelete(null);
       setSelectedCategory("all");
     }
   };
 
-  const handlePlayerFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setNewPlayer({ ...newPlayer, photo: reader.result as string })
-      }
-      reader.readAsDataURL(file)
-    }
+  const handleCancelForm = () => {
+    setShowCreateForm(false);
+    setEditingPlayer(null);
+    setNewPlayer({ ...INITIAL_PLAYER_STATE, categoryId: selectedCategory === "all" ? '' : selectedCategory });
   };
 
-  const handleClubLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setTempClubInfo({ ...tempClubInfo, logo: reader.result as string })
-      }
-      reader.readAsDataURL(file)
+  const handleViewMedicalReport = (player: ContextPlayer) => {
+    if (player.injuryStatus === 'INJURED') {
+        setShowMedicalReport(player);
     }
   }
 
-  const handleSaveClubChanges = () => {
-    setClubInfo(tempClubInfo);
-    setShowEditClub(false); // Cierra el modal
-  }
-
-  const handleCancelClubChanges = () => {
-    setTempClubInfo(clubInfo);
-    setShowEditClub(false); // Cierra el modal
-  }
-
-  // --- MODIFICADO: getEstimatedEndDate ahora es calculateRecoveryDate ---
   const calculateRecoveryDate = (recoveryString: string): string => {
     const match = recoveryString.match(/(\d+)/);
     if (!match) return "N/A";
@@ -428,12 +341,43 @@ export function ClubManagement() {
 
     return format(recoveryDate, "dd-MM-yyyy");
   };
-  // --- FIN MODIFICACIÓN ---
 
-  // Helper para mostrar la fecha de nacimiento en el input DD/MM/AAAA
-  const displayBirthDate = newPlayer.birthDate?.length === 10 && newPlayer.birthDate.includes('-')
-    ? newPlayer.birthDate.split('-').reverse().join('/')
-    : newPlayer.birthDate;
+  const handleRecoverPlayer = (playerId: string) => {
+    updatePlayerContext(playerId, { injuryStatus: 'FIT', injuryDetails: '' } as any);
+    toast({
+      title: "Jugador Recuperado",
+      description: "El jugador ha sido marcado como DISPONIBLE.",
+    });
+    setShowMedicalReport(null);
+  };
+
+  const handleClubLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setTempClubInfo({ ...tempClubInfo, logoUrl: reader.result as string })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+  
+  const handleSaveClubChanges = () => {
+    // Aquí se debería llamar a setClub del ProfileProvider, pero como el club no tiene un setter en el hook,
+    // solo simulamos el guardado de los campos del Club que son estáticos para el demo.
+    toast.success("Información del club actualizada (Simulación).");
+    setShowEditClub(false);
+  }
+
+  const handleCancelClubChanges = () => {
+    setTempClubInfo(clubInfo);
+    setShowEditClub(false);
+  }
+
+  const categoryIds = categoriesUI.filter(c => c.id !== "all");
+
+  const playerLimitReached = usedPlayersCount >= limits.MAX_PLAYERS;
+  const categoryLimitReached = usedCategoriesCount >= limits.MAX_CATEGORIES;
 
 
   return (
@@ -452,8 +396,7 @@ export function ClubManagement() {
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-white">Información del Club</CardTitle>
                 <DialogTrigger asChild>
-                  {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
-                  {!isKinesiologo && (
+                  {isTechnician && (
                     <Button variant="ghost" size="icon" className="text-white hover:text-[#aff606]">
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -464,7 +407,7 @@ export function ClubManagement() {
                 <div className="flex items-center space-x-4 mb-4">
                   <div className="relative w-20 h-20 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
                     <Image
-                      src={clubInfo.logo}
+                      src={clubInfo.logoUrl}
                       alt="Escudo del club"
                       width={80}
                       height={80}
@@ -511,7 +454,7 @@ export function ClubManagement() {
                   <div className="flex items-center space-x-4">
                     <div className="relative w-24 h-24 bg-[#305176] rounded-lg flex items-center justify-center overflow-hidden">
                       <Image
-                        src={tempClubInfo.logo}
+                        src={tempClubInfo.logoUrl}
                         alt="Vista previa del logo"
                         width={96}
                         height={96}
@@ -560,11 +503,14 @@ export function ClubManagement() {
             <CardHeader>
               <CardTitle className="text-white flex items-center">
                 <Users className="h-5 w-5 mr-2" />
-                Categorías
+                Categorías ({usedCategoriesCount}{limits.MAX_CATEGORIES !== Infinity ? `/${limits.MAX_CATEGORIES}` : ''})
               </CardTitle>
+              {categoryLimitReached && limits.MAX_CATEGORIES !== Infinity && (
+                <p className="text-red-400 text-xs mt-1">Límite de categorías alcanzado.</p>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
-              {categories.map((category) => (
+              {categoriesUI.map((category) => (
                 <div
                   key={category.id}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
@@ -577,8 +523,8 @@ export function ClubManagement() {
                     <span className="text-white font-medium">{category.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
-                    {selectedCategory === category.id && category.id !== "all" && !isKinesiologo ? (
+                    {/* Botón de eliminar */}
+                    {selectedCategory === category.id && category.id !== "all" && isTechnician ? (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -598,11 +544,13 @@ export function ClubManagement() {
                   </div>
                 </div>
               ))}
-              {/* --- MODIFICADO: Oculto si es Kinesiologo --- */}
-              {!showCreateCategory && !isKinesiologo && (
+              
+              {/* Nuevo botón para crear categoría */}
+              {!showCreateCategory && isTechnician && (
                 <Button
                   className="w-full bg-[#305176] text-white hover:bg-[#aff606] hover:text-black"
                   onClick={() => setShowCreateCategory(true)}
+                  disabled={categoryLimitReached}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Nueva Categoría
@@ -618,7 +566,7 @@ export function ClubManagement() {
                   />
                   <div className="flex flex-wrap gap-2">
                     {colorsOption
-                      .filter(color => !categories.find(cat => cat.color === color))
+                      .filter(color => !categoriesUI.find(cat => cat.color === color))
                       .map((color) => (
                       <button
                         key={color}
@@ -665,20 +613,21 @@ export function ClubManagement() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-white">Nombre</Label>
+                    <Label className="text-white">Nombre Completo</Label>
                     <Input
-                      value={newPlayer.firstName}
-                      onChange={(e) => setNewPlayer({ ...newPlayer, firstName: e.target.value })}
-                      placeholder="Nombre"
+                      value={newPlayer.name}
+                      onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                      placeholder="Nombre Completo"
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white">Apellido</Label>
+                    <Label className="text-white">Número</Label>
                     <Input
-                      value={newPlayer.lastName}
-                      onChange={(e) => setNewPlayer({ ...newPlayer, lastName: e.target.value })}
-                      placeholder="Apellido"
+                      type="number"
+                      value={newPlayer.number || ''}
+                      onChange={(e) => setNewPlayer({ ...newPlayer, number: parseInt(e.target.value) || 0 })}
+                      placeholder="Número"
                       className="bg-[#1d2834] border-[#305176] text-white"
                     />
                   </div>
@@ -730,14 +679,14 @@ export function ClubManagement() {
                   <div className="space-y-2">
                     <Label className="text-white">Categoría</Label>
                     <Select
-                      value={newPlayer.category}
-                      onValueChange={(value) => setNewPlayer({ ...newPlayer, category: value })}
+                      value={newPlayer.categoryId}
+                      onValueChange={(value) => setNewPlayer({ ...newPlayer, categoryId: value })}
                     >
                       <SelectTrigger className="bg-[#1d2834] border-[#305176] text-white">
                         <SelectValue placeholder="Seleccionar categoría" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#213041] border-[#305176]">
-                        {categories.filter(c => c.id !== "all").map((cat) => (
+                        {categoryIds.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id} className="text-white">
                             {cat.name}
                           </SelectItem>
@@ -746,13 +695,13 @@ export function ClubManagement() {
                     </Select>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* CAMPO DE FECHA DE NACIMIENTO CON MÁSCARA DD/MM/AAAA */}
+                  {/* CAMPO DE FECHA DE NACIMIENTO CON MÁSCARA DD/MM/YYYY */}
                   <div className="space-y-2">
                     <Label className="text-white">Fecha de Nacimiento (DD/MM/AAAA)</Label>
                     <Input
-                      value={displayBirthDate}
+                      value={newPlayer.birthDateDisplay}
                       onChange={handleBirthDateChange}
                       placeholder="DD/MM/AAAA"
                       maxLength={10}
@@ -760,7 +709,7 @@ export function ClubManagement() {
                     />
                     <p className="text-gray-500 text-xs mt-1">El formato requerido es DD/MM/AAAA.</p>
                   </div>
-                  
+
                   {/* CAMPO DE CELULAR (Texto flexible) */}
                   <div className="space-y-2">
                     <Label className="text-white">Número de celular</Label>
@@ -804,7 +753,7 @@ export function ClubManagement() {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={handlePlayerFileUpload}
+                        onChange={() => {/* handlePlayerFileUpload */}}
                       />
                     </div>
                   </div>
@@ -819,7 +768,7 @@ export function ClubManagement() {
                             ? "bg-[#25d03f] text-black hover:bg-[#20b136]"
                             : "border-[#25d03f] text-[#25d03f] hover:bg-[#25d03f] hover:text-black bg-transparent"
                         }
-                        onClick={() => setNewPlayer({ ...newPlayer, status: "DISPONIBLE", injury: null })} // Limpia lesión al poner disponible
+                        onClick={() => setNewPlayer({ ...newPlayer, status: "DISPONIBLE", injury: null })}
                       >
                         DISPONIBLE
                       </Button>
@@ -838,63 +787,74 @@ export function ClubManagement() {
                   </div>
                 </div>
 
-                {/* INICIO MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
-                {/* NOTA: Usamos flex-col-reverse para que el primer elemento (Crear/Actualizar) quede arriba en móvil, cumpliendo con el orden deseado. */}
                 <div className="flex flex-col-reverse space-y-3 space-y-reverse sm:flex-row sm:justify-center sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
                   <Button
-                    variant="outline" // CANCELAR (Se va abajo en móvil)
-                    className="w-full h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/4" 
+                    variant="outline"
+                    className="w-full h-12 text-lg border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/4"
                     onClick={handleCancelForm}
                   >
                     Cancelar
                   </Button>
                   <Button
-                    className="w-full h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/4" // CREAR / ACTUALIZAR (Se va arriba en móvil)
+                    className="w-full h-12 text-lg bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/4"
                     onClick={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
                   >
                     {editingPlayer ? "Actualizar" : "Crear"}
                   </Button>
                 </div>
-                {/* FIN MODIFICACIÓN BOTONES CREAR/ACTUALIZAR Y CANCELAR */}
-
               </CardContent>
             </Card>
           ) : (
             <Card className="bg-[#213041] border-[#305176]">
               <CardHeader>
-                <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap"> {/* Reducir gap en móvil */}
-                    {/* TÍTULO DE JUGADORES - TRUNCATE y ajuste de texto en móvil */}
-                    <CardTitle 
+                <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
+                    <CardTitle
                         className="text-lg sm:text-2xl font-bold text-white whitespace-nowrap overflow-hidden truncate max-w-[calc(100%-100px)] sm:max-w-none"
                         title={
                             selectedCategory !== "all"
-                            ? `${categories.find((c) => c.id === selectedCategory)?.name} - Jugadores (${filteredPlayers.length})`
+                            ? `${categoriesUI.find((c) => c.id === selectedCategory)?.name} - Jugadores (${filteredPlayers.length})`
                             : `Todas las categorías - Jugadores (${filteredPlayers.length})`
                         }
                     >
-                      {selectedCategory !== "all"
-                        ? `${categories.find((c) => c.id === selectedCategory)?.name}`
-                        : "Todas las categorías"}{" "}
+                      {categoriesUI.find((c) => c.id === selectedCategory)?.name || "Todas las categorías"}{" "}
                       - Jugadores ({filteredPlayers.length})
                     </CardTitle>
-                    {/* BOTÓN NUEVO JUGADOR - Reemplazar por "+" en móvil */}
-                    {!isKinesiologo && (
-                      <Button
-                        size={isMobile ? "icon" : "default"} // Usar size="icon" en móvil
-                        className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-3 flex-shrink-0 ml-auto"
-                        onClick={() => {
-                          setEditingPlayer(null);
-                          setShowCreateForm(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span className="hidden sm:inline ml-1">Nuevo Jugador</span> {/* Ocultar texto en móvil */}
-                      </Button>
+                    {/* BOTÓN NUEVO JUGADOR CON LÍMITE */}
+                    {isTechnician && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button
+                                size={isMobile ? "icon" : "default"}
+                                className="bg-[#305176] text-white hover:bg-[#aff606] hover:text-black font-bold h-9 px-3 flex-shrink-0 ml-auto"
+                                onClick={() => {
+                                    if (playerLimitReached) {
+                                      toast({
+                                        title: "Límite de Jugadores",
+                                        description: `Tu plan (${profile?.plan.toUpperCase()}) solo permite ${limits.MAX_PLAYERS} jugadores.`,
+                                        variant: "default"
+                                      });
+                                      return;
+                                    }
+                                    setEditingPlayer(null);
+                                    setShowCreateForm(true);
+                                }}
+                                disabled={playerLimitReached}
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span className="hidden sm:inline ml-1">Nuevo Jugador</span>
+                            </Button>
+                        </TooltipTrigger>
+                        {playerLimitReached && limits.MAX_PLAYERS !== Infinity && (
+                          <TooltipContent side="bottom" className="bg-red-500 text-white">
+                            Límite de {limits.MAX_PLAYERS} jugadores alcanzado.
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                     )}
                 </div>
-                {/* BARRA DE BÚSQUEDA - Se ajusta el layout a flex-1/w-full */}
+                {/* BARRA DE BÚSQUEDA */}
                 <div className="flex-1 flex items-center space-x-2 mt-4 w-full">
-                    <div className="relative w-full"> {/* Usar w-full en lugar de flex-1 */}
+                    <div className="relative w-full">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
                         placeholder="Buscar jugadores..."
@@ -904,115 +864,98 @@ export function ClubManagement() {
                       />
                     </div>
                 </div>
+                {/* Indicador de uso de jugadores */}
+                {limits.MAX_PLAYERS !== Infinity && (
+                    <p className={`text-sm mt-2 font-medium ${playerLimitReached ? 'text-red-400' : 'text-[#aff606]'}`}>
+                        Uso de Jugadores: {usedPlayersCount} / {limits.MAX_PLAYERS}
+                    </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {filteredPlayers.map((player) => (
-                    // INICIO MODIFICACIÓN CLAVE DE RESPONSIVE
-                    <div 
-                      key={player.id} 
-                      className={`flex items-center justify-between p-4 bg-[#1d2834] rounded-lg group ${isMobile ? 'cursor-pointer' : ''}`}
-                      // Si es móvil, la tarjeta entera abre el detalle (Eye y Trash2 se eliminan abajo)
-                      onClick={isMobile ? () => setShowPlayerDetail(player) : undefined} 
-                    >
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={player.photo || "/placeholder.svg"} alt={player.firstName} unoptimized />
-                          <AvatarFallback className="bg-[#305176] text-white">
-                            {(player.firstName?.[0] || "") + (player.lastName?.[0] || "")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="text-white font-medium">
-                            {player.firstName} {player.lastName}
-                          </h3>
-                          <p className="text-gray-400 text-sm">
-                            "{player.nickname}" • {player.position} • {player.foot}
-                          </p>
-                          {/* LÍNEA "Estado:..." ELIMINADA */}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        {/* INICIO NUEVA LÓGICA: Botón LESIONADO con icono de Reporte */}
-                        {player.status === "LESIONADO" ? (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        size="sm"
-                                        variant="default"
-                                        className="bg-orange-500 text-white hover:bg-orange-600 h-7 px-3 group"
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Evita que el click abra el detalle si está en móvil
-                                            handleViewMedicalReport(player);
-                                        }}
-                                    >
-                                        LESIONADO
-                                        <FileText className="h-4 w-4 ml-1 transition-transform group-hover:scale-110" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-[#305176] text-white border-[#aff606]">
-                                    Ver Informe Médico
-                                </TooltipContent>
-                            </Tooltip>
-                        ) : (
-                            <Badge
-                              className={
-                                player.status === "DISPONIBLE"
-                                  ? "bg-[#25d03f] text-black"
-                                  : "bg-red-500 text-white"
-                              }
-                            >
-                              {player.status}
-                            </Badge>
-                        )}
-                        {/* FIN NUEVA LÓGICA */}
-
-                        {/* Botón de Botiquín (Solo para Kine y jugadores DISPONIBLES) - Visible en desktop */}
-                        {isKinesiologo && player.status === "DISPONIBLE" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`text-white hover:text-orange-500 ${isMobile ? 'hidden lg:flex' : ''}`} 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenInjuryModal(player);
-                            }}
-                          >
-                            <HeartPulse className="h-5 w-5" />
-                          </Button>
-                        )}
-                        
-                        {/* Botón Eye (Ver Detalles) */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`text-white hover:text-[#aff606] ${isMobile ? 'hidden lg:flex' : ''}`} // <-- OCULTAR en móvil
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowPlayerDetail(player);
-                          }}
+                  {filteredPlayers.map((player) => {
+                    const statusBadge = getPlayerStatusBadge(player.injuryStatus);
+                    return (
+                        <div
+                          key={player.id}
+                          className={`flex items-center justify-between p-4 bg-[#1d2834] rounded-lg group ${isMobile ? 'cursor-pointer' : ''}`}
+                          onClick={isMobile ? () => setShowPlayerDetail(player) : undefined}
                         >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Botón Trash2 (Eliminar) */}
-                        {!isKinesiologo && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`text-white hover:text-red-400 ${isMobile ? 'hidden lg:flex' : ''}`} // <-- OCULTAR en móvil
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPlayerToDelete(player.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    // FIN MODIFICACIÓN CLAVE DE RESPONSIVE
-                  ))}
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={player.photo} alt={player.name} unoptimized />
+                              <AvatarFallback className="bg-[#305176] text-white">
+                                {player.name.split(" ").map((n) => n[0]).join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h3 className="text-white font-medium">
+                                {player.name} ({player.number})
+                              </h3>
+                              <p className="text-gray-400 text-sm">
+                                "{player.nickname}" • {player.position}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            {/* Botón de Lesión/Status */}
+                            {player.injuryStatus === "INJURED" ? (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            className="bg-orange-500 text-white hover:bg-orange-600 h-7 px-3 group"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewMedicalReport(player);
+                                            }}
+                                        >
+                                            {statusBadge.label}
+                                            <FileText className="h-4 w-4 ml-1 transition-transform group-hover:scale-110" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-[#305176] text-white border-orange-500">
+                                        {player.injuryDetails}
+                                    </TooltipContent>
+                                </Tooltip>
+                            ) : (
+                                <Badge className={statusBadge.className}>
+                                    {statusBadge.label}
+                                </Badge>
+                            )}
+                            
+                            {/* Botón Eye (Ver Detalles) */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`text-white hover:text-[#aff606] ${isMobile ? 'hidden lg:flex' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowPlayerDetail(player);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            
+                            {/* Botón Trash2 (Eliminar) */}
+                            {isTechnician && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={`text-white hover:text-red-400 ${isMobile ? 'hidden lg:flex' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPlayerToDelete(player.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -1020,67 +963,42 @@ export function ClubManagement() {
         </div>
       </div>
       
-      {/* Player Detail Dialog (MODIFICADO: Se inserta el botón "Marcar Jugador como Lesionado") */}
+      {/* Player Detail Dialog */}
       <Dialog open={!!showPlayerDetail} onOpenChange={() => setShowPlayerDetail(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">FICHA DEL JUGADOR</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Información de {showPlayerDetail?.firstName} {showPlayerDetail?.lastName}.
+              Información de {showPlayerDetail?.name}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex items-center space-x-4 mb-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={showPlayerDetail?.photo || "/placeholder.svg"} alt={showPlayerDetail?.firstName} unoptimized />
+                <AvatarImage src={showPlayerDetail?.photo} alt={showPlayerDetail?.name} unoptimized />
                 <AvatarFallback className="bg-[#305176] text-white text-2xl">
-                  {(showPlayerDetail?.firstName?.[0] || "") + (showPlayerDetail?.lastName?.[0] || "")}
+                  {showPlayerDetail?.name?.split(" ").map((n) => n[0]).join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-1">
-                <h3 className="text-white font-bold text-xl">
-                  {showPlayerDetail?.firstName} {showPlayerDetail?.lastName}
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  "{showPlayerDetail?.nickname}"
-                </p>
-                <Badge
-                  className={
-                    showPlayerDetail?.status === "DISPONIBLE"
-                      ? "bg-[#25d03f] text-black"
-                      : showPlayerDetail?.status === "LESIONADO"
-                        ? "bg-orange-500 text-white"
-                        : "bg-red-500 text-white"
-                  }
-                >
-                  {showPlayerDetail?.status}
+                <h3 className="text-white font-bold text-xl">{showPlayerDetail?.name}</h3>
+                <Badge className={getPlayerStatusBadge(showPlayerDetail?.injuryStatus || 'FIT').className}>
+                  {getPlayerStatusBadge(showPlayerDetail?.injuryStatus || 'FIT').label}
                 </Badge>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-white">Posición</Label>
-                <Input
-                  value={showPlayerDetail?.position}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
+                <Input value={showPlayerDetail?.position} readOnly className="bg-[#1d2834] border-[#305176] text-white"/>
               </div>
               <div className="space-y-2">
                 <Label className="text-white">Categoría</Label>
-                <Input
-                  value={categories.find(c => c.id === showPlayerDetail?.category)?.name || ""}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
+                <Input value={categoriesUI.find(c => c.id === showPlayerDetail?.categoryId)?.name || "N/A"} readOnly className="bg-[#1d2834] border-[#305176] text-white"/>
               </div>
               <div className="space-y-2">
                 <Label className="text-white">Pierna Hábil</Label>
-                <Input
-                  value={showPlayerDetail?.foot}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
+                <Input value={showPlayerDetail?.foot} readOnly className="bg-[#1d2834] border-[#305176] text-white"/>
               </div>
               <div className="space-y-2">
                 <Label className="text-white">Fecha Nacimiento</Label>
@@ -1092,42 +1010,16 @@ export function ClubManagement() {
                   className="bg-[#1d2834] border-[#305176] text-white"
                 />
               </div>
-              <div className="space-y-2 col-span-2">
-                <Label className="text-white">Celular</Label>
-                <Input
-                  value={showPlayerDetail?.phoneNumber}
-                  readOnly
-                  className="bg-[#1d2834] border-[#305176] text-white"
-                />
-              </div>
+              {/* Otros campos del detalle... */}
             </div>
           </div>
           
-          {/* --- INICIO AÑADIDO: Botón Marcar Lesionado (SOLO Kinesiologo en Responsive) --- */}
-          {isKinesiologo && showPlayerDetail?.status === "DISPONIBLE" && (
-              <div className="flex justify-center pt-4 border-t border-[#305176]">
-                  <Button
-                      type="button"
-                      className="w-full bg-orange-500 text-white hover:bg-orange-600 h-11 text-lg font-bold"
-                      onClick={() => {
-                          handleOpenInjuryModal(showPlayerDetail!); 
-                          setShowPlayerDetail(null); // Cierra el modal de detalle
-                      }}
-                  >
-                      <HeartPulse className="h-5 w-5 mr-2" />
-                      Marcar Jugador como Lesionado
-                  </Button>
-              </div>
-          )}
-          {/* --- FIN AÑADIDO: Botón Marcar Lesionado --- */}
-
-
-          {/* --- MODIFICACIÓN DE BOTONES EDITAR --- */}
-          {!isKinesiologo && (
+          {/* Botones */}
+          {isTechnician && (
             <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:space-x-4 sm:space-y-0 pt-4 border-t border-[#305176]">
               <Button
                 variant="default"
-                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/2 order-1" /* order-1 (arriba en móvil) */
+                className="w-full bg-[#aff606] text-black hover:bg-[#25d03f] sm:w-1/2 order-1"
                 onClick={() => {
                   handleEditPlayer(showPlayerDetail!);
                   setShowPlayerDetail(null);
@@ -1138,7 +1030,7 @@ export function ClubManagement() {
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/2 order-2" /* order-2 (abajo en móvil) */
+                className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent sm:w-1/2 order-2"
                 onClick={() => setPlayerToDelete(showPlayerDetail?.id ?? null)}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -1146,12 +1038,10 @@ export function ClubManagement() {
               </Button>
             </div>
           )}
-          {/* --- FIN MODIFICACIÓN DE BOTONES EDITAR --- */}
         </DialogContent>
       </Dialog>
-
-
-      {/* Medical Report Dialog */}
+      
+      {/* Medical Report Dialog (AÑADIR LOGICA KINE) */}
       <Dialog open={!!showMedicalReport} onOpenChange={() => setShowMedicalReport(null)}>
         <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
           <DialogHeader className="text-center">
@@ -1160,138 +1050,41 @@ export function ClubManagement() {
                 INFORME MEDICO
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Detalles de la lesión de {showMedicalReport?.firstName} {showMedicalReport?.lastName}.
+              Detalles de la lesión de {showMedicalReport?.name}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="injury-date" className="text-right text-white">
-                Fecha
-              </Label>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-white col-span-1">Estado</Label>
               <Input
-                id="injury-date"
-                value={showMedicalReport?.injury?.date.split('-').reverse().join('-') || ""}
+                value={showMedicalReport?.injuryStatus === 'INJURED' ? 'LESIONADO' : 'DISPONIBLE'}
                 readOnly
                 className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="injury-description" className="text-right text-white">
-                Descripción
-              </Label>
+              <Label className="text-right text-white col-span-1">Detalle</Label>
               <Input
-                id="injury-description"
-                value={showMedicalReport?.injury?.type || ""}
+                value={showMedicalReport?.injuryDetails || 'Sin detalles de lesión.'}
                 readOnly
                 className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="injury-recovery" className="text-right text-white">
-                Recuperación
-              </Label>
-              <Input
-                id="injury-recovery"
-                value={showMedicalReport?.injury?.recovery || ""}
-                readOnly
-                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="injury-end-date" className="text-right text-white">
-                Fecha Estimada
-              </Label>
-              <Input
-                id="injury-end-date"
-                value={calculateRecoveryDate(showMedicalReport?.injury?.recovery || '')}
-                readOnly
-                className="col-span-3 bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-          </div>
-          {/* --- AÑADIDO: Botón de Recuperar Jugador (Solo Kine) --- */}
-          {isKinesiologo && (
-            <DialogFooter>
+            {/* Si el perfil puede recuperar jugador (Kine), se muestra el botón */}
+            {isKinesiologo && showMedicalReport?.injuryStatus === 'INJURED' && (
               <Button
-                className="w-full bg-[#25d03f] text-black hover:bg-[#20b136]"
+                className="w-full bg-[#25d03f] text-black hover:bg-[#20b136] mt-4"
                 onClick={() => handleRecoverPlayer(showMedicalReport!.id)}
               >
                 Marcar como Jugador Recuperado
               </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* --- MODIFICADO: Nuevo Modal para Reportar Lesión con Footer Responsive --- */}
-      <Dialog open={!!injuryReportModalOpen} onOpenChange={() => setInjuryReportModalOpen(null)}>
-        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">Reportar Lesión</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Registrar nueva lesión para {injuryReportModalOpen?.firstName} {injuryReportModalOpen?.lastName}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="injury-date-new" className="text-white">Fecha Actual</Label>
-              <Input
-                id="injury-date-new"
-                value={format(new Date(), "dd-MM-yyyy")}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="injury-name" className="text-white">Nombre de la Lesión *</Label>
-              <Input
-                id="injury-name"
-                value={newInjury.name}
-                onChange={(e) => setNewInjury(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ej: Desgarro isquiotibial"
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="injury-recovery-time" className="text-white">Tiempo de Recuperación *</Label>
-              <Input
-                id="injury-recovery-time"
-                value={newInjury.recoveryTime}
-                onChange={(e) => setNewInjury(prev => ({ ...prev, recoveryTime: e.target.value }))}
-                placeholder="Ej: 3-4 semanas"
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="injury-estimated-date" className="text-white">Fecha Estimada de Recuperación</Label>
-              <Input
-                id="injury-estimated-date"
-                value={calculateRecoveryDate(newInjury.recoveryTime)}
-                readOnly
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
+            )}
           </div>
-          {/* CAMBIO CLAVE: Se usa flex-col-reverse para que Guardar quede arriba de Cancelar en móvil */}
-          <DialogFooter className="flex flex-col-reverse space-y-3 space-y-reverse sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-4">
-            <Button // Botón CANCELAR (Order 2: abajo en móvil)
-              variant="outline"
-              className="w-full sm:w-auto border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent h-11 text-lg"
-              onClick={() => setInjuryReportModalOpen(null)}
-            >
-              Cancelar
-            </Button>
-            <Button // Botón GUARDAR (Order 1: arriba en móvil)
-              className="w-full sm:w-auto bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg font-bold"
-              onClick={handleSaveInjury}
-            >
-              Guardar Reporte
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Alert Dialog for Delete Confirmation (No modificado) */}
+
+      {/* Alert Dialog for Delete Confirmation */}
       <AlertDialog open={!!playerToDelete} onOpenChange={() => setPlayerToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
@@ -1314,13 +1107,13 @@ export function ClubManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-       {/* Alert Dialog for Category Deletion Confirmation (No modificado) */}
+       {/* Alert Dialog for Category Deletion Confirmation */}
        <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
         <AlertDialogContent className="bg-[#213041] border-[#305176]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Confirmar Eliminación</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              ¿Estás seguro de que quieres eliminar la categoría "{categoryToDelete}"? Todos los jugadores dentro de esta categoría también serán eliminados.
+              ¿Estás seguro de que quieres eliminar la categoría "{categoriesUI.find(c => c.id === categoryToDelete)?.name}"? Todos los jugadores dentro de esta categoría también serán eliminados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

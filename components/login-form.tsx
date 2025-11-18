@@ -1,3 +1,5 @@
+// components/login-form.tsx
+
 "use client"
 
 import type React from "react"
@@ -12,78 +14,84 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
+import { DEMO_ACCOUNTS, PlanKey } from "@/lib/limits" // <-- Importa las cuentas corregidas
+import { useProfile } from "@/hooks/use-profile"
 
-// CREDENCIALES DEL USUARIO PUBLICADOR (MODO DEMO)
-const PUBLISHER_EMAIL = "cuatrocero@gmail.com";
-const PUBLISHER_PASSWORD = "Chata202";
-const PUBLISHER_PROFILE = {
-    id: 9999,
-    firstName: "Cuatro",
-    lastName: "Cero",
-    profileType: "PUBLICADOR",
-    category: "primera", // Aunque publicador no use categoría, la necesita para el objeto
-    displayName: "Cuatro Cero - Publicador",
-};
 
 // --- MOCK DATA NECESARIA PARA SALTAR EL PROFILE GUARD (Paso 1 y 2) ---
-const MOCK_CLUB_DATA = {
-    id: "mock_club_pub", 
-    name: "Cuatro Cero Admin Club",
-    abbreviation: "4C",
-    logoUrl: "/images/cuatro-cero-logo.png",
-    createdAt: new Date().toISOString(),
-};
+const MOCK_CLUB_ID = "mock_club_test";
+const MOCK_CATEGORY_ID = "mock_category_test";
 
-const MOCK_CATEGORY_DATA = {
-    id: "mock_category_pub",
-    name: "Publicador",
-    color: "bg-gray-500",
-};
-// --------------------------------------------------------------------
-
-// --- CORRECCIÓN: Clave correcta de localStorage ---
-// Esta clave debe coincidir con ACTIVE_PROFILE_KEY en use-profile.tsx
+// Claves consistentes para el estado
+const CLUB_DATA_KEY = "clubData"; 
+const SELECTED_CATEGORY_KEY = "selectedCategory"; 
 const ACTIVE_PROFILE_KEY = "userProfile"; 
+// --------------------------------------------------------------------
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const { signIn, signUp } = useAuth()
+  const { setProfile, clearProfileData } = useProfile()
   const router = useRouter()
 
-  // --- FUNCIÓN CLAVE: FORZAR CIERRE DE SESIÓN EN MODO DEMO ---
-  const clearDemoSession = () => {
-      // Importante: Eliminar TODAS las claves de flujo de configuración
-      localStorage.removeItem("userProfile"); 
-      localStorage.removeItem("selectedProfile"); 
-      localStorage.removeItem("activeProfile"); 
-      localStorage.removeItem("selectedCategory"); 
-      localStorage.removeItem("allUserCategories"); 
-      localStorage.removeItem("allUserProfiles"); 
-      localStorage.removeItem("clubData"); // Limpiamos el club
-  };
+  // --- FUNCIÓN CENTRAL DE LOGIN DEMO ---
+  const handleDemoLogin = (email: string, password: string) => {
+    // 1. Encontrar cuenta de demo por email
+    const demoAccountEntry = Object.values(DEMO_ACCOUNTS).find(
+      (account) => account.email === email
+    );
 
-
-  const handleDemoLogin = (email: string, isSignUp: boolean) => {
-    // Si estamos en modo demo (Supabase no configurado)
-    if (!isSupabaseConfigured()) {
-
-      // *** 1. LIMPIAR SIEMPRE LA SESIÓN ANTERIOR ANTES DE CONTINUAR ***
-      clearDemoSession();
-
-      setTimeout(() => {
-        setIsLoading(false)
-
-        // 2. Redirige a /select-category para cualquier usuario que no sea el publicador
-        router.push("/select-category"); 
-
-      }, 1000);
-      return true; // Indica que manejamos el login demo
+    if (!demoAccountEntry) {
+      // CORRECCIÓN: Si el usuario intenta usar un email de registro en demo, no lo permitimos
+      setError("Usuario demo no encontrado. Solo se permiten las cuentas de prueba.");
+      return false;
     }
-    return false; // Indica que se debe usar el login de Supabase
-  }
 
+    if (password !== demoAccountEntry.password) {
+      setError("Contraseña incorrecta.");
+      return false;
+    }
+    
+    // 2. Éxito de login: Limpiar datos anteriores y configurar mocks
+    clearProfileData(); 
 
+    // A. Mockear datos de Club y Categoría para satisfacer el ProfileGuard (Paso 1 y 2)
+    const mockClubData = {
+        id: MOCK_CLUB_ID,
+        name: `${demoAccountEntry.plan.toUpperCase()} Test Club`,
+        abbreviation: demoAccountEntry.plan.toUpperCase().slice(0, 3),
+        logoUrl: "/images/cuatro-cero-logo.png",
+    };
+    const mockCategoryData = {
+        id: MOCK_CATEGORY_ID,
+        name: `Categoría ${demoAccountEntry.plan.toUpperCase()}`,
+        color: "#aff606",
+    };
+    
+    localStorage.setItem(CLUB_DATA_KEY, JSON.stringify(mockClubData));
+    localStorage.setItem(SELECTED_CATEGORY_KEY, JSON.stringify(mockCategoryData));
+
+    // B. Crear objeto de perfil para guardar en localStorage
+    const mockProfile = {
+        id: Date.now(),
+        firstName: demoAccountEntry.role.split(' ')[0],
+        lastName: 'Test',
+        profileType: demoAccountEntry.role,
+        category: MOCK_CATEGORY_ID,
+        displayName: `${demoAccountEntry.role.split(' ')[0]} Test - ${demoAccountEntry.role} (${mockCategoryData.name})`,
+        plan: demoAccountEntry.plan as PlanKey, 
+    };
+    
+    localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(mockProfile));
+
+    // C. Redirigimos al dashboard, el ProfileGuard permitirá el acceso.
+    router.push("/dashboard");
+
+    return true;
+  };
+  
+  // --- FUNCIÓN DE SUBMIT ---
   const handleSubmit = async (e: React.FormEvent, isSignUp = false) => {
     e.preventDefault()
     setIsLoading(true)
@@ -101,40 +109,17 @@ export function LoginForm() {
       return
     }
 
-    // --- Lógica de Modo Demo (MODIFICADA) ---
+    // --- Lógica de Modo Demo ---
     if (!isSupabaseConfigured()) {
-        // Manejo del usuario publicador en modo demo:
-        if (!isSignUp && email === PUBLISHER_EMAIL) {
-            if (password !== PUBLISHER_PASSWORD) {
-                setError("Contraseña incorrecta para el usuario publicador demo.");
-                setIsLoading(false);
-                return;
-            }
-            
-            // Éxito de login Publicador (salta todos los pasos)
-            clearDemoSession(); // Limpiar cualquier sesión antigua
-            setTimeout(() => {
-                setIsLoading(false);
-                
-                // 1. Guardamos el perfil del publicador
-                localStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(PUBLISHER_PROFILE));
-                
-                // 2. Mockear datos de Club y Categoría para satisfacer el ProfileGuard
-                localStorage.setItem("clubData", JSON.stringify(MOCK_CLUB_DATA));
-                localStorage.setItem("selectedCategory", JSON.stringify(MOCK_CATEGORY_DATA));
-                
-                // 3. Redirigimos directamente al dashboard
-                router.push("/dashboard");
-            }, 1000);
-            return; // Detiene la ejecución aquí
-        } else {
-             // Cualquier otro login/signup en modo demo va directo al flujo de configuración
-             handleDemoLogin(email, isSignUp);
-        }
-        return; // Detiene la ejecución aquí para el modo demo
+      setTimeout(() => {
+        setIsLoading(false);
+        // Llama a la función de login demo para manejar la autenticación
+        handleDemoLogin(email, password);
+      }, 1000);
+      return;
     }
 
-    // --- Lógica de Supabase Real (si está configurado) ---
+    // --- Lógica de Supabase Real ---
     try {
       let result
       if (isSignUp) {
@@ -146,7 +131,7 @@ export function LoginForm() {
       if (result.error) {
         setError(result.error.message)
       } else {
-        // Siempre ir a seleccionar categoría después de login/signup exitoso
+        // En Supabase real, siempre vamos a seleccionar categoría/perfil
         router.push("/select-category"); 
       }
     } catch (err) {
@@ -173,7 +158,14 @@ export function LoginForm() {
           {!isSupabaseConfigured() && (
             <Alert className="mb-4 bg-[#f4c11a] border-[#f4c11a] text-black">
               <AlertDescription>
-                <strong>Modo Demo:</strong> Usa `cuatrocero@gmail.com` / `Chata202` para el perfil publicador. Los datos no se guardarán.
+                <strong>Modo Demo:</strong> Usa las cuentas de prueba: 
+                <ul className="list-disc ml-4 mt-2 text-sm">
+                    <li>tecnico@4c.com (Técnico / Límite)</li>
+                    <li>cuerpo@4c.com (PF / Límite)</li>
+                    <li>institucional@4c.com (Directivo / Ilimitado)</li>
+                    <li>cuatrocero@gmail.com (Publicador)</li>
+                </ul>
+                Contraseña para todas: `pass123` (excepto Publicador: `Chata202`).
               </AlertDescription>
             </Alert>
           )}

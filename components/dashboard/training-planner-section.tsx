@@ -1,6 +1,10 @@
+// components/dashboard/training-planner-section.tsx
+
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
+// Importamos el hook useProfile para obtener datos reales del usuario, categorías y jugadores
+import { useProfile, Player as ContextPlayer, Category as ContextCategory } from "@/hooks/use-profile" 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Plus, Calendar as CalendarIcon, Clock, Target, PieChart, Users, X, Check, Search, Trash2, Edit, Eye } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
-import { format } from "date-fns" // Importación necesaria para el formato de fecha
-import { es } from 'date-fns/locale/es'; // Importar locale español
-import { useIsMobile } from "@/hooks/use-mobile" // <-- IMPORTADO
+import { format } from "date-fns"
+import { es } from 'date-fns/locale/es';
+import { useIsMobile } from "@/hooks/use-mobile"
+import { toast } from "@/hooks/use-toast"
 
 import {
   AlertDialog,
@@ -30,18 +35,40 @@ import { Calendar } from "@/components/ui/calendar"
 
 // --- CONSTANTES GLOBALES DE NOTA ---
 const NOTE_TYPE = "Note"; 
-const NOTE_NEUTRAL_COLOR = "#7c7c7c"; // Color gris oscuro neutro
+const NOTE_NEUTRAL_COLOR = "#7c7c7c"; 
 const NOTE_CATEGORY_NAME = "Nota de Sesión";
 // ---------------------------------
+
+// --- MOCK DATA GLOBAL (PARA SIMULAR EJERCICIOS DISPONIBLES) ---
+// Mantenemos los mocks de ejercicios fuera del componente como constantes,
+// ya que el manejo de ejercicios es un módulo separado que debe ser persistente.
+
+const exercisesFromManagement = [
+  { id: 1, name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, players: 11, goalkeepers: 1, difficulty: "Media", materials: "Conos, balones", objective: "Mejorar el juego por las bandas", createdAt: "2024-01-15", type: "Técnico", description: "Ejercicio de ataque posicional para romper líneas por las bandas y buscar centros al área.", },
+  { id: 2, name: "Presión alta coordinada", category: "Defensa", duration: 15, players: 8, goalkeepers: 0, difficulty: "Difícil", materials: "Conos, petos", objective: "Coordinar la presión defensiva", createdAt: "2024-01-14", type: "Técnico", description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.", },
+  { id: 3, name: "Transición defensa-ataque", category: "Transiciones", duration: 18, players: 10, goalkeepers: 1, difficulty: "Media", materials: "Balones, conos", objective: "Mejorar transiciones rápidas", createdAt: "2024-01-13", type: "Técnico", description: "Ejercicio para practicar la transición rápida de defensa a ataque, creando superioridad numérica.", },
+  { id: 4, name: "Tiros libres directos", category: "Balón Parado", duration: 12, players: 6, goalkeepers: 1, difficulty: "Fácil", materials: "Balones, barrera", objective: "Mejorar precisión en tiros libres", createdAt: "2024-01-12", type: "Técnico", description: "Práctica de tiros libres directos para mejorar la técnica y la efectividad en estas jugadas.", },
+  { id: 5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, players: 4, goalkeepers: 1, difficulty: "Media", materials: "Balones, conos", objective: "Mejorar distribución del arquero", createdAt: "2024-01-11", type: "Técnico", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
+];
+
+const exercisesFromPhysical = [
+  { id: 101, name: "Circuito de Resistencia Aeróbica", category: "Resistencia", duration: 25, players: 15, goalkeepers: 0, difficulty: "Media", materials: "Conos, cronómetro", objective: "Mejorar la capacidad aeróbica", createdBy: "Preparador Físico", type: "Físico", createdAt: "2024-01-15", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
+  { id: 102, name: "Entrenamiento de Fuerza Funcional", category: "Fuerza", duration: 30, players: 12, goalkeepers: 0, difficulty: "Difícil", materials: "Pesas rusas, bandas elásticas", objective: "Desarrollar fuerza específica para fútbol", createdBy: "Preparador Físico", type: "Físico", createdAt: "2024-01-14", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
+];
+
+const exercisesFromKinesiology = [
+  { id: 201, name: "Ejercicios de Rehabilitación de Rodilla", category: "Rehabilitación", duration: 20, players: 1, goalkeepers: 0, difficulty: "Media", materials: "Banda elástica, pelota suiza", objective: "Recuperar movilidad y fuerza en rodilla", createdBy: "Kinesiólogo", type: "Kinesiológico", createdAt: "2024-01-15", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
+  { id: 202, name: "Prevención de Lesiones de Tobillo", category: "Prevención", duration: 15, players: 8, goalkeepers: 0, difficulty: "Fácil", materials: "Conos, plataforma inestable", objective: "Fortalecer músculos estabilizadores del tobillo", createdBy: "Kinesiólogo", type: "Kinesiológico", createdAt: "2024-01-14", description: "Fortalecimiento de músculos estabilizadores del tobillo para prevenir lesiones comunes en el fútbol.", },
+];
+
+const emptyTrainingSessions: any[] = [];
+// -------------------------------------------------------------------------
+
 
 // Función de ayuda para obtener la fecha y hora actual predeterminada
 const getInitialDateTime = () => {
   const now = new Date();
-  
-  // Usamos el objeto Date para almacenar la fecha completa
   const dateObject = now;
-  
-  // Formato HH:MM para input type="time"
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const timeString = `${hours}:${minutes}`;
@@ -49,449 +76,108 @@ const getInitialDateTime = () => {
   return { date: dateObject, time: timeString };
 };
 
-// --- FUNCIÓN AUXILIAR PARA OBTENER LA CATEGORÍA POR DEFECTO DEL PERFIL (CORREGIDA) ---
-const getInitialCategory = (): string => {
-  if (typeof window !== "undefined") {
-    const profileJson = localStorage.getItem("userProfile");
-    if (profileJson) {
-      try {
-        const profile = JSON.parse(profileJson);
-        // CORRECCIÓN: Se lee 'profile.category' (el ID) directamente.
-        return profile?.category || ""; 
-      } catch (e) {
-        console.error("Error parsing user profile from localStorage", e);
-        return "";
-      }
-    }
-  }
-  return "";
-};
-// ---------------------------------------------------------------------------------
-
 
 export function TrainingPlannerSection() {
-  const isMobile = useIsMobile(); // <-- Uso del hook
+  const isMobile = useIsMobile();
+  // --- USO DE CONTEXTO ---
+  const { profile, categories, players: allPlayersFromContext } = useProfile();
+  const profileType = profile?.role; // Ej: "DIRECTOR TECNICO"
+  const profileCategoryId = profile?.categoryId; // El ID de la categoría seleccionada por el usuario
+  // -----------------------
+
   const [showPlannerForm, setShowPlannerForm] = useState(false)
   const [selectedExercises, setSelectedExercises] = useState<any[]>([])
   const [showTrainingDetail, setShowTrainingDetail] = useState<any>(null)
   const [showAttendance, setShowAttendance] = useState(false)
-  const [attendance, setAttendance] = useState<Record<number, boolean>>({}) 
+  // Usamos string ID para jugadores del contexto
+  const [attendance, setAttendance] = useState<Record<string, boolean>>({}) 
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [trainingToDelete, setTrainingToDelete] = useState<number | null>(null)
   const [showExerciseDetail, setShowExerciseDetail] = useState<any>(null)
-  
   const [validationMessage, setValidationMessage] = useState("Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.");
-
   const [showNoteModal, setShowNoteModal] = useState(false)
-  const [newNote, setNewNote] = useState({
-    title: "",
-    duration: "",
-    description: "",
-  })
+  const [newNote, setNewNote] = useState({ title: "", duration: "", description: "" })
+
+  // --- ESTADO DE SESIONES: INICIALIZADO LIMPIO ---
+  // Las sesiones programadas se guardan en el estado local, pero inician vacías
+  const [trainingSessions, setTrainingSessions] = useState(emptyTrainingSessions);
+  // Las sesiones recientes siempre están vacías en el modo demo limpio
+  const [previousSessions, setPreviousSessions] = useState(emptyTrainingSessions); 
+
+  // Determina la categoría inicial del formulario basado en el perfil
+  const getInitialCategory = useMemo((): string => {
+    // Si el perfil ya tiene un categoryId, úsalo. Si no, usa la primera categoría disponible.
+    return profileCategoryId || categories[0]?.id || "";
+  }, [profileCategoryId, categories]);
 
   const [newTraining, setNewTraining] = useState(() => {
     const initialDateTime = getInitialDateTime();
     return {
       name: "",
-      date: initialDateTime.date as Date, 
+      date: initialDateTime.date as Date,
       time: initialDateTime.time,
-      category: getInitialCategory(), // <-- Se establece la categoría predeterminada aquí
+      category: getInitialCategory, // Usar la categoría inicial calculada
     }
   });
 
-  // #######################################################################
-  // ###       EJEMPLOS DE ENTRENAMIENTOS CON "createdBy" AÑADIDO        ###
-  // #######################################################################
-  const [trainingSessions, setTrainingSessions] = useState([
-    {
-      id: 1,
-      name: "Entrenamiento Táctico - Ataque",
-      date: "2025-11-08", // Fecha futura
-      time: "10:00",
-      duration: 90,
-      exercises: [
-        { id:1, name: "Ataque 4-3-3 por bandas", category: "Ataque", duration: 20, type: "Táctico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas", description: "Ejercicio de ataque posicional para romper líneas por las bandas y buscar centros al área.", },
-        { id:2, name: "Transición defensa-ataque", category: "Transiciones", duration: 18, type: "Táctico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas", description: "Ejercicio para practicar la transición rápida de defensa a ataque, creando superioridad numérica.", },
-        { id:3, name: "Presión alta coordinada", category: "Defensa", duration: 15, type: "Táctico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva", description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.", },
-        { id:4, name: "Tiros libres directos", category: "Balón Parado", duration: 12, type: "Táctico", players:6, goalkeepers:1, difficulty:"Fácil", materials:"Balones, barrera", objective:"Mejorar precisión en tiros libres", description: "Práctica de tiros libres directos para mejorar la técnica y la efectividad en estas jugadas.", },
-        { id:5, name: "Salida con los pies", category: "Arquero-Jugador", duration: 25, type: "Táctico", players:4, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar distribución del arquero", description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.", },
-      ],
-      category: "Primera División",
-      categoryId: "primera", // <-- ID Estático para Mocks
-      createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
-      attendance: "0/25", // Aún no sucedió
-      path: "/dashboard/entrenamiento/planificar"
-    },
-    {
-      id: 2,
-      name: "Preparación Física - Resistencia",
-      date: "2025-11-10", // Fecha futura
-      time: "15:00",
-      duration: 75,
-      exercises: [
-        { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 30, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.", },
-        { id:102, name: "Sprints cortos", category: "Fuerza", duration: 20, type: "Físico", players:12, goalkeepers:0, difficulty:"Difícil", materials:"Pesas, bandas elásticas", objective:"Desarrollar fuerza específica para fútbol", description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.", },
-        { id:103, name: "Trabajo aeróbico", category: "Resistencia", duration: 25, type: "Físico", players:10, goalkeepers:0, difficulty:"Fácil", materials:"Conos, petos", objective:"Mejorar la resistencia aeróbica", description: "Trabajo aeróbico a baja intensidad para la recuperación activa y el desarrollo de la resistencia.", },
-      ],
-      category: "Primera División",
-      categoryId: "primera", // <-- ID Estático para Mocks
-      createdBy: "PREPARADOR FISICO", // <-- ETIQUETA
-      attendance: "0/25", // Aún no sucedió
-      path: "/dashboard/entrenamiento/planificar"
-    },
-  ]);
-  // #######################################################################
+  // Efecto para actualizar la categoría si cambia el perfil/contexto (ej. después del login)
+  useEffect(() => {
+      setNewTraining(prev => ({ ...prev, category: getInitialCategory }));
+  }, [getInitialCategory]);
+  // -------------------------------------------------------------------------
 
-  // Filtros
+
+  // --- DATOS PRINCIPALES DE JUGADORES Y CATEGORÍAS (CONTEXTUALIZADOS) ---
+  const currentCategory = useMemo(() => {
+    return categories.find(cat => cat.id === newTraining.category);
+  }, [newTraining.category, categories]);
+
+  // Filtramos los jugadores por la categoría seleccionada en el formulario
+  const playersInCurrentCategory = useMemo(() => {
+    if (!currentCategory) return [];
+    return allPlayersFromContext.filter(p => p.categoryId === currentCategory.id);
+  }, [allPlayersFromContext, currentCategory]);
+
+  // Mapeo de categorías reales para el Select
+  const playersInTraining = categories.map(cat => ({ id: cat.id, name: cat.name }));
+  // -------------------------------------------------------------------------
+
+
+  // Filtros de Ejercicios
   const [searchQuery, setSearchQuery] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterPlayers, setFilterPlayers] = useState("all")
   const [filterGoalkeepers, setFilterGoalkeepers] = useState("all")
   const [filterDifficulty, setFilterDifficulty] = useState("all")
   const [filterTime, setFilterTime] = useState("all")
-  const today = new Date().toISOString().split("T")[0]
 
   
-  // --- OBTENER PERFIL Y CATEGORÍA ACTUAL (CORREGIDO) ---
-  const savedProfile = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null
-  const profileData = savedProfile ? JSON.parse(savedProfile) : null
-  
-  // 1. Lectura corregida de localStorage
-  const profileType = profileData?.profileType; // Ej: "PREPARADOR FISICO"
-  
-  // 2. Extraer el ID de la categoría (ej: "primera_division")
-  const profileCategoryId = profileData?.category;
-
-  // 3. Función helper para convertir el ID de Categoría (ej: "primera_division") al ID estático de los Mocks (ej: "primera")
-  const getMockIdFromProfileId = (id: string | null) => {
-    if (!id) return "";
-    if (id.toLowerCase().includes("primera")) return "primera";
-    if (id.toLowerCase().includes("juveniles")) return "juveniles";
-    if (id.toLowerCase().includes("tercera")) return "tercera";
-    if (id.toLowerCase().includes("cuarta")) return "cuarta";
-    if (id.toLowerCase().includes("quinta")) return "quinta";
-    if (id.toLowerCase().includes("sexta")) return "sexta";
-    if (id.toLowerCase().includes("septima")) return "septima";
-    if (id.toLowerCase().includes("infantiles")) return "infantiles";
-    return id; // fallback
-  };
-
-  // 4. Obtener el ID estático (ej: "primera") que coincide con los mocks
-  const mockCategoryId = getMockIdFromProfileId(profileCategoryId);
-
-  // #######################################################################
-
-
-  // Helper function to format the date as DD - MM - YYYY
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "N/A"
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      const [year, month, day] = parts;
-      return `${day} - ${month} - ${year}`;
+  // --- LÓGICA DE EJERCICIOS DISPONIBLES POR ROL ---
+  const availableExercises = useMemo(() => {
+    if (profileType === "DIRECTOR TECNICO") {
+      return exercisesFromManagement;
+    } else if (profileType === "PREPARADOR FISICO") {
+      // El PF ve ejercicios físicos y kinesiológicos
+      return [...exercisesFromPhysical, ...exercisesFromKinesiology];
+    } else if (profileType === "KINESIOLOGO") {
+      // El Kinesiólogo solo ve ejercicios kinesiológicos
+      return exercisesFromKinesiology;
+    } else {
+      // Modo "TODOS" (ej. Directivo) o si no hay perfil definido
+      return [...exercisesFromManagement, ...exercisesFromPhysical, ...exercisesFromKinesiology];
     }
-    return dateString;
-  };
-  
-  // Helper function to format Date object for display
-  const formatDisplayDate = (date: Date | undefined) => {
-    if (!date) return "Seleccionar fecha";
-    // Formato legible: DD/MM/YYYY
-    return format(date, "PPP", { locale: es }); // Usamos el locale español para el display
-  };
-
-
-  // Generar jugadores para la categoría
-  const generatePlayersForCategory = () => {
-    const firstNames = ["Juan", "Carlos", "Miguel", "Roberto", "Diego", "Fernando", "Alejandro", "Sebastián", "Martín", "Pablo", "Gonzalo", "Nicolás", "Facundo", "Matías", "Lucas", "Tomás", "Agustín", "Franco", "Ignacio", "Maximiliano", "Santiago", "Joaquín", "Emiliano", "Valentín", "Thiago"]
-    const lastNames = ["García", "Rodríguez", "González", "Fernández", "López", "Martínez", "Sánchez", "Pérez", "Gómez", "Martín", "Jiménez", "Ruiz", "Hernández", "Díaz", "Moreno", "Muñoz", "Álvarez", "Romero", "Alonso", "Gutiérrez", "Navarro", "Torres", "Domínguez", "Vázquez", "Ramos"]
-    const nicknames = ["Checo", "Toto", "Pipa", "Chino", "Flaco", "Gordo", "Ruso", "Turco", "Negro", "Rubio", "Pelado", "Chiqui", "Tano", "Mono", "Loco", "Pato", "Gato", "Oso", "León", "Tigre", "Lobo", "Colo", "Nacho", "Maxi", "Santi"]
-
-    const players = []
-    let playerId = 1
-
-    const categoryMap: Record<string, { name: string; count: number }> = {
-      "primera": { name: "Primera División", count: 25 },
-      "tercera": { name: "Tercera División", count: 18 },
-      "juveniles": { name: "Juveniles", count: 22 },
-      "cuarta": { name: "Cuarta División", count: 20 },
-      "quinta": { name: "Quinta División", count: 20 },
-      "sexta": { name: "Sexta División", count: 20 },
-      "septima": { name: "Séptima División", count: 20 },
-      "infantiles": { name: "Infantiles", count: 20 },
-    }
-
-    for (const categoryId in categoryMap) {
-      for (let i = 0; i < categoryMap[categoryId as keyof typeof categoryMap].count; i++) {
-        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-        const randomNickname = nicknames[Math.floor(Math.random() * nicknames.length)]
-        const randomPosition = ["Arquero", "Defensor", "Mediocampista", "Delantero"][Math.floor(Math.random() * 4)]
-        const randomFoot = ["Derecho", "Izquierdo", "Ambidiestro"][Math.floor(Math.random() * 3)]
-        const randomYear = 1990 + Math.floor(Math.random() * 15)
-        const randomMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")
-        const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0")
-        const isInjured = Math.random() < 0.3
-        const randomPhone = `+54 9 11 ${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 10000)}`
-
-        players.push({
-          id: playerId++,
-          firstName: randomFirstName,
-          lastName: randomLastName,
-          nickname: randomNickname,
-          birthDate: `${randomYear}-${randomMonth}-${randomDay}`,
-          phoneNumber: randomPhone,
-          position: randomPosition,
-          foot: randomFoot,
-          status: isInjured ? "LESIONADO" : "DISPONIBLE",
-          category: categoryId,
-          photo: "/placeholder-user.jpg",
-          injury: isInjured
-            ? {
-                type: "Lesión muscular",
-                date: "2024-01-05",
-                recovery: "3-4 semanas",
-              }
-            : null,
-        })
-      }
-    }
-    return players
-  }
-  
-  const allPlayers = generatePlayersForCategory()
-  
-  // #######################################################################
-  // ###     EJEMPLOS DE SESIONES RECIENTES CON "createdBy" AÑADIDO      ###
-  // #######################################################################
-  const previousSessions = [
-    {
-      id: 3,
-      name: "Entrenamiento Técnico",
-      date: "2024-01-10",
-      duration: 60,
-      exercises: [
-        { id:1, name: "Control y pase", category: "Técnico", duration: 20, type: "Técnico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas" },
-        { id:2, name: "Definición", category: "Ataque", duration: 25, type: "Técnico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas" },
-        { id:3, name: "Juego aéreo", category: "Defensa", duration: 15, type: "Técnico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
-      ],
-      category: "Juveniles",
-      categoryId: "juveniles", // <-- ID Estático para Mocks
-      createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
-      attendance: "19/22"
-    },
-    {
-      id: 4,
-      name: "Trabajo Defensivo",
-      date: "2024-01-08",
-      duration: 80,
-      exercises: [
-        { id:1, name: "Marcaje individual", category: "Defensa", duration: 25, type: "Táctico", players:11, goalkeepers:1, difficulty:"Media", materials:"Conos, balones", objective:"Mejorar el juego por las bandas" },
-        { id:2, name: "Coberturas", category: "Defensa", duration: 20, type: "Táctico", players:10, goalkeepers:1, difficulty:"Media", materials:"Balones, conos", objective:"Mejorar transiciones rápidas" },
-        { id:3, name: "Salida jugada", category: "Defensa", duration: 35, type: "Táctico", players:8, goalkeepers:0, difficulty:"Difícil", materials:"Conos, petos", objective:"Coordinar la presión defensiva" },
-      ],
-      category: "Primera División",
-      categoryId: "primera", // <-- ID Estático para Mocks
-      createdBy: "DIRECTOR TECNICO", // <-- ETIQUETA
-      attendance: "20/22"
-    },
-    {
-      id: 5,
-      name: "Sesión Física Juveniles",
-      date: "2024-01-07",
-      duration: 40,
-      exercises: [ 
-        { id:101, name: "Circuito de resistencia", category: "Resistencia", duration: 40, type: "Físico", players:15, goalkeepers:0, difficulty:"Media", materials:"Conos, cronómetro", objective:"Mejorar la capacidad aeróbica", description: "...", },
-      ],
-      category: "Juveniles",
-      categoryId: "juveniles", // <-- ID Estático para Mocks
-      createdBy: "PREPARADOR FISICO", // <-- ETIQUETA
-      attendance: "15/15"
-    },
-  ];
-  // #######################################################################
-  
-  const exercisesFromManagement = [
-    {
-      id: 1,
-      name: "Ataque 4-3-3 por bandas",
-      category: "Ataque",
-      duration: 20,
-      players: 11,
-      goalkeepers: 1,
-      difficulty: "Media",
-      materials: "Conos, balones",
-      objective: "Mejorar el juego por las bandas",
-      createdAt: "2024-01-15",
-      type: "Técnico",
-      description: "Ejercicio de ataque posicional para romper líneas por las bandas y buscar centros al área.",
-    },
-    {
-      id: 2,
-      name: "Presión alta coordinada",
-      category: "Defensa",
-      duration: 15,
-      players: 8,
-      goalkeepers: 0,
-      difficulty: "Difícil",
-      materials: "Conos, petos",
-      objective: "Coordinar la presión defensiva",
-      createdAt: "2024-01-14",
-      type: "Técnico",
-      description: "Ejercicio para coordinar la presión de todo el equipo en campo rival, forzando errores del oponente.",
-    },
-    {
-      id: 3,
-      name: "Transición defensa-ataque",
-      category: "Transiciones",
-      duration: 18,
-      players: 10,
-      goalkeepers: 1,
-      difficulty: "Media",
-      materials: "Balones, conos",
-      objective: "Mejorar transiciones rápidas",
-      createdAt: "2024-01-13",
-      type: "Técnico",
-      description: "Ejercicio para practicar la transición rápida de defensa a ataque, creando superioridad numérica.",
-    },
-    {
-      id: 4,
-      name: "Tiros libres directos",
-      category: "Balón Parado",
-      duration: 12,
-      players: 6,
-      goalkeepers: 1,
-      difficulty: "Fácil",
-      materials: "Balones, barrera",
-      objective: "Mejorar precisión en tiros libres",
-      createdAt: "2024-01-12",
-      type: "Técnico",
-      description: "Práctica de tiros libres directos para mejorar la técnica y la efectividad en estas jugadas.",
-    },
-    {
-      id: 5,
-      name: "Salida con los pies",
-      category: "Arquero-Jugador",
-      duration: 25,
-      players: 4,
-      goalkeepers: 1,
-      difficulty: "Media",
-      materials: "Balones, conos",
-      objective: "Mejorar distribución del arquero",
-      createdAt: "2024-01-11",
-      type: "Técnico",
-      description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.",
-    },
-  ];
-
-  const exercisesFromPhysical = [
-    {
-      id: 101,
-      name: "Circuito de Resistencia Aeróbica",
-      category: "Resistencia",
-      duration: 25,
-      players: 15,
-      goalkeepers: 0,
-      difficulty: "Media",
-      materials: "Conos, cronómetro",
-      objective: "Mejorar la capacidad aeróbica",
-      createdBy: "Preparador Físico",
-      type: "Físico",
-      createdAt: "2024-01-15",
-      description: "Circuito de alta intensidad para mejorar la resistencia cardiovascular y la capacidad aeróbica.",
-    },
-    {
-      id: 102,
-      name: "Entrenamiento de Fuerza Funcional",
-      category: "Fuerza",
-      duration: 30,
-      players: 12,
-      goalkeepers: 0,
-      difficulty: "Difícil",
-      materials: "Pesas rusas, bandas elásticas",
-      objective: "Desarrollar fuerza específica para fútbol",
-      createdBy: "Preparador Físico",
-      type: "Físico",
-      createdAt: "2024-01-14",
-      description: "Sprints de corta distancia con recuperación activa para mejorar la velocidad y la aceleración.",
-    },
-  ];
-
-  const exercisesFromKinesiology = [
-    {
-      id: 201,
-      name: "Ejercicios de Rehabilitación de Rodilla",
-      category: "Rehabilitación",
-      duration: 20,
-      players: 1,
-      goalkeepers: 0,
-      difficulty: "Media",
-      materials: "Banda elástica, pelota suiza",
-      objective: "Recuperar movilidad y fuerza en rodilla",
-      createdBy: "Kinesiólogo",
-      type: "Kinesiológico", // Ajustado a "Kinesiológico"
-      createdAt: "2024-01-15",
-      description: "Ejercicio para que el arquero practique la distribución de balón con los pies, buscando pases largos y cortos.",
-    },
-    {
-      id: 202,
-      name: "Prevención de Lesiones de Tobillo",
-      category: "Prevención",
-      duration: 15,
-      players: 8,
-      goalkeepers: 0,
-      difficulty: "Fácil",
-      materials: "Conos, plataforma inestable",
-      objective: "Fortalecer músculos estabilizadores del tobillo",
-      createdBy: "Kinesiólogo",
-      type: "Kinesiológico", // Ajustado a "Kinesiológico"
-      createdAt: "2024-01-14",
-      description: "Fortalecimiento de músculos estabilizadores del tobillo para prevenir lesiones comunes en el fútbol.",
-    },
-  ];
-
-  // --- LÓGICA DE EJERCICIOS DISPONIBLES MODIFICADA (PETICIÓN DEL USUARIO) ---
-  // El PF ahora solo ve ejercicios Físicos y Kinesiológicos
-  let availableExercises: any[] = []
-  if (profileType === "DIRECTOR TECNICO") {
-    availableExercises = exercisesFromManagement.filter(ex => ex.type === "Técnico")
-  } else if (profileType === "PREPARADOR FISICO") {
-    availableExercises = [
-      ...exercisesFromPhysical, 
-      ...exercisesFromKinesiology
-      // --- LÍNEA ELIMINADA ---
-      // ...exercisesFromManagement.filter(ex => ex.type === "Técnico") 
-    ]
-  } else if (profileType === "KINESIOLOGO") {
-    availableExercises = exercisesFromKinesiology.filter(ex => ex.type === "Kinesiológico")
-  } else {
-    // Modo "TODOS" (ej. Directivo)
-    availableExercises = [...exercisesFromManagement, ...exercisesFromPhysical, ...exercisesFromKinesiology]
-  }
+  }, [profileType]);
   // --------------------------------------------------
 
-  // Filtros
-  const uniquePlayers = [...new Set(availableExercises.map(ex => ex.players))].sort((a, b) => a - b);
-  const uniqueGoalkeepers = [...new Set(availableExercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b);
-  const uniqueDurations = [...new Set(availableExercises.map(ex => ex.duration))].sort((a, b) => a - b);
-  const uniqueCategories = [...new Set(availableExercises.map(ex => ex.category))];
-  const uniqueDifficulties = [...new Set(availableExercises.map(ex => ex.difficulty))];
+  // Generación de opciones de filtro (Usando useMemo para optimizar)
+  const uniquePlayers = useMemo(() => [...new Set(availableExercises.map(ex => ex.players))].sort((a, b) => a - b), [availableExercises]);
+  const uniqueGoalkeepers = useMemo(() => [...new Set(availableExercises.map(ex => ex.goalkeepers))].sort((a, b) => a - b), [availableExercises]);
+  const uniqueDurations = useMemo(() => [...new Set(availableExercises.map(ex => ex.duration))].sort((a, b) => a - b), [availableExercises]);
+  const uniqueCategories = useMemo(() => [...new Set(availableExercises.map(ex => ex.category))], [availableExercises]);
+  const uniqueDifficulties = useMemo(() => [...new Set(availableExercises.map(ex => ex.difficulty))], [availableExercises]);
 
   const categoriesOptions = [{ id: "all", name: "Todas las categorías" }, ...uniqueCategories.map(cat => ({ id: cat, name: cat }))];
-  const difficultyOptions = [{ id: "all", name: "Todas" }, ...uniqueDifficulties.map(diff => ({ id: diff, name: diff }))];
   
-  const playersInTraining = [
-    {
-      id: "primera", name: "Primera División"
-    },
-    {
-      id: "tercera", name: "Tercera División"
-    },
-    {
-      id: "juveniles", name: "Juveniles"
-    },
-  ];
-
   const filteredExercises = availableExercises
     .filter((exercise) => {
       const matchesSearch = searchQuery === "" || exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -505,6 +191,25 @@ export function TrainingPlannerSection() {
     })
     .sort((a, b) => a.id - b.id)
 
+  
+  // Helper function to format the date as DD - MM - YYYY
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "N/A"
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day} - ${month} - ${year}`;
+    }
+    return dateString;
+  };
+    
+  // Helper function to format Date object for display
+  const formatDisplayDate = (date: Date | undefined) => {
+    if (!date) return "Seleccionar fecha";
+    return format(date, "PPP", { locale: es });
+  };
+
+
   // Helper para generar ID de nota
   const generateNoteId = () => `note-${Date.now()}`;
 
@@ -514,10 +219,9 @@ export function TrainingPlannerSection() {
     }
   }
 
-  // --- LÓGICA PARA AÑADIR NOTA ---
   const handleAddNote = () => {
     if (!newNote.title.trim()) {
-      alert("El Título de la nota es obligatorio.");
+      toast.error("El Título de la nota es obligatorio.");
       return;
     }
 
@@ -533,41 +237,39 @@ export function TrainingPlannerSection() {
       difficulty: "N/A",
       materials: "N/A",
       objective: newNote.description,
-      type: NOTE_TYPE, // Flag para exclusión del gráfico
+      type: NOTE_TYPE,
     };
 
     setSelectedExercises(prev => [...prev, note]);
     setNewNote({ title: "", duration: "", description: "" });
     setShowNoteModal(false);
   };
-  // ------------------------------
-
+  
   const removeExercise = (exerciseId: number | string) => {
     setSelectedExercises(selectedExercises.filter((e) => e.id !== exerciseId))
   }
 
   const getCategoryColors = (category: string) => {
     switch (category) {
-        case 'Ataque': return '#ea3498';
-        case 'Defensa': return '#33d9f6';
-        case 'Transiciones': return '#f4c11a';
-        case 'Balón Parado': return '#8a46c5';
-        case 'Resistencia': return '#25d03f';
-        case 'Fuerza': return '#ff6b35';
-        case 'Rehabilitación': return '#4ecdc4';
-        case 'Prevención': return '#45b7d1';
-        case 'Técnico': return '#aff606';
-        case 'Kinesiológico': return '#4ecdc4'; // Añadido para Kine
-        case 'Físico': return '#25d03f'; // Añadido para Físico
-        case NOTE_CATEGORY_NAME: return NOTE_NEUTRAL_COLOR; // Color neutral para notas
-        default: return '#aff606';
+      case 'Ataque': return '#ea3498';
+      case 'Defensa': return '#33d9f6';
+      case 'Transiciones': return '#f4c11a';
+      case 'Balón Parado': return '#8a46c5';
+      case 'Resistencia': return '#25d03f';
+      case 'Fuerza': return '#ff6b35';
+      case 'Rehabilitación': return '#4ecdc4';
+      case 'Prevención': return '#45b7d1';
+      case 'Técnico': return '#aff606';
+      case 'Kinesiológico': return '#4ecdc4';
+      case 'Físico': return '#25d03f';
+      case NOTE_CATEGORY_NAME: return NOTE_NEUTRAL_COLOR;
+      default: return '#aff606';
     }
   };
 
   const calculatePieData = () => {
     const sessionToDisplay = showTrainingDetail || { exercises: selectedExercises };
 
-    // MODIFICACIÓN CLAVE: Filtramos explícitamente las notas (`exercise.type === NOTE_TYPE`)
     const graphExercises = sessionToDisplay.exercises
       .filter((exercise: any) => exercise.type !== NOTE_TYPE);
 
@@ -585,7 +287,6 @@ export function TrainingPlannerSection() {
     return Object.entries(categoryCount).map(([category, duration]) => ({
       category,
       duration,
-      // Usamos la duración total de los ejercicios que SÍ están en el gráfico
       percentage: totalGraphDuration > 0 ? Math.round((duration / totalGraphDuration) * 100) : 0, 
       color: getCategoryColors(category),
     }));
@@ -594,7 +295,6 @@ export function TrainingPlannerSection() {
   const pieData = calculatePieData()
 
   const getCategoriesInTraining = (exercises: any[]) => {
-    // Esta función se utiliza para los puntos de color en el resumen de la sesión
     const categories = [...new Set(exercises.map((ex) => ex.category))]
     const colors: Record<string, string> = {
       Ataque: "#ea3498",
@@ -606,14 +306,8 @@ export function TrainingPlannerSection() {
       "Arquero-Jugador": "#ff6b35",
       Resistencia: "#25d03f",
       Fuerza: "#ff6b35",
-      Velocidad: "#4ecdc4",
-      Agilidad: "#45b7d1",
-      Flexibilidad: "#96ceb4",
       Rehabilitación: "#4ecdc4",
       Prevención: "#45b7d1",
-      Fortalecimiento: "#96ceb4",
-      Movilidad: "#f1a85f",
-      Recuperación: "#c9d99d",
       [NOTE_CATEGORY_NAME]: NOTE_NEUTRAL_COLOR,
     }
 
@@ -625,20 +319,16 @@ export function TrainingPlannerSection() {
   
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case "Fácil":
-        return "bg-[#25d03f] text-black"
-      case "Media":
-        return "bg-[#f4c11a] text-black"
-      case "Difícil":
-        return "bg-red-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
+      case "Fácil": return "bg-[#25d03f] text-black"
+      case "Media": return "bg-[#f4c11a] text-black"
+      case "Difícil": return "bg-red-500 text-white"
+      default: return "bg-gray-500 text-white"
     }
   }
 
 
-  const handleAttendanceToggle = (playerId: number) => {
-    // Si la sesión está programada, actualiza el estado de asistencia, que a su vez afectará la simulación.
+  const handleAttendanceToggle = (playerId: string) => {
+    // Si la sesión está programada, actualiza el estado de asistencia.
     if (showTrainingDetail && trainingSessions.some(s => s.id === showTrainingDetail.id)) {
       setAttendance((prev) => ({
         ...prev,
@@ -663,24 +353,23 @@ export function TrainingPlannerSection() {
       name: "", 
       date: initialDateTime.date as Date,
       time: initialDateTime.time,
-      category: getInitialCategory() // Restablecer a la categoría por defecto
+      category: getInitialCategory 
     });
     setSelectedExercises([]);
   };
 
   // --- FUNCIÓN DE GUARDADO MODIFICADA ---
   const handleSaveTraining = () => {
-    // 0. Preliminary validation (Fields)
+    // 0. Validación de campos
     if (!newTraining.name || !newTraining.date || !newTraining.time || !newTraining.category || selectedExercises.length === 0) {
       setValidationMessage("Por favor, completa todos los campos del formulario y agrega al menos un ejercicio.");
       setShowValidationAlert(true);
       return;
     }
 
-    // 1. Time Validation
+    // 1. Validación de tiempo (futuro)
     const [hours, minutes] = newTraining.time.split(':').map(Number);
     const plannedDateTime = new Date(newTraining.date);
-    // Establecemos la hora, minutos, y segundos a cero para la comparación
     plannedDateTime.setHours(hours, minutes, 0, 0); 
 
     const currentDateTime = new Date();
@@ -693,6 +382,10 @@ export function TrainingPlannerSection() {
     
     // Convertir el objeto Date a string en formato YYYY-MM-DD para la sesión
     const dateString = format(newTraining.date, 'yyyy-MM-dd');
+    
+    // Obtener el nombre de la categoría y el conteo de jugadores
+    const categoryName = categories.find(cat => cat.id === newTraining.category)?.name || "N/A";
+    const totalPlayersInCat = playersInCurrentCategory.length;
 
     const newSession = {
       id: trainingSessions.length + previousSessions.length + 1,
@@ -702,15 +395,16 @@ export function TrainingPlannerSection() {
       // Se suman los minutos de ejercicios y notas
       duration: selectedExercises.reduce((sum, ex) => sum + ex.duration, 0), 
       exercises: selectedExercises,
-      category: playersInTraining.find(cat => cat.id === newTraining.category)?.name || "N/A",
+      category: categoryName,
       categoryId: newTraining.category,
-      createdBy: profileType, // <-- CAMBIO CLAVE: Se etiqueta el ROL que lo crea
-      attendance: `0/${allPlayers.filter(p => p.category === newTraining.category).length}`, // Simulación de asistencia
+      createdBy: profileType, // Se etiqueta el ROL que lo crea
+      attendance: `0/${totalPlayersInCat}`, // Uso del conteo real de jugadores
       path: "/dashboard/entrenamiento/planificar"
     };
 
     setTrainingSessions(prevSessions => [...prevSessions, newSession]);
     handleCancelForm();
+    toast.success("Entrenamiento programado con éxito.");
   };
   // --- FIN DE FUNCIÓN DE GUARDADO ---
   
@@ -719,17 +413,22 @@ export function TrainingPlannerSection() {
       setTrainingSessions(prevSessions => prevSessions.filter(t => t.id !== trainingToDelete));
       setTrainingToDelete(null);
       setShowTrainingDetail(null);
+      toast.success("Entrenamiento eliminado.");
     }
   };
 
+  // Jugadores para la asistencia (usando jugadores del contexto)
   const playersForAttendance = showTrainingDetail?.categoryId
-  ? allPlayers.filter(p => p.category.toLowerCase() === showTrainingDetail.categoryId.toLowerCase() && p.status === 'DISPONIBLE')
-  : [];
+    ? allPlayersFromContext.filter(p => p.categoryId === showTrainingDetail.categoryId && p.injuryStatus === 'FIT')
+    : [];
 
-  const sortedAttendance = playersForAttendance.sort((a: any, b: any) => {
-    // SIMULACIÓN DE ASISTENCIA: Los jugadores cuyo ID es divisible por 5 están ausentes por defecto.
-    const isMissingA = (a.id % 5) === 0; 
-    const isMissingB = (b.id % 5) === 0;
+  // Ordenamos los jugadores para la simulación de asistencia
+  const sortedAttendance = playersForAttendance.sort((a, b) => {
+    // Usamos el ID del jugador (string) y lo hasheamos para el mock de inasistencia
+    const hashA = a.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hashB = b.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const isMissingA = (hashA % 5) === 0;
+    const isMissingB = (hashB % 5) === 0;
 
     // ORDENAMIENTO: Inasistentes primero
     if (isMissingA && !isMissingB) return -1;
@@ -742,10 +441,9 @@ export function TrainingPlannerSection() {
 
   // Calcula el conteo de asistentes/inasistentes para mostrar en el encabezado de la lista
   const attendanceCount = sortedAttendance.reduce((acc, player) => {
-    // La inasistencia se basa en la simulación por ID, o en el estado si fue tocado (aunque solo funciona en el render)
-    const isMissingSimulated = (player.id % 5) === 0;
+    const hash = player.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const isMissingSimulated = (hash % 5) === 0;
     
-    // Para simplificar la simulación visual, nos basamos solo en la simulación por ID en este mock
     if (isMissingSimulated) {
       acc.missing++;
     } else {
@@ -755,22 +453,13 @@ export function TrainingPlannerSection() {
   }, { present: 0, missing: 0 });
 
   
-  // #######################################################################
-  // ###       FILTRADO DE SESIONES POR ROL Y CATEGORÍA                  ###
-  // #######################################################################
-  // Filtramos las sesiones que se mostrarán en la UI
+  // --- FILTRADO FINAL DE SESIONES POR ROL ---
   const filteredProgrammedSessions = trainingSessions.filter(
-    (session) =>
-      // session.categoryId === mockCategoryId && // <-- FILTRO DE CATEGORÍA ELIMINADO PARA DEMO
-      session.createdBy === profileType // Coincide el ROL (ej: "PREPARADOR FISICO")
+    (session) => session.createdBy === profileType
   );
-
-  const filteredRecentSessions = previousSessions.filter(
-    (session) =>
-      // session.categoryId === mockCategoryId && // <-- FILTRO DE CATEGORÍA ELIMINADO PARA DEMO
-      session.createdBy === profileType // Coincide el ROL
-  );
-  // #######################################################################
+  // Las sesiones recientes siempre están vacías
+  const filteredRecentSessions = previousSessions;
+  // ------------------------------------------
 
 
   return (
@@ -780,12 +469,10 @@ export function TrainingPlannerSection() {
           <h2 className="text-2xl font-bold text-white mb-2">Planificar Entrenamiento</h2>
           <p className="text-gray-400">Organiza y programa las sesiones de entrenamiento</p>
         </div>
-        
       </div>
 
       {/* Training Detail Modal (COMPARTIDO Y FUNCIONAL) */}
       <Dialog open={!!showTrainingDetail} onOpenChange={() => {setShowTrainingDetail(null); setShowAttendance(false);}}>
-        {/* MODIFICACIÓN: Añadir max-h-[90vh] overflow-y-auto para hacerlo scrollable en móvil/tablet */}
         <DialogContent className="sm:max-w-[700px] bg-[#213041] border-[#305176] text-white max-h-[90vh] overflow-y-auto">
           <DialogHeader className="text-center">
             <DialogTitle className="text-white text-2xl font-bold">
@@ -834,28 +521,22 @@ export function TrainingPlannerSection() {
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
                       {showTrainingDetail?.exercises?.map((exercise: any, index: number) => (
                         <div 
-                          key={exercise.id} // Usamos exercise.id para las claves, no el index
+                          key={exercise.id}
                           className="flex items-center justify-between p-3 bg-[#1d2834] rounded-lg cursor-pointer hover:bg-[#305176] transition-colors"
-                          // Permite abrir el detalle solo si no es una nota
                           onClick={() => exercise.type !== NOTE_TYPE && setShowExerciseDetail(exercise)} 
                         >
                           <div className="flex items-center space-x-3">
                             <span className="text-[#aff606] font-bold">{index + 1}.</span>
                             <div>
-                              {/* Título y tiempo */}
                               <p className="text-white font-medium">{exercise.name}</p>
-                              {/* Muestra duración si es un ejercicio o una nota con tiempo */}
                               {exercise.duration > 0 && <p className="text-gray-400 text-sm">{exercise.duration} min</p>} 
-                              {/* Muestra descripción si es una nota sin duración */}
                               {exercise.type === NOTE_TYPE && exercise.objective && <p className="text-gray-500 text-xs italic">{exercise.objective}</p>}
                             </div>
                           </div>
-                          {/* Solo el círculo de color */}
                           <div
                             className="w-4 h-4 rounded-full"
-                            // Usa el color de categoría, que es neutro para las notas
                             style={{ backgroundColor: getCategoryColors(exercise.category) }}
-                            title={exercise.category} // Añadir título para accesibilidad
+                            title={exercise.category} 
                           ></div>
                         </div>
                       ))}
@@ -863,13 +544,14 @@ export function TrainingPlannerSection() {
                   </div>
                 </>
               ) : (
-                /* Contenido de Asistencia (SIMULACIÓN ACTIVA) */
+                /* Contenido de Asistencia (SIMULACIÓN ACTIVA con jugadores reales) */
                 <div className="space-y-4 lg:col-span-2">
                   <h4 className="text-white font-medium">Lista de Asistencia - {showTrainingDetail?.category}</h4>
                   <div className="space-y-2 max-h-72 overflow-y-auto">
-                    {sortedAttendance.map((player: any) => {
-                      // LÓGICA DE SIMULACIÓN PARA LA LISTA:
-                      const isMissingSimulated = (player.id % 5) === 0;
+                    {sortedAttendance.map((player: ContextPlayer) => {
+                      // Usamos el ID del jugador (string) y lo hasheamos para el mock de inasistencia
+                      const hash = player.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                      const isMissingSimulated = (hash % 5) === 0;
 
                       return (
                         <div
@@ -879,7 +561,6 @@ export function TrainingPlannerSection() {
                               ? "bg-red-900/30 border border-red-500"
                               : "bg-[#1d2834] hover:bg-[#305176]"
                           } ${isScheduledSession ? 'cursor-pointer' : 'cursor-default'}`}
-                          // Si la sesión es programada, permite el toggle (aunque solo funciona en el render)
                           onClick={() => {
                             if (isScheduledSession) {
                               handleAttendanceToggle(player.id);
@@ -899,7 +580,7 @@ export function TrainingPlannerSection() {
                               )}
                             </div>
                             <span className={`font-medium ${isMissingSimulated ? "text-red-400" : "text-white"}`}>
-                              {player.firstName} {player.lastName}
+                              {player.name}
                             </span>
                           </div>
                           <Badge className={isMissingSimulated ? "bg-red-500 text-white" : "bg-[#25d03f] text-black"}>
@@ -931,7 +612,6 @@ export function TrainingPlannerSection() {
               </CardHeader>
               <div className="flex flex-col items-center">
                 <div className="relative w-48 h-48 mx-auto mb-4">
-                  {/* Renderizado del gráfico de pizza */}
                   {showTrainingDetail?.exercises?.filter((ex: any) => ex.type !== NOTE_TYPE).length > 0 ? (
                     <svg viewBox="0 0 200 200" className="w-full h-full">
                       {calculatePieData().map((segment, segIndex) => {
@@ -991,9 +671,7 @@ export function TrainingPlannerSection() {
                 <CalendarIcon className="h-5 w-5 mr-2" />
                 Entrenamientos Programados
               </CardTitle>
-              {/* MODIFICACIÓN: Botón Planificar Responsive */}
               <Button 
-                // size: "icon" en móvil, "sm" en tablet/PC (h-9, px-4)
                 size={isMobile ? "icon" : "sm"}
                 className="bg-[#aff606] text-black hover:bg-[#25d03f] font-semibold h-9 px-2 sm:px-4 ml-auto" 
                 onClick={() => setShowPlannerForm(true)}
@@ -1005,9 +683,6 @@ export function TrainingPlannerSection() {
             <CardContent>
               <div className="space-y-6">
                 
-                {/* ###################################################### */}
-                {/* ###    SE USA LA LISTA FILTRADA "filteredProgrammedSessions"   ### */}
-                {/* ###################################################### */}
                 {filteredProgrammedSessions.length > 0 ? (
                   filteredProgrammedSessions.slice(0, 3).map((session) => (
                     <div 
@@ -1050,7 +725,6 @@ export function TrainingPlannerSection() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        {/* Botón de Programados con Eye icon y estilo outline - OCULTO EN MÓVIL */}
                         <Button
                           size="sm"
                           variant="outline"
@@ -1071,7 +745,7 @@ export function TrainingPlannerSection() {
                           onClick={(e) => {
                               e.stopPropagation();
                               setTrainingToDelete(session.id);
-                            }}
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1080,10 +754,9 @@ export function TrainingPlannerSection() {
                   ))
                 ) : (
                   <p className="text-center text-gray-500 py-4">
-                    No hay entrenamientos programados para este perfil en esta categoría.
+                    No hay entrenamientos programados para tu perfil.
                   </p>
                 )}
-                {/* ###################################################### */}
 
               </div>
             </CardContent>
@@ -1091,7 +764,6 @@ export function TrainingPlannerSection() {
 
           <Card className="bg-[#213041] border-[#305176]">
             <CardHeader>
-              {/* Título con ícono de Calendar */}
               <CardTitle className="text-white flex items-center">
                 <CalendarIcon className="h-5 w-5 mr-2" />
                 Entrenamientos Recientes
@@ -1100,9 +772,6 @@ export function TrainingPlannerSection() {
             <CardContent>
               <div className="space-y-6">
                 
-                {/* ###################################################### */}
-                {/* ###    SE USA LA LISTA FILTRADA "filteredRecentSessions"   ### */}
-                {/* ###################################################### */}
                 {filteredRecentSessions.length > 0 ? (
                   filteredRecentSessions.slice(0, 3).map((session) => (
                     <div 
@@ -1141,12 +810,11 @@ export function TrainingPlannerSection() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        {/* Botón VER ENTRENAMIENTO - OCULTO EN MÓVIL */}
                         <Button
                           size="sm"
                           className={`bg-[#aff606] text-black hover:bg-[#25d03f] h-10 font-bold ${isMobile ? 'hidden lg:flex' : ''}`}
                           onClick={(e) => {
-                              e.stopPropagation(); // Previene el click de la fila
+                              e.stopPropagation(); 
                               setShowTrainingDetail(session);
                             }}
                         >
@@ -1162,10 +830,9 @@ export function TrainingPlannerSection() {
                   ))
                 ) : (
                   <p className="text-center text-gray-500 py-4">
-                    No hay entrenamientos recientes para este perfil en esta categoría.
+                    No hay entrenamientos recientes para tu perfil.
                   </p>
                 )}
-                {/* ###################################################### */}
 
               </div>
             </CardContent>
@@ -1194,11 +861,7 @@ export function TrainingPlannerSection() {
                     />
                   </div>
                   
-                  {/* INICIO MODIFICACIÓN FECHA Y HORA */}
-                  {/* En móvil (por defecto), este grid tendrá 1 columna, apilando Fecha y Hora */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> 
-                    
-                    {/* CAMPO DE SELECCIÓN DE FECHA (Ocupa el 100% en móvil, 2/3 en md) */}
                     <div className="space-y-2 col-span-1 md:col-span-2"> 
                       <Label htmlFor="training-date" className="text-white">
                         Fecha
@@ -1211,7 +874,7 @@ export function TrainingPlannerSection() {
                           >
                             <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
                             {newTraining.date ? (
-                              format(newTraining.date, "PPP", { locale: es }) // Usamos el locale español
+                              format(newTraining.date, "PPP", { locale: es })
                             ) : (
                               <span className="text-gray-400">Seleccionar fecha</span>
                             )}
@@ -1223,15 +886,13 @@ export function TrainingPlannerSection() {
                             selected={newTraining.date}
                             onSelect={(date) => setNewTraining({ ...newTraining, date: date as Date })}
                             initialFocus
-                            locale={es} // Usar el locale español
+                            locale={es}
                             classNames={{
-                                caption_label: "text-white font-semibold", // Mes y Año en blanco
-                                head_cell: "text-white rounded-md w-9 font-medium text-[0.8rem]", // Abreviaturas de días en blanco
-                                day: "text-white", // Días del mes actual en blanco
-                                day_outside: "text-gray-500 opacity-80", // Días fuera del mes en gris
-                                // ESTILO PARA EL DÍA ACTUAL (Fondo verde, texto negro/negrita)
-                                day_today: "bg-[#aff606] text-black hover:bg-[#25d03f] hover:text-black font-bold", 
-                                // ESTILO para el día seleccionado (importante para mantener el contraste si se selecciona hoy)
+                                caption_label: "text-white font-semibold",
+                                head_cell: "text-white rounded-md w-9 font-medium text-[0.8rem]",
+                                day: "text-white",
+                                day_outside: "text-gray-500 opacity-80",
+                                day_today: "bg-[#aff606] text-black hover:bg-[#25d03f] hover:text-black font-bold",
                                 day_selected: "bg-[#aff606] text-black hover:bg-[#aff606] hover:text-black focus:bg-[#aff606] focus:text-black",
                             }}
                           />
@@ -1239,7 +900,6 @@ export function TrainingPlannerSection() {
                       </Popover>
                     </div>
                     
-                    {/* CAMPO DE HORA (Ocupa el 100% en móvil, 1/3 en md) */}
                     <div className="space-y-2 col-span-1">
                       <Label htmlFor="training-time" className="text-white">
                         Hora
@@ -1253,7 +913,6 @@ export function TrainingPlannerSection() {
                       />
                     </div>
                   </div>
-                  {/* FIN MODIFICACIÓN FECHA Y HORA */}
                 </div>
 
                 <div className="space-y-2">
@@ -1278,7 +937,7 @@ export function TrainingPlannerSection() {
 
                 {/* Filtros para Ejercicios Disponibles */}
                 <div className="space-y-3">
-                  <Label className="text-white">Ejercicios Disponibles</Label>
+                  <Label className="text-white">Ejercicios Disponibles ({availableExercises.length})</Label>
                   <div className="flex flex-wrap items-center gap-2"> 
                     <div className="min-w-[140px] max-w-full flex-1">
                       <div className="relative">
@@ -1373,10 +1032,10 @@ export function TrainingPlannerSection() {
                         <div>
                           <p className="text-white font-medium">{exercise.name}</p>
                           <div className="flex items-center gap-2 mt-1">
-                             <p className="text-gray-400 text-sm">
+                            <p className="text-gray-400 text-sm">
                                {exercise.category} • {exercise.duration}min
-                             </p>
-                             <Badge
+                            </p>
+                            <Badge
                                className={getDifficultyColor(exercise.difficulty)}
                             >
                               {exercise.difficulty}
@@ -1430,8 +1089,7 @@ export function TrainingPlannerSection() {
                   </div>
                 )}
 
-                {/* MODIFICACIÓN: Bloque de botones para Guardar/Cancelar (Responsive) */}
-                {/* flex-col por defecto (móvil) y sm:flex-row (desktop) */}
+                {/* Bloque de botones para Guardar/Cancelar (Responsive) */}
                 <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:space-y-0 sm:space-x-4">
                   <Button
                     className="w-full sm:w-1/2 bg-[#aff606] text-black hover:bg-[#25d03f] h-11 text-lg"
@@ -1543,7 +1201,7 @@ export function TrainingPlannerSection() {
               <CardContent>
                 {selectedExercises.filter((ex: any) => ex.type !== NOTE_TYPE).length > 0 ? (
                   <div className="space-y-4">
-                    {/* Gráfico Pizza Simple */}
+                    {/* Gráfico Pizza Simple (mantenido el código SVG) */}
                     <div className="relative w-48 h-48 mx-auto">
                       <svg viewBox="0 0 200 200" className="w-full h-full">
                         {pieData.length === 1 ? (
@@ -1734,80 +1392,6 @@ export function TrainingPlannerSection() {
                 className="bg-[#1d2834] border-[#305176] text-white min-h-[100px]"
               />
             </div>
-          </div>
-          {/* Se eliminan los botones de edición/eliminación para que sea read-only */}
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialogo para Agregar Nota (NUEVA INTERFAZ) */}
-      <Dialog open={showNoteModal} onOpenChange={setShowNoteModal}>
-        <DialogContent className="sm:max-w-[425px] bg-[#213041] border-[#305176] text-white">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-white text-2xl font-bold">
-              Agregar Nota/Pausa
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Añade una nota o un tiempo de pausa a la sesión.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="note-title" className="text-white">
-                Título de la Nota *
-              </Label>
-              <Input
-                id="note-title"
-                placeholder="Ej: Charla Técnica"
-                value={newNote.title}
-                onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-                className="bg-[#1d2834] border-[#305176] text-white"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="note-duration" className="text-white">
-                Tiempo/Duración (min, opcional)
-              </Label>
-              <Input
-                id="note-duration"
-                type="number"
-                placeholder="10"
-                min="0"
-                value={newNote.duration}
-                onChange={(e) => setNewNote({ ...newNote, duration: e.target.value })}
-                className="bg-[#1d2834] border-[#305176] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="note-description" className="text-white">
-                Descripción (opcional)
-              </Label>
-              <Textarea
-                id="note-description"
-                placeholder="Detalles sobre esta pausa o nota..."
-                value={newNote.description}
-                onChange={(e) => setNewNote({ ...newNote, description: e.target.value })}
-                className="bg-[#1d2834] border-[#305176] text-white min-h-[80px]"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end space-x-4">
-            <Button
-              variant="outline"
-              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
-              onClick={() => {
-                setShowNoteModal(false);
-                setNewNote({ title: "", duration: "", description: "" });
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="bg-[#aff606] text-black hover:bg-[#25d03f]"
-              onClick={handleAddNote}
-            >
-              Guardar Nota
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,3 +1,5 @@
+// components/auth/profile-guard.tsx
+
 "use client"
 
 import type React from "react"
@@ -9,15 +11,15 @@ interface ProfileGuardProps {
   children: React.ReactNode
 }
 
-// Claves consistentes para el estado
-const ACTIVE_PROFILE_KEY = "userProfile";
-const CLUB_DATA_KEY = "clubData"; 
+// Claves consistentes para el estado (CORREGIDAS)
+const ACTIVE_PROFILE_KEY = "userProfile"; 
+const CLUB_DATA_KEY = "4c_club"; // <-- CLAVE CORREGIDA PARA COINCIDIR CON use-profile.tsx
 const SELECTED_CATEGORY_KEY = "selectedCategory"; 
 
 export function ProfileGuard({ children }: ProfileGuardProps) {
   const router = useRouter();
-  // currentProfile se usa para verificar si el usuario tiene un perfil activo cargado en el contexto.
-  const { currentProfile } = useProfile(); 
+  // Usamos el perfil del contexto
+  const { profile: currentProfileInContext, isLoading } = useProfile(); 
   const [isVerifying, setIsVerifying] = useState(true); 
 
   useEffect(() => {
@@ -29,25 +31,29 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
         return;
     }
 
+    // Esperar a que el hook useProfile termine de cargar el estado de localStorage
+    if (isLoading) {
+        return;
+    }
+
+    // Leemos las claves directamente del localStorage para la lógica de redirección
     const savedClubJson = typeof window !== 'undefined' ? localStorage.getItem(CLUB_DATA_KEY) : null;
-    const savedProfileJson = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_PROFILE_KEY) : null;
     const savedCategoryJson = typeof window !== 'undefined' ? localStorage.getItem(SELECTED_CATEGORY_KEY) : null;
+    const savedProfileJson = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_PROFILE_KEY) : null;
     
     let clubExists = !!savedClubJson;
     let categoryExists = !!savedCategoryJson;
-    let profileExists = !!currentProfile || !!savedProfileJson; 
+    let profileExists = !!currentProfileInContext || !!savedProfileJson; 
 
     // Lógica principal de redirección
     if (isVerifying) {
         
-        // FIX: Si un usuario accede a una ruta protegida (dashboard) sin un perfil activo,
-        // pero con datos de club viejos (por el mock de localStorage), borramos los datos del club 
-        // para forzar el inicio en el Paso 1. Esto simula un nuevo usuario en un entorno de prueba.
-        if (!profileExists && clubExists) {
-             console.warn("ProfileGuard: Profile missing but old Club data found. Clearing Club/Category data to force start at Paso 1 for new session simulation.");
+        // Si no hay perfil, forzamos la limpieza de claves para asegurar el inicio del flujo
+        if (!profileExists && (clubExists || categoryExists)) {
+             console.warn("ProfileGuard: Profile missing but Club/Category data found. Clearing data to force start at Paso 1 for new session simulation.");
              localStorage.removeItem(CLUB_DATA_KEY);
              localStorage.removeItem(SELECTED_CATEGORY_KEY);
-             clubExists = false; // Forzar el fallo en el siguiente chequeo
+             clubExists = false; 
              categoryExists = false;
         }
         
@@ -71,37 +77,29 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
           router.replace("/select-profile");
           return;
         }
-        
-        // 4. Si todo existe, conceder acceso al Dashboard.
-        if (clubExists && categoryExists && profileExists) {
-          console.log("ProfileGuard: Club, Category, and Profile found. Access granted.");
-        }
       
       setIsVerifying(false);
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, currentProfile]); // currentProfile agregado para reaccionar al estado de autenticación
+  }, [isLoading, router, currentProfileInContext]);
   
-  // Lógica para reaccionar a un logout (currentProfile se vuelve null)
+  // Lógica para reaccionar a un logout
   useEffect(() => {
-      // SOLO si no estamos en medio de una verificación y el perfil se perdió:
-      if (!isVerifying && !currentProfile) {
+      if (!isVerifying && !currentProfileInContext) {
           const clubExists = !!(typeof window !== 'undefined' && localStorage.getItem(CLUB_DATA_KEY));
           
-          // Si hay club, el flujo debe reanudar en selección de categoría (Comportamiento deseado para usuarios que comparten club)
           if (clubExists) {
               router.replace("/select-category");
           } else {
-              // Si no hay club, debe reanudar en creación de club
                router.replace("/create-club");
           }
       }
-  }, [currentProfile, isVerifying, router]);
+  }, [currentProfileInContext, isVerifying, router]);
 
 
-  // Muestra "Cargando..." mientras se realiza la verificación inicial
-  if (isVerifying) {
+  // Muestra "Cargando..." mientras se realiza la verificación inicial o carga del perfil
+  if (isVerifying || isLoading) {
     return (
       <div className="min-h-screen bg-[#1d2834] flex items-center justify-center">
         <div className="text-white">Cargando perfil...</div>
@@ -109,14 +107,9 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
     );
   }
 
-  // Si no estamos verificando, el contenido se muestra.
-  if (currentProfile) {
+  // Si la verificación terminó y estamos en una ruta de selección o el perfil existe, permite el render.
+  if (currentProfileInContext || window.location.pathname === '/create-club' || window.location.pathname === '/select-category' || window.location.pathname === '/select-profile') {
     return <>{children}</>;
-  }
-
-  // Si la verificación terminó y estamos en una ruta de selección, permite renderizar la página.
-  if (window.location.pathname === '/create-club' || window.location.pathname === '/select-category' || window.location.pathname === '/select-profile') {
-      return <>{children}</>;
   }
   
   return null;

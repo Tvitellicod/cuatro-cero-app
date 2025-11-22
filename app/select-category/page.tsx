@@ -220,5 +220,4 @@ export default function SelectCategoryPage() {
       </Card>
     </div>
   )
-  
 }
